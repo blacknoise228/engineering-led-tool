@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --canvas-bg: #07080b;
+  --surface-1: #0c0d12;
+  --surface-2: #12141c;
+  --surface-3: #181b25;
+  --border-subtle: rgba(19, 13, 13, 0.35);
+  --border-active: rgba(15, 28, 33, 0.4);
+}
+
+body {
+  background: var(--canvas-bg);
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Стилизация скроллбара для темной темы */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+/* Тонкое свечение для фокуса и выделения */
+.glow-cyan {
+  box-shadow: 0 0 16px -2px rgba(56, 189, 248, 0.35);
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+}
+
