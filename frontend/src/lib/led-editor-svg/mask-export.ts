@@ -1,6 +1,7 @@
 // src/lib/led-editor-svg/mask-export.ts
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { savePngFile, saveDesktopZIP, blobToBase64, isDesktopApp, showToast } from '../desktop';
 import { Panel, ScreenGroup } from './types';
 import { getTextureById } from './textures';
 import { computePixelPanels, computeContour, GroupContourResult, PixelPanel, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds } from './mask-contour';
@@ -387,11 +388,13 @@ export async function exportMaskPNG(
   if (totalW === 0 || totalH === 0) return;
 
   const dataUrl = canvas.toDataURL('image/png');
-  const a = document.createElement('a');
-  a.href = dataUrl;
   const safePage = pageName ? `_${pageName.replace(/[/\\?%*:|"<>]/g, '_')}` : '';
-  a.download = `${eventName}${safePage}_mask_${totalW}x${totalH}.png`;
-  a.click();
+  const filename = `${eventName}${safePage}_mask_${totalW}x${totalH}.png`;
+
+  const saved = await savePngFile(filename, dataUrl);
+  if (saved) {
+    showToast('PNG сохранен');
+  }
 }
 
 export async function exportMaskZIP(
@@ -411,6 +414,17 @@ export async function exportMaskZIP(
   zip.file(`${eventName}${safePage}_mask_${totalW}x${totalH}.png`, fullDataUrl.split(',')[1], { base64: true });
 
   const blob = await zip.generateAsync({ type: 'blob' });
-  saveAs(blob, `${eventName}${safePage}_mask_${totalW}x${totalH}.zip`);
+  const filename = `${eventName}${safePage}_mask_${totalW}x${totalH}.zip`;
+
+  if (isDesktopApp()) {
+    const base64 = await blobToBase64(blob);
+    const saved = await saveDesktopZIP(filename, base64);
+    if (saved) {
+      showToast('ZIP сохранен');
+    }
+  } else {
+    saveAs(blob, filename);
+    showToast('ZIP сохранен');
+  }
 }
 

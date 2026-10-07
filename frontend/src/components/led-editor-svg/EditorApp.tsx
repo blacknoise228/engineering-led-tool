@@ -36,6 +36,12 @@ import { exportMaskPNG, exportMaskZIP, prepareScreensData } from '@/lib/led-edit
 import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
 import PageBar from './PageBar';
+import {
+  isDesktopApp,
+  openDesktopProject,
+  saveDesktopProject,
+  useToastListener,
+} from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
 
@@ -123,6 +129,9 @@ export default function EditorApp() {
     } catch {}
   }, []);
 
+  // текущий файл проекта (для перезаписи при Ctrl+S)
+  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+
   // уведомления (toast)
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,8 +141,11 @@ export default function EditorApp() {
     setToastMessage(msg);
     toastTimeoutRef.current = setTimeout(() => {
       setToastMessage(null);
-    }, 2200);
+    }, 2500);
   }, []);
+
+  // слушаем глобальные уведомления (например, от экспорта PNG)
+  useToastListener(showToast);
 
   // рамка выделения
   const marqueeStart = useRef<Vec | null>(null);
@@ -810,8 +822,94 @@ export default function EditorApp() {
     eventName, eventDate, servers, cardId,
     logoDataUrl, cards, fiberCounts, activeWiringPage.name]);
 
+  // ======== APPLY LOADED PROJECT DATA ========
+  const applyProjectData = useCallback((data: {
+    meta?: { presetId?: string; rows?: number; cols?: number };
+    wiringPages?: WiringPage[];
+    activeWiringPageId?: string;
+    maskPages?: MaskPage[];
+    activeMaskPageId?: string;
+    panels?: Panel[];
+    cables?: CableEx[];
+    cards?: CardInstance[];
+    selectedCardId?: string | null;
+    activeLink?: number;
+    fiberCounts?: Record<string, number>;
+    eventName?: string;
+    eventDate?: string;
+    servers?: Array<{ id: string; modelId: string }>;
+    serverId?: string;
+    screenGroups?: ScreenGroup[];
+  }) => {
+    let parsedWiringPages: WiringPage[] = [];
+    let parsedActiveWiringPageId = 'wiring-1';
+    if (Array.isArray(data.wiringPages) && data.wiringPages.length > 0) {
+      parsedWiringPages = data.wiringPages;
+      parsedActiveWiringPageId = data.activeWiringPageId ?? data.wiringPages[0].id;
+    } else if (Array.isArray(data.panels) && Array.isArray(data.cables)) {
+      parsedWiringPages = [{
+        id: 'wiring-1',
+        name: 'Schema 1',
+        panels: data.panels,
+        cables: data.cables,
+      }];
+      parsedActiveWiringPageId = 'wiring-1';
+    }
+
+    if (parsedWiringPages.length > 0) {
+      setWiringPages(parsedWiringPages);
+      setActiveWiringPageId(parsedActiveWiringPageId);
+
+      let parsedMaskPages: MaskPage[] = [];
+      let parsedActiveMaskPageId = 'mask-1';
+      if (Array.isArray(data.maskPages) && data.maskPages.length > 0) {
+        parsedMaskPages = data.maskPages;
+        parsedActiveMaskPageId = data.activeMaskPageId ?? data.maskPages[0].id;
+      } else if (Array.isArray(data.screenGroups) && data.screenGroups.length > 0) {
+        parsedMaskPages = [{
+          id: 'mask-1',
+          name: 'Page 1',
+          screenGroups: data.screenGroups,
+        }];
+        parsedActiveMaskPageId = 'mask-1';
+      } else {
+        const allP = parsedWiringPages.flatMap(wp => wp.panels);
+        parsedMaskPages = [{
+          id: 'mask-1',
+          name: 'Page 1',
+          screenGroups: autoGroupPanels(allP),
+        }];
+        parsedActiveMaskPageId = 'mask-1';
+      }
+      setMaskPages(parsedMaskPages);
+      setActiveMaskPageId(parsedActiveMaskPageId);
+
+      if (Array.isArray(data.cards)) setCards(data.cards);
+      setSelectedCardId(data.selectedCardId ?? null);
+      if (typeof data.activeLink === 'number') setActiveLink(data.activeLink);
+      if (data.meta?.presetId) setPresetId(data.meta.presetId);
+      if (data.eventName) setEventName(data.eventName);
+      if (data.eventDate) setEventDate(data.eventDate);
+      if (Array.isArray(data.servers) && data.servers.length > 0) {
+        setServers(data.servers);
+      } else if (data.serverId) {
+        setServers([{ id: 'srv-1', modelId: data.serverId }]);
+      }
+      if (data.fiberCounts && typeof data.fiberCounts === 'object') {
+        setFiberCounts(data.fiberCounts as Record<string, number>);
+      }
+      if (typeof data.meta?.rows === 'number') setRows(data.meta.rows);
+      if (typeof data.meta?.cols === 'number') setCols(data.meta.cols);
+      setSelectedGroupId(null);
+      setSelectedPanels(new Set());
+      setSelectedCables(new Set());
+      setDraft(null);
+      undoRef.current = []; redoRef.current = [];
+    }
+  }, [setSelectedGroupId]);
+
   // ======== SAVE JSON ========
-  const saveJSON = useCallback(() => {
+  const saveJSON = useCallback(async () => {
     const payload = {
       meta: { version: 4, presetId, rows, cols },
       wiringPages,
@@ -830,12 +928,74 @@ export default function EditorApp() {
       servers,
       screenGroups: activeMaskPage.screenGroups,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${eventName}.ss`; a.click();
-    URL.revokeObjectURL(url);
-  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers]);
+    const jsonContent = JSON.stringify(payload, null, 2);
+
+    if (isDesktopApp()) {
+      try {
+        const defaultName = `${eventName || 'project'}.ss`;
+        const savedPath = await saveDesktopProject(currentFilePath, defaultName, jsonContent);
+        if (savedPath) {
+          setCurrentFilePath(savedPath);
+          showToast('Сохранено');
+        }
+      } catch (err) {
+        console.error('Failed to save project:', err);
+      }
+    } else {
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${eventName || 'project'}.ss`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Сохранено');
+    }
+  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, currentFilePath, showToast]);
+
+  const saveJSONAs = useCallback(async () => {
+    const payload = {
+      meta: { version: 4, presetId, rows, cols },
+      wiringPages,
+      activeWiringPageId,
+      maskPages,
+      activeMaskPageId,
+      panels: activeWiringPage.panels,
+      cables: activeWiringPage.cables,
+      cards,
+      selectedCardId,
+      activeLink,
+      fiberCounts,
+      eventName,
+      eventDate,
+      serverId: servers[0]?.modelId ?? '',
+      servers,
+      screenGroups: activeMaskPage.screenGroups,
+    };
+    const jsonContent = JSON.stringify(payload, null, 2);
+
+    if (isDesktopApp()) {
+      try {
+        const defaultName = `${eventName || 'project'}.ss`;
+        const savedPath = await saveDesktopProject(null, defaultName, jsonContent);
+        if (savedPath) {
+          setCurrentFilePath(savedPath);
+          showToast('Сохранено');
+        }
+      } catch (err) {
+        console.error('Failed to save project:', err);
+      }
+    } else {
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${eventName || 'project'}.ss`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Сохранено');
+    }
+  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
 
   // ======== MASK HANDLERS ========
   const onAddGroup = useCallback(() => {
@@ -926,7 +1086,22 @@ export default function EditorApp() {
     setPreviewModalOpen(true);
   }, []);
 
-  const openLoadJSONDialog = useCallback(() => fileInputRef.current?.click(), []);
+  const openLoadJSONDialog = useCallback(async () => {
+    if (isDesktopApp()) {
+      try {
+        const res = await openDesktopProject();
+        if (res && res.filePath && res.content) {
+          const data = JSON.parse(res.content);
+          applyProjectData(data);
+          setCurrentFilePath(res.filePath);
+        }
+      } catch (err) {
+        console.error('Failed to open project:', err);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, [applyProjectData]);
 
   // ======== LOGO PRELOAD ========
   useEffect(() => {
@@ -1208,7 +1383,8 @@ export default function EditorApp() {
     copySelectedPanels,
     cutSelectedPanels,
     pastePanels,
-    saveJSON
+    saveJSON,
+    saveJSONAs
   );
 
   // ======== ZOOM ========
@@ -1593,71 +1769,8 @@ export default function EditorApp() {
             reader.onload = () => {
               try {
                 const data = JSON.parse(String(reader.result));
-                let parsedWiringPages: WiringPage[] = [];
-                let parsedActiveWiringPageId = 'wiring-1';
-                if (Array.isArray(data.wiringPages) && data.wiringPages.length > 0) {
-                  parsedWiringPages = data.wiringPages;
-                  parsedActiveWiringPageId = data.activeWiringPageId ?? data.wiringPages[0].id;
-                } else if (Array.isArray(data.panels) && Array.isArray(data.cables)) {
-                  parsedWiringPages = [{
-                    id: 'wiring-1',
-                    name: 'Schema 1',
-                    panels: data.panels,
-                    cables: data.cables,
-                  }];
-                  parsedActiveWiringPageId = 'wiring-1';
-                }
-
-                if (parsedWiringPages.length > 0) {
-                  setWiringPages(parsedWiringPages);
-                  setActiveWiringPageId(parsedActiveWiringPageId);
-
-                  let parsedMaskPages: MaskPage[] = [];
-                  let parsedActiveMaskPageId = 'mask-1';
-                  if (Array.isArray(data.maskPages) && data.maskPages.length > 0) {
-                    parsedMaskPages = data.maskPages;
-                    parsedActiveMaskPageId = data.activeMaskPageId ?? data.maskPages[0].id;
-                  } else if (Array.isArray(data.screenGroups) && data.screenGroups.length > 0) {
-                    parsedMaskPages = [{
-                      id: 'mask-1',
-                      name: 'Page 1',
-                      screenGroups: data.screenGroups,
-                    }];
-                    parsedActiveMaskPageId = 'mask-1';
-                  } else {
-                    const allP = parsedWiringPages.flatMap(wp => wp.panels);
-                    parsedMaskPages = [{
-                      id: 'mask-1',
-                      name: 'Page 1',
-                      screenGroups: autoGroupPanels(allP),
-                    }];
-                    parsedActiveMaskPageId = 'mask-1';
-                  }
-                  setMaskPages(parsedMaskPages);
-                  setActiveMaskPageId(parsedActiveMaskPageId);
-
-                  if (Array.isArray(data.cards)) setCards(data.cards);
-                  setSelectedCardId(data.selectedCardId ?? null);
-                  if (typeof data.activeLink === 'number') setActiveLink(data.activeLink);
-                  if (data.meta?.presetId) setPresetId(data.meta.presetId);
-                  if (data.eventName) setEventName(data.eventName);
-                  if (data.eventDate) setEventDate(data.eventDate);
-                  if (Array.isArray(data.servers) && data.servers.length > 0) {
-                    setServers(data.servers);
-                  } else if (data.serverId) {
-                    setServers([{ id: 'srv-1', modelId: data.serverId }]);
-                  }
-                  if (data.fiberCounts && typeof data.fiberCounts === 'object') {
-                    setFiberCounts(data.fiberCounts as Record<string, number>);
-                  }
-                  if (typeof data.meta?.rows === 'number') setRows(data.meta.rows);
-                  if (typeof data.meta?.cols === 'number') setCols(data.meta.cols);
-                  setSelectedGroupId(null);
-                  setSelectedPanels(new Set());
-                  setSelectedCables(new Set());
-                  setDraft(null);
-                  undoRef.current = []; redoRef.current = [];
-                }
+                applyProjectData(data);
+                setCurrentFilePath(null);
               } catch { /* noop */ }
               (e.target as HTMLInputElement).value = '';
             };
@@ -1683,11 +1796,11 @@ export default function EditorApp() {
             fiberCounts,
           }}
         />
-        {/* Всплывающее уведомление (Toast) */}
+        {/* Всплывающее уведомление (Toast) справа внизу */}
         {toastMessage && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-50">
-            <div className="bg-[#10121a]/95 backdrop-blur-md border border-cyan-500/40 text-cyan-200 px-3.5 py-1.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <div className="fixed bottom-6 right-6 pointer-events-none z-[9999] transition-all animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="bg-[#10121a]/95 backdrop-blur-md border border-white/[0.12] text-neutral-100 px-3.5 py-2 rounded-xl shadow-2xl shadow-black/80 text-xs font-medium flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               <span>{toastMessage}</span>
             </div>
           </div>

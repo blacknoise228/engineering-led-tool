@@ -1,6 +1,7 @@
 // src/lib/led-editor-svg/utils.ts
 import type { Panel, Vec, CableEx, CardInstance, ScreenGroup } from './types';
 import { PRESETS, SERVERS, CARDS, FIBER_CONVERTERS } from './presets';
+import { savePngBlob, savePngFile, showToast } from '../desktop';
 
 export const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 9)}`;
 export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
@@ -306,18 +307,6 @@ export function exportSvgToPng(
     new Promise((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob(): null blob'))), 'image/png')
     );
-
-  const downloadBlob = (blob: Blob, name: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.download = name.endsWith('.png') ? name : `${name}.png`;
-    a.href = url;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Small delay before revoke to avoid some browsers cutting the download
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
 
   // Find the stage group that carries pan/scale. In your SvgStage it's [data-root].
   const findStage = (root: SVGSVGElement) =>
@@ -768,21 +757,22 @@ export function exportSvgToPng(
 
       // Use toBlob + objectURL (robust; avoids 0-byte/data: quirks)
       const blob = await toBlob(canvas);
-      downloadBlob(blob, filename);
+      const saved = await savePngBlob(filename, blob);
+      if (saved) {
+        showToast('PNG сохранен');
+      }
     } catch (e) {
       console.error('Export failed, fallback to DataURL:', e);
       // Fallback (in case toBlob fails on very large canvases)
-      const a = document.createElement('a');
-      a.download = filename.endsWith('.png') ? filename : `${filename}.png`;
-      a.href = (document.createElement('canvas').toDataURL('image/png')); // placeholder
-      // Try direct dataurl from original canvas (may be huge)
       try {
         const fallbackUrl = (document.createElement('canvas'), (e as CanvasRenderingContext2D)?.canvas?.toDataURL?.('image/png'));
-        if (typeof fallbackUrl === 'string' && fallbackUrl.startsWith('data:image/png')) a.href = fallbackUrl;
+        if (typeof fallbackUrl === 'string' && fallbackUrl.startsWith('data:image/png')) {
+          const saved = await savePngFile(filename, fallbackUrl);
+          if (saved) {
+            showToast('PNG сохранен');
+          }
+        }
       } catch { }
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
     }
   };
   img.onerror = () => console.error('Failed to load SVG data for export');
