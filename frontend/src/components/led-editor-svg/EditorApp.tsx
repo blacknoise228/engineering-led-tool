@@ -35,6 +35,7 @@ import { autoGroupPanels } from '@/lib/led-editor-svg/mask-contour';
 import { exportMaskPNG, exportMaskZIP, prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
+import ConfirmModal from './ConfirmModal';
 import PageBar from './PageBar';
 import {
   isDesktopApp,
@@ -1103,6 +1104,49 @@ export default function EditorApp() {
     }
   }, [applyProjectData]);
 
+  // ======== NEW PROJECT ========
+  const [confirmNewProjectOpen, setConfirmNewProjectOpen] = useState(false);
+
+  const resetProjectState = useCallback(() => {
+    setWiringPages([{ id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] }]);
+    setActiveWiringPageId('wiring-1');
+    setMaskPages([{ id: 'mask-1', name: 'Page 1', screenGroups: [] }]);
+    setActiveMaskPageId('mask-1');
+    setCards([]);
+    setSelectedCardId(null);
+    setActiveLink(0);
+    setPresetId(PRESETS[0].id);
+    setRows(0);
+    setCols(0);
+    setEventName('Event');
+    setEventDate(new Date().toISOString().slice(0, 10));
+    setServers([{ id: 'srv-1', modelId: SERVERS[0]?.id ?? 'hp-z2' }]);
+    setCardId('');
+    setFiberCounts({});
+    setSelectedPanels(new Set());
+    setSelectedCables(new Set());
+    setSelectedGroupId(null);
+    setDraft(null);
+    setCurrentFilePath(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    undoRef.current = [];
+    redoRef.current = [];
+    setPan({ x: 0, y: 0 });
+    setScale(1);
+    showToast('Новый проект создан');
+  }, [setSelectedGroupId, showToast]);
+
+  const newProject = useCallback(() => {
+    const hasContent = allPanels.length > 0 || cards.length > 0 || currentFilePath !== null;
+    if (hasContent) {
+      setConfirmNewProjectOpen(true);
+      return;
+    }
+    resetProjectState();
+  }, [allPanels.length, cards.length, currentFilePath, resetProjectState]);
+
   // ======== LOGO PRELOAD ========
   useEffect(() => {
     (async () => {
@@ -1384,7 +1428,8 @@ export default function EditorApp() {
     cutSelectedPanels,
     pastePanels,
     saveJSON,
-    saveJSONAs
+    saveJSONAs,
+    newProject
   );
 
   // ======== ZOOM ========
@@ -1452,6 +1497,7 @@ export default function EditorApp() {
         setRows={setRows} setCols={setCols}
         createMatrix={createMatrix} clearAll={clearAll}
         exportPNG={exportPNG} saveJSON={saveJSON} openLoadJSONDialog={openLoadJSONDialog}
+        newProject={newProject}
         clearSelectedWiring={clearSelectedWiring}
         hasPanelSelection={selectedPanels.size > 0}
         cables={cables}
@@ -1795,6 +1841,20 @@ export default function EditorApp() {
             logoDataUrl,
             fiberCounts,
           }}
+        />
+
+        {/* Модальное окно подтверждения нового проекта */}
+        <ConfirmModal
+          open={confirmNewProjectOpen}
+          title="Начать новый проект?"
+          description="Все текущие панели, схемы и настройки будут удалены. Несохраненные изменения будут потеряны."
+          confirmText="Начать новый проект"
+          cancelText="Отмена"
+          onConfirm={() => {
+            setConfirmNewProjectOpen(false);
+            resetProjectState();
+          }}
+          onClose={() => setConfirmNewProjectOpen(false)}
         />
         {/* Всплывающее уведомление (Toast) справа внизу */}
         {toastMessage && (

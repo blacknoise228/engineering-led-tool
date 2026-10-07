@@ -33,6 +33,7 @@ type SidebarProps = {
   createMatrix: () => void; clearAll: () => void;
 
   exportPNG: () => void; saveJSON: () => void; openLoadJSONDialog: () => void;
+  newProject?: () => void;
 
   clearSelectedWiring: () => void;
   hasPanelSelection: boolean;
@@ -121,7 +122,7 @@ export default function Sidebar(props: SidebarProps) {
     tool, setTool,
     presetId, setPresetId, setRows, setCols,
     createMatrix, clearAll,
-    exportPNG, saveJSON, openLoadJSONDialog,
+    exportPNG, saveJSON, openLoadJSONDialog, newProject,
     clearSelectedWiring, hasPanelSelection,
     autoSnakeH_TL, autoSnakeH_TR, autoSnakeH_BL, autoSnakeH_BR,
     autoSnakeV_TL, autoSnakeV_TR, autoSnakeV_BL, autoSnakeV_BR,
@@ -1074,21 +1075,36 @@ export default function Sidebar(props: SidebarProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06]">
-            <button
-              className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-lg shadow-blue-500/20 transition active:scale-[0.99] flex items-center justify-center gap-1.5"
-              onClick={saveJSON}
-              title="Сохранить проект в .ss (Ctrl+S)"
-            >
-              <span>Сохранить проект</span>
-              <span className="text-[10px] text-white/70 font-mono">Ctrl+S</span>
-            </button>
-            <button
-              className="py-2.5 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] text-neutral-200 border border-white/[0.08] text-xs font-medium transition flex items-center justify-center gap-1.5"
-              onClick={openLoadJSONDialog}
-            >
-              Загрузить проект
-            </button>
+          <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+            {newProject && (
+              <button
+                className="w-full py-2.5 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] hover:border-emerald-500/30 text-neutral-200 hover:text-white border border-white/[0.08] text-xs font-medium transition active:scale-[0.99] flex items-center justify-center gap-1.5"
+                onClick={newProject}
+                title="Начать новый проект (Ctrl+N)"
+              >
+                <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Новый проект</span>
+                <span className="text-[10px] text-neutral-400 font-mono">Ctrl+N</span>
+              </button>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-lg shadow-blue-500/20 transition active:scale-[0.99] flex items-center justify-center gap-1.5"
+                onClick={saveJSON}
+                title="Сохранить проект в .ss (Ctrl+S)"
+              >
+                <span>Сохранить проект</span>
+                <span className="text-[10px] text-white/70 font-mono">Ctrl+S</span>
+              </button>
+              <button
+                className="py-2.5 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] text-neutral-200 border border-white/[0.08] text-xs font-medium transition flex items-center justify-center gap-1.5"
+                onClick={openLoadJSONDialog}
+              >
+                Загрузить проект
+              </button>
+            </div>
           </div>
         </>
       )}

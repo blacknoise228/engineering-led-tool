@@ -51,7 +51,8 @@ export function useHotkeys(
     cutSelected?: () => void,
     paste?: () => void,
     saveProject?: () => void,
-    saveProjectAs?: () => void
+    saveProjectAs?: () => void,
+    newProject?: () => void
 ) {
     const { scale, svgRef, draft, pan, tool, selectedCables, selectedPanels, selectedGroupIds } = values;
     useEffect(() => {
@@ -88,6 +89,14 @@ export function useHotkeys(
                     saveProjectAs();
                 } else if (saveProject) {
                     saveProject();
+                }
+                return;
+            }
+
+            if (isCtrlOrMeta && !e.shiftKey && !e.altKey && (e.code === 'KeyN' || e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т')) {
+                e.preventDefault();
+                if (newProject) {
+                    newProject();
                 }
                 return;
             }
@@ -189,7 +198,7 @@ export function useHotkeys(
         draft, pan, scale, applySnapToDelta, onPointerUp,
         deleteSelected, exportPNG, redo, undo,
         selectedPanels.size, selectedCables.size, selectedGroupIds, tool,
-        duplicateSelectedPanels, selectAll, copySelected, cutSelected, paste, saveProject, saveProjectAs,
+        duplicateSelectedPanels, selectAll, copySelected, cutSelected, paste, saveProject, saveProjectAs, newProject,
         setDraft, dragGroup, setMarquee, marqueeStart, setPanels, setTool, svgRef
     ]);
 }
