@@ -11,5 +11,13 @@
   "author": {
     "name": "blacknoise",
     "email": "blacknoise228@gmail.com"
+  },
+  "info": {
+    "companyName": "blacknoise",
+    "productName": "SHOW SCREEN ENGINEERING",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright (C) blacknoise",
+    "comments": "SHOW SCREEN ENGINEERING"
   }
 }
+

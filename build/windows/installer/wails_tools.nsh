@@ -5,19 +5,19 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "Remote Engineering Tool"
+    !define INFO_PROJECTNAME "ss-engineering"
 !endif
 !ifndef INFO_COMPANYNAME
     !define INFO_COMPANYNAME "blacknoise"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "Remote Engineering Tool"
+    !define INFO_PRODUCTNAME "SHOW SCREEN ENGINEERING"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "0.1.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "blacknoise"
+    !define INFO_COPYRIGHT "Copyright (C) blacknoise"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

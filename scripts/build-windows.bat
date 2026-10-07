@@ -4,6 +4,6 @@ echo Start running the script...
 cd ../
 
 echo Start building the app for windows platform...
-wails build --clean --platform windows/amd64
+wails build --clean --platform windows/amd64 -nsis
 
 echo End running the script!
