@@ -23,7 +23,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "ss-engineering",
+		Title:             "SHOW SCREEN ENGINEERING",
 		Width:             1920,
 		Height:            1080,
 		MinWidth:          1024,
@@ -68,7 +68,7 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "ss-engineering",
+				Title:   "SHOW SCREEN ENGINEERING",
 				Message: "",
 				Icon:    icon,
 			},
