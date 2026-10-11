@@ -804,7 +804,7 @@ export default function Sidebar(props: SidebarProps) {
                       title={`Порт P${i + 1}`}
                     >
                       <span
-                        className="font-mono text-[14px] font-bold leading-none select-none"
+                        className="font-mono text-[18px] font-bold leading-none select-none"
                         style={{ color: '#fff', ...textOutline('#000') }}
                       >
                         {i + 1}
