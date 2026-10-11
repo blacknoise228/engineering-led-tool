@@ -71,6 +71,7 @@ export const CARDS: CardPreset[] = [
   // Processors
   { id: 'vx1000', name: 'NovaStar VX1000', category: 'processor', maxInput: '3840×1080 @60Hz', outputPorts: 10 },
   { id: 'novapro-jr', name: 'NovaPro Junior', category: 'processor', maxInput: '7680×1080 @60Hz', outputPorts: 16 },
+  { id: 'h2', name: 'NovaStar H2', category: 'processor', maxInput: '7680×1080 @60Hz', outputPorts: 16 },
   { id: 'h5', name: 'NovaStar H5', category: 'processor', maxInput: '7680×1080 @60Hz', outputPorts: 16 },
   { id: 'h5_e', name: 'NovaStar H5 Enhanced', category: 'processor', maxInput: '7680×2160 @60Hz', outputPorts: 40 },
   { id: 'h9', name: 'NovaStar H9', category: 'processor', maxInput: '7680×1080 @60Hz', outputPorts: 16 },
