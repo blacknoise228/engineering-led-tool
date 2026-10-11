@@ -239,10 +239,18 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macro wails.associateFiles
     ; Create file associations
     
+      !insertmacro APP_ASSOCIATE "ss" "SHOW SCREEN Engineering Project" "SHOW SCREEN Engineering Project File" "$INSTDIR\icon.ico" "Open with ${INFO_PRODUCTNAME}" "$INSTDIR\${PRODUCT_EXECUTABLE} $\"%1$\""
+
+      File "..\icon.ico"
+    
 !macroend
 
 !macro wails.unassociateFiles
     ; Delete app associations
+    
+      !insertmacro APP_UNASSOCIATE "ss" "SHOW SCREEN Engineering Project"
+
+      Delete "$INSTDIR\icon.ico"
     
 !macroend
 

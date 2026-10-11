@@ -46,6 +46,14 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId:               "d6f4c54e-e1bb-4e67-8fa0-68112e75e923",
+			OnSecondInstanceLaunch: app.onSecondInstanceLaunch,
+		},
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: false,
+		},
 		// Windows platform specific options
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,
@@ -67,6 +75,7 @@ func main() {
 			Appearance:           mac.NSAppearanceNameDarkAqua,
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
+			OnFileOpen:           app.onFileOpen,
 			About: &mac.AboutInfo{
 				Title:   "SHOW SCREEN ENGINEERING",
 				Message: "",

@@ -27,6 +27,14 @@ interface WailsApp {
   SaveProject: (targetPath: string, defaultFilename: string, content: string) => Promise<string>;
   SavePNG: (defaultFilename: string, base64Data: string) => Promise<string>;
   SaveZIP: (defaultFilename: string, base64Data: string) => Promise<string>;
+  GetInitialProject: () => Promise<{ filePath?: string; content?: string } | null>;
+  ReadProjectFile: (filePath: string) => Promise<{ filePath?: string; content?: string }>;
+}
+
+interface WailsRuntime {
+  EventsOn?: (eventName: string, callback: (data: unknown) => void) => () => void;
+  OnFileDrop?: (callback: (x: number, y: number, paths: string[]) => void, useDropTarget: boolean) => void;
+  OnFileDropOff?: () => void;
 }
 
 interface WailsWindow {
@@ -35,6 +43,7 @@ interface WailsWindow {
       App?: WailsApp;
     };
   };
+  runtime?: WailsRuntime;
 }
 
 function getWailsApp(): WailsApp | null {
@@ -143,5 +152,74 @@ export async function saveDesktopZIP(filename: string, base64Data: string): Prom
     console.error('Failed to save ZIP in desktop app:', e);
     return null;
   }
+}
+
+export async function getInitialDesktopProject(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (!app?.GetInitialProject) return null;
+  try {
+    const res = await app.GetInitialProject();
+    if (res && res.filePath && res.content) {
+      return {
+        filePath: res.filePath,
+        content: res.content,
+      };
+    }
+  } catch (e) {
+    console.error('Failed to get initial project:', e);
+  }
+  return null;
+}
+
+export async function readDesktopProjectFile(filePath: string): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (!app?.ReadProjectFile) return null;
+  try {
+    const res = await app.ReadProjectFile(filePath);
+    if (res && res.filePath && res.content) {
+      return {
+        filePath: res.filePath,
+        content: res.content,
+      };
+    }
+  } catch (e) {
+    console.error('Failed to read project file:', e);
+  }
+  return null;
+}
+
+export function onDesktopProjectOpen(callback: (project: { filePath: string; content: string }) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const w = window as unknown as WailsWindow;
+  if (w.runtime?.EventsOn) {
+    return w.runtime.EventsOn('open-project', (data: unknown) => {
+      const res = data as { filePath?: string; content?: string } | null;
+      if (res && res.filePath && res.content) {
+        callback({
+          filePath: res.filePath,
+          content: res.content,
+        });
+      }
+    });
+  }
+  return () => {};
+}
+
+export function setupDesktopFileDrop(onFilePaths: (paths: string[]) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const w = window as unknown as WailsWindow;
+  if (w.runtime?.OnFileDrop) {
+    w.runtime.OnFileDrop((_x: number, _y: number, paths: string[]) => {
+      if (Array.isArray(paths) && paths.length > 0) {
+        onFilePaths(paths);
+      }
+    }, false);
+    return () => {
+      if (w.runtime?.OnFileDropOff) {
+        w.runtime.OnFileDropOff();
+      }
+    };
+  }
+  return () => {};
 }
 

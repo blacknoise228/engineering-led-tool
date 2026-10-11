@@ -42,6 +42,10 @@ import {
   openDesktopProject,
   saveDesktopProject,
   useToastListener,
+  getInitialDesktopProject,
+  readDesktopProjectFile,
+  onDesktopProjectOpen,
+  setupDesktopFileDrop,
 } from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
@@ -908,6 +912,92 @@ export default function EditorApp() {
       undoRef.current = []; redoRef.current = [];
     }
   }, [setSelectedGroupId]);
+
+  // ======== AUTO LOAD / CLI / SECOND INSTANCE / DRAG & DROP ========
+  useEffect(() => {
+    // 1. Initial project passed via CLI argument (e.g. double-click in explorer)
+    getInitialDesktopProject().then(res => {
+      if (res && res.content) {
+        try {
+          const data = JSON.parse(res.content);
+          applyProjectData(data);
+          setCurrentFilePath(res.filePath);
+          showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+        } catch (e) {
+          console.error('Failed to parse initial project:', e);
+        }
+      }
+    });
+
+    // 2. Project opened via second instance (when app is already running)
+    const unsubProjectOpen = onDesktopProjectOpen(res => {
+      if (res && res.content) {
+        try {
+          const data = JSON.parse(res.content);
+          applyProjectData(data);
+          setCurrentFilePath(res.filePath);
+          showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+        } catch (e) {
+          console.error('Failed to parse project from second instance:', e);
+        }
+      }
+    });
+
+    // 3. Desktop drag & drop file path
+    const unsubFileDrop = setupDesktopFileDrop(async paths => {
+      const ssPath = paths.find(p => {
+        const lower = p.toLowerCase();
+        return lower.endsWith('.ss') || lower.endsWith('.json');
+      });
+      if (ssPath) {
+        try {
+          const res = await readDesktopProjectFile(ssPath);
+          if (res && res.content) {
+            const data = JSON.parse(res.content);
+            applyProjectData(data);
+            setCurrentFilePath(res.filePath);
+            showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+          }
+        } catch (e) {
+          console.error('Failed to load dropped desktop file:', e);
+        }
+      }
+    });
+
+    // 4. HTML5 drag & drop fallback (works in browser and webview)
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer?.files?.[0];
+      if (file && (file.name.endsWith('.ss') || file.name.endsWith('.json'))) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(String(reader.result));
+            applyProjectData(data);
+            setCurrentFilePath(null);
+            showToast(`Проект загружен: ${file.name}`);
+          } catch (err) {
+            console.error('Failed to parse dropped file:', err);
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+
+    return () => {
+      unsubProjectOpen();
+      unsubFileDrop();
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [applyProjectData, showToast]);
 
   // ======== SAVE JSON ========
   const saveJSON = useCallback(async () => {

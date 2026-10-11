@@ -8,17 +8,47 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx             context.Context
+	initialFilePath string
+}
+
+func findProjectArg(args []string) string {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		clean := strings.Trim(arg, "\"'")
+		if clean == "" {
+			continue
+		}
+		lower := strings.ToLower(clean)
+		if strings.HasSuffix(lower, ".ss") || strings.HasSuffix(lower, ".json") {
+			if abs, err := filepath.Abs(clean); err == nil {
+				if _, err := os.Stat(abs); err == nil {
+					return abs
+				}
+			}
+			if _, err := os.Stat(clean); err == nil {
+				return clean
+			}
+		}
+	}
+	return ""
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	app := &App{}
+	if len(os.Args) > 1 {
+		app.initialFilePath = findProjectArg(os.Args[1:])
+	}
+	return app
 }
 
 // startup is called at application startup
@@ -27,8 +57,53 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+// onSecondInstanceLaunch is called when a second instance of the application is launched
+func (a *App) onSecondInstanceLaunch(secondInstanceData options.SecondInstanceData) {
+	if a.ctx != nil {
+		runtime.WindowUnminimise(a.ctx)
+		runtime.Show(a.ctx)
+	}
+
+	targetFile := findProjectArg(secondInstanceData.Args)
+	if targetFile == "" && len(secondInstanceData.Args) > 0 {
+		for _, arg := range secondInstanceData.Args {
+			if strings.HasPrefix(arg, "-") {
+				continue
+			}
+			clean := strings.Trim(arg, "\"'")
+			if clean == "" {
+				continue
+			}
+			full := filepath.Join(secondInstanceData.WorkingDirectory, clean)
+			if _, err := os.Stat(full); err == nil {
+				targetFile = full
+				break
+			}
+		}
+	}
+
+	if targetFile != "" && a.ctx != nil {
+		res, err := a.ReadProjectFile(targetFile)
+		if err == nil && res != nil {
+			runtime.EventsEmit(a.ctx, "open-project", res)
+		}
+	}
+}
+
+// onFileOpen is called on macOS when a file is opened with the application
+func (a *App) onFileOpen(filePath string) {
+	if a.ctx == nil {
+		a.initialFilePath = filePath
+		return
+	}
+	res, err := a.ReadProjectFile(filePath)
+	if err == nil && res != nil {
+		runtime.EventsEmit(a.ctx, "open-project", res)
+	}
+}
+
 // domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
+func (a *App) domReady(ctx context.Context) {
 	// Add your action here
 }
 
@@ -47,6 +122,36 @@ func (a *App) shutdown(ctx context.Context) {
 type OpenProjectResult struct {
 	FilePath string `json:"filePath"`
 	Content  string `json:"content"`
+}
+
+// ReadProjectFile reads a project file by path and returns its content.
+func (a *App) ReadProjectFile(filePath string) (*OpenProjectResult, error) {
+	clean := strings.Trim(filePath, "\"'")
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
+	}
+
+	absPath, err := filepath.Abs(clean)
+	if err != nil {
+		absPath = clean
+	}
+
+	return &OpenProjectResult{
+		FilePath: absPath,
+		Content:  string(data),
+	}, nil
+}
+
+// GetInitialProject returns the project file passed as CLI argument on startup.
+// Once returned, initialFilePath is cleared.
+func (a *App) GetInitialProject() (*OpenProjectResult, error) {
+	if a.initialFilePath == "" {
+		return nil, nil
+	}
+	path := a.initialFilePath
+	a.initialFilePath = ""
+	return a.ReadProjectFile(path)
 }
 
 // OpenProjectDialog opens a native file dialog to select a project file (.ss, .json)
@@ -72,15 +177,7 @@ func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
 		return &OpenProjectResult{FilePath: "", Content: ""}, nil
 	}
 
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
-	}
-
-	return &OpenProjectResult{
-		FilePath: filePath,
-		Content:  string(data),
-	}, nil
+	return a.ReadProjectFile(filePath)
 }
 
 // SaveProject saves the project content.
