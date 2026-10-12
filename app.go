@@ -104,7 +104,7 @@ func (a *App) onFileOpen(filePath string) {
 
 // domReady is called after front-end resources have been loaded
 func (a *App) domReady(ctx context.Context) {
-	// Add your action here
+	runtime.WindowMaximise(ctx)
 }
 
 // beforeClose is called when the application is about to quit,

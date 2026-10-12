@@ -48,7 +48,7 @@ export default function NavBar() {
 
   return (
 <header
-  className="w-full h-[44px] shrink-0 bg-[#16181d] border-b border-[#2a2d36] flex items-center justify-between pl-4 select-none z-50"
+  className="w-full h-[32px] shrink-0 bg-[#16181d] border-b border-[#2a2d36] flex items-center justify-between pl-4 select-none z-50"
   style={{ "--wails-draggable": "drag" } as React.CSSProperties}
   onDoubleClick={onNavbarDblClick}
 >
@@ -65,7 +65,7 @@ export default function NavBar() {
             width={32}
             height={32}
           />
-          <span className="text-[11px] tracking-[2px] text-[#7a828e] font-semibold">
+          <span className="text-[14px] tracking-[2px] text-[#7a828e] font-semibold">
             SHOW SCREEN ENGINEERING
           </span>
         </div>

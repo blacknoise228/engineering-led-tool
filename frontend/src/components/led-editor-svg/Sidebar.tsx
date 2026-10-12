@@ -298,7 +298,7 @@ export default function Sidebar(props: SidebarProps) {
         // размеры/позиционирование
         'relative md:sticky md:top-0 flex-shrink-0',
         'w-full md:w-[24rem] lg:w-[26rem] max-w-full',
-        'h-screen',
+        'h-full',
         'overflow-y-auto supports-[scrollbar-gutter:stable]:scrollbar-gutter-stable',
         // стиль
         'border-r border-white/[0.07]',
