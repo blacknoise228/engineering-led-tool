@@ -481,18 +481,10 @@ export default function EditorApp() {
 
     pushHistory();
     setPanels(prev => [...prev, ...newPanels]);
-    const newGroup: ScreenGroup = {
-      id: uid('screen'),
-      name: `Screen ${screenGroups.length + 1}`,
-      panelIds: newPanels.map(p => p.id),
-      textureId: TEXTURES[screenGroups.length % TEXTURES.length].id,
-      strokeColor: '#ffffff',
-    };
-    setScreenGroups(prev => [...prev, newGroup]);
     setSelectedPanels(new Set());
     setSelectedCables(new Set());
     setDraft(null);
-  }, [cols, rows, presetId, panels, screenGroups.length, pushHistory, setPanels, setScreenGroups]);
+  }, [cols, rows, presetId, panels, pushHistory, setPanels]);
 
   const clearAll = useCallback(() => {
     pushHistory();
@@ -1268,16 +1260,8 @@ export default function EditorApp() {
     }));
 
     setPanels(prev => [...prev, ...clones]);
-    const newGroup: ScreenGroup = {
-      id: uid('screen'),
-      name: `Screen ${screenGroups.length + 1}`,
-      panelIds: clones.map(p => p.id),
-      textureId: TEXTURES[screenGroups.length % TEXTURES.length].id,
-      strokeColor: '#ffffff',
-    };
-    setScreenGroups(prev => [...prev, newGroup]);
     setSelectedPanels(new Set(clones.map(p => p.id)));
-  }, [panels, selectedPanels, screenGroups.length, pushHistory, setPanels, setScreenGroups]);
+  }, [panels, selectedPanels, pushHistory, setPanels]);
 
   // ======== COPY / CUT / PASTE PANELS ========
   const copySelectedPanels = useCallback(() => {
@@ -1417,15 +1401,6 @@ export default function EditorApp() {
       setCables(prev => [...prev, ...clonedCables]);
     }
 
-    const newGroup: ScreenGroup = {
-      id: uid('screen'),
-      name: `Screen ${screenGroups.length + 1}`,
-      panelIds: clonedPanels.map(p => p.id),
-      textureId: TEXTURES[screenGroups.length % TEXTURES.length].id,
-      strokeColor: '#ffffff',
-    };
-    setScreenGroups(prev => [...prev, newGroup]);
-
     setSelectedPanels(new Set(clonedPanels.map(p => p.id)));
     setSelectedCables(new Set());
     setDraft(null);
@@ -1441,7 +1416,7 @@ export default function EditorApp() {
     } catch {}
 
     showToast(`Вставлено панелей: ${clonedPanels.length}`);
-  }, [clipboard, activeWiringPageId, panels, pushHistory, setPanels, setCables, screenGroups.length, setScreenGroups, showToast]);
+  }, [clipboard, activeWiringPageId, panels, pushHistory, setPanels, setCables, showToast]);
 
   // ======== LABELS: S{card}-{port}-{n} (жёсткие типы) ========
 
