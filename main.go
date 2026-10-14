@@ -59,6 +59,7 @@ func main() {
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			DisableWindowIcon:    false,
+			DisablePinchZoom:     true,
 			// DisableFramelessWindowDecorations: false,
 			WebviewUserDataPath: "",
 		},
