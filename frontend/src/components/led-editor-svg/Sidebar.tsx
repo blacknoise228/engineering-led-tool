@@ -19,6 +19,7 @@ import type {
   CableEx,
   WiringPage,
   MaskPage,
+  MaskLogoConfig,
 } from "@/lib/led-editor-svg/types";
 import { buildSpecText } from "@/lib/led-editor-svg/utils";
 import SnakeIcon from "./icons/SnakeIcon";
@@ -154,6 +155,9 @@ type SidebarProps = {
   onOpenCardPresetsModal?: () => void;
   serverPresets?: ServerPreset[];
   onOpenServerPresetsModal?: () => void;
+
+  maskLogoConfig?: MaskLogoConfig;
+  onOpenMaskLogoModal?: () => void;
 };
 
 export default function Sidebar(props: SidebarProps) {
@@ -256,6 +260,8 @@ export default function Sidebar(props: SidebarProps) {
     allCables,
     allScreenGroups,
     onAddScreensFromWiringPage,
+    maskLogoConfig,
+    onOpenMaskLogoModal,
   } = props;
 
   // вкладки
@@ -1185,6 +1191,8 @@ export default function Sidebar(props: SidebarProps) {
           onDuplicateMaskPage={onDuplicateMaskPage}
           wiringPages={wiringPages}
           onAddScreensFromWiringPage={onAddScreensFromWiringPage}
+          maskLogoConfig={maskLogoConfig}
+          onOpenMaskLogoModal={onOpenMaskLogoModal}
         />
       )}
 

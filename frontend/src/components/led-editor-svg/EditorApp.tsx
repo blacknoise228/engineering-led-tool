@@ -31,7 +31,8 @@ import {
   boundsOfPanels, clientToStage,
   rectsIntersect, uid, ensureDataUrl
 } from '@/lib/led-editor-svg/utils';
-import type { CableEx, CardInstance, Panel, Tool, Vec, ScreenGroup, WiringPage, MaskPage, PanelClipboardData } from '@/lib/led-editor-svg/types';
+import type { CableEx, CardInstance, Panel, Tool, Vec, ScreenGroup, WiringPage, MaskPage, PanelClipboardData, MaskLogoConfig } from '@/lib/led-editor-svg/types';
+import { DEFAULT_MASK_LOGO_CONFIG } from '@/lib/led-editor-svg/types';
 import { exportPNGFunc } from '@/lib/led-editor/export-png';
 import { snapFunc } from '@/lib/led-editor/snapping';
 import { computeLabels } from '@/lib/led-editor/labels';
@@ -41,6 +42,7 @@ import { autoGroupPanels } from '@/lib/led-editor-svg/mask-contour';
 import { exportMaskPNG, exportMaskZIP, prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
+import MaskLogoModal from './MaskLogoModal';
 import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
 import CardPresetsModal from './CardPresetsModal';
@@ -64,6 +66,8 @@ import {
   loadDesktopServerPresets,
   saveDesktopServerPresets,
   getDesktopServersConfigPath,
+  loadDesktopMaskLogoConfig,
+  saveDesktopMaskLogoConfig,
 } from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
@@ -87,6 +91,9 @@ export default function EditorApp() {
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(DEFAULT_SERVER_PRESETS);
   const [serversConfigPath, setServersConfigPath] = useState<string>('');
   const [isServerPresetsModalOpen, setIsServerPresetsModalOpen] = useState(false);
+
+  const [maskLogoConfig, setMaskLogoConfig] = useState<MaskLogoConfig>(DEFAULT_MASK_LOGO_CONFIG);
+  const [isMaskLogoModalOpen, setIsMaskLogoModalOpen] = useState(false);
 
   const [rows, setRows] = useState(0);
   const [cols, setCols] = useState(0);
@@ -1017,6 +1024,30 @@ export default function EditorApp() {
         })
         .catch(e => console.error('Failed to initialize servers.json:', e));
     });
+
+    // Mask Logo Config (постоянные настройки логотипа на масках)
+    loadDesktopMaskLogoConfig().then(raw => {
+      if (raw && raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setMaskLogoConfig({
+              ...DEFAULT_MASK_LOGO_CONFIG,
+              ...parsed,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to parse mask logo config:', e);
+        }
+      }
+    });
+  }, []);
+
+  const handleSaveMaskLogoConfig = useCallback((newConfig: MaskLogoConfig) => {
+    setMaskLogoConfig(newConfig);
+    saveDesktopMaskLogoConfig(JSON.stringify(newConfig, null, 2)).catch(e =>
+      console.error('Failed to save mask logo config:', e)
+    );
   }, []);
 
   const handleSavePresets = useCallback(async (newPresets: PanelPreset[]) => {
@@ -1299,8 +1330,8 @@ export default function EditorApp() {
   }, [screenGroups]);
 
   const onExportMaskPNG = useCallback(() => {
-    exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name);
-  }, [allPanels, screenGroups, eventName, activeMaskPage.name]);
+    exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onExportMaskZIP = useCallback(() => {
     exportMaskZIP(allPanels, screenGroups, eventName, {
@@ -1311,8 +1342,8 @@ export default function EditorApp() {
       eventDate,
       logoDataUrl,
       fiberCounts,
-    }, activeMaskPage.name);
-  }, [allPanels, screenGroups, eventName, allCables, servers, cardId, cards, eventDate, logoDataUrl, fiberCounts, activeMaskPage.name]);
+    }, activeMaskPage.name, maskLogoConfig);
+  }, [allPanels, screenGroups, eventName, allCables, servers, cardId, cards, eventDate, logoDataUrl, fiberCounts, activeMaskPage.name, maskLogoConfig]);
 
   const onPreviewMask = useCallback(() => {
     setPreviewModalOpen(true);
@@ -1792,6 +1823,8 @@ export default function EditorApp() {
         allCables={allCables}
         allScreenGroups={allScreenGroups}
         onAddScreensFromWiringPage={addScreensFromWiringPage}
+        maskLogoConfig={maskLogoConfig}
+        onOpenMaskLogoModal={() => setIsMaskLogoModalOpen(true)}
       />
 
       <div className="flex-1 relative" onContextMenu={(e) => e.preventDefault()}>
@@ -1816,6 +1849,7 @@ export default function EditorApp() {
                 scale={scale}
                 showGuides={true}
                 showBadges={true}
+                maskLogoConfig={maskLogoConfig}
               />
             ) : (
               <PanelsLayer
@@ -2064,6 +2098,15 @@ export default function EditorApp() {
             cardPresets,
             serverPresets,
           }}
+          maskLogoConfig={maskLogoConfig}
+        />
+
+        {/* Модальное окно настройки логотипа бейджей на масках */}
+        <MaskLogoModal
+          open={isMaskLogoModalOpen}
+          onClose={() => setIsMaskLogoModalOpen(false)}
+          config={maskLogoConfig}
+          onSaveConfig={handleSaveMaskLogoConfig}
         />
 
         {/* Модальное окно управления прессетами панелей */}

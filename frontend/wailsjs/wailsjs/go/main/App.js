@@ -10,6 +10,10 @@ export function GetInitialProject() {
   return window['go']['main']['App']['GetInitialProject']();
 }
 
+export function GetMaskLogoConfigPath() {
+  return window['go']['main']['App']['GetMaskLogoConfigPath']();
+}
+
 export function GetPanelsConfigPath() {
   return window['go']['main']['App']['GetPanelsConfigPath']();
 }
@@ -20,6 +24,10 @@ export function GetServersConfigPath() {
 
 export function LoadCardPresets() {
   return window['go']['main']['App']['LoadCardPresets']();
+}
+
+export function LoadMaskLogoConfig() {
+  return window['go']['main']['App']['LoadMaskLogoConfig']();
 }
 
 export function LoadPanelPresets() {
@@ -56,6 +64,10 @@ export function SaveCardPresets(arg1) {
 
 export function SaveCardsFileDialog(arg1, arg2) {
   return window['go']['main']['App']['SaveCardsFileDialog'](arg1, arg2);
+}
+
+export function SaveMaskLogoConfig(arg1) {
+  return window['go']['main']['App']['SaveMaskLogoConfig'](arg1);
 }
 
 export function SavePNG(arg1, arg2) {

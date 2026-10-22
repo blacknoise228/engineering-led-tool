@@ -917,3 +917,67 @@ func (a *App) SaveServersFileDialog(defaultFilename string, content string) (str
 	return chosen, nil
 }
 
+// GetMaskLogoConfigPath returns the absolute path to mask_logo.json next to the executable.
+func (a *App) GetMaskLogoConfigPath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return filepath.Abs("mask_logo.json")
+	}
+	realExe, err := filepath.EvalSymlinks(exe)
+	if err == nil {
+		exe = realExe
+	}
+	dir := filepath.Dir(exe)
+	return filepath.Join(dir, "mask_logo.json"), nil
+}
+
+// LoadMaskLogoConfig reads mask_logo.json if present.
+func (a *App) LoadMaskLogoConfig() (*PanelsConfigResult, error) {
+	targetPath, err := a.GetMaskLogoConfigPath()
+	if err != nil {
+		targetPath = "mask_logo.json"
+	}
+
+	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
+		return &PanelsConfigResult{
+			FilePath: targetPath,
+			Content:  string(data),
+		}, nil
+	}
+
+	cwdFile := "mask_logo.json"
+	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
+		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{
+				FilePath: absCwd,
+				Content:  string(data),
+			}, nil
+		}
+	}
+
+	return &PanelsConfigResult{
+		FilePath: targetPath,
+		Content:  "",
+	}, nil
+}
+
+// SaveMaskLogoConfig saves content string into mask_logo.json next to the binary.
+func (a *App) SaveMaskLogoConfig(content string) (string, error) {
+	targetPath, err := a.GetMaskLogoConfigPath()
+	if err != nil {
+		targetPath = "mask_logo.json"
+	}
+
+	dir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("ошибка создания каталога для mask_logo.json: %w", err)
+	}
+
+	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("ошибка записи mask_logo.json: %w", err)
+	}
+
+	return targetPath, nil
+}
+
+

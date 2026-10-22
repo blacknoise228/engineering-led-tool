@@ -84,6 +84,31 @@ export type PanelClipboardData = {
   isCut?: boolean;
 };
 
+/** Постоянные настройки логотипа на бейджах масок (единые для всех бейджиков) */
+export type MaskLogoConfig = {
+  /** Base64 Data URL кастомного логотипа. Если пусто — используется логотип приложения (/logo3.png) */
+  customLogoDataUrl?: string;
+  /** Имя файла кастомного логотипа */
+  customLogoFileName?: string;
+  /** Масштаб логотипа внутри бейджа (1 = 100%, по умолчанию 1) */
+  scale: number;
+  /** Смещение по X в % от стороны бейджа относительно центра (-45 .. +45, по умолчанию 0) */
+  offsetX: number;
+  /** Смещение по Y в % от стороны бейджа относительно стандартного положения (-20 .. +60, по умолчанию 0) */
+  offsetY: number;
+};
+
+export const DEFAULT_MASK_LOGO_URL = '/logo3.png';
+
+export const DEFAULT_MASK_LOGO_CONFIG: MaskLogoConfig = {
+  customLogoDataUrl: '',
+  customLogoFileName: '',
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+};
+
+
 
 
 

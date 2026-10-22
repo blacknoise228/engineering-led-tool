@@ -46,6 +46,9 @@ interface WailsApp {
   GetServersConfigPath: () => Promise<string>;
   OpenServersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
   SaveServersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadMaskLogoConfig?: () => Promise<{ filePath?: string; content?: string }>;
+  SaveMaskLogoConfig?: (content: string) => Promise<string>;
 }
 
 interface WailsRuntime {
@@ -612,6 +615,60 @@ export async function saveDesktopServersFileDialog(defaultFilename: string, cont
 
   return null;
 }
+
+const MASK_LOGO_STORAGE_KEY = 'ss_mask_logo_config';
+
+export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.LoadMaskLogoConfig) {
+    try {
+      const res = await app.LoadMaskLogoConfig();
+      if (res && typeof res.content === 'string' && res.content.trim()) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(MASK_LOGO_STORAGE_KEY, res.content);
+          } catch {}
+        }
+        return res.content;
+      }
+    } catch (e) {
+      console.error('Failed to load mask logo config from desktop:', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(MASK_LOGO_STORAGE_KEY);
+      if (saved && saved.trim()) {
+        return saved;
+      }
+    } catch (e) {
+      console.error('Failed to load mask logo config from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function saveDesktopMaskLogoConfig(content: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(MASK_LOGO_STORAGE_KEY, content);
+    } catch (e) {
+      console.error('Failed to save mask logo config to localStorage:', e);
+    }
+  }
+
+  const app = getWailsApp();
+  if (app?.SaveMaskLogoConfig) {
+    try {
+      await app.SaveMaskLogoConfig(content);
+    } catch (e) {
+      console.error('Failed to save mask logo config to desktop:', e);
+    }
+  }
+}
+
 
 
 

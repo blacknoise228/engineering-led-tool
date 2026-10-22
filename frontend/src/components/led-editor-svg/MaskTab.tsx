@@ -1,7 +1,7 @@
 // src/components/led-editor-svg/MaskTab.tsx
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
-import { Panel, ScreenGroup, MaskPage, WiringPage } from '@/lib/led-editor-svg/types';
+import { Panel, ScreenGroup, MaskPage, WiringPage, MaskLogoConfig, DEFAULT_MASK_LOGO_URL } from '@/lib/led-editor-svg/types';
 import { TEXTURES } from '@/lib/led-editor-svg/textures';
 import { computePixelPanels, computeContour, formatMeters, computeBadgeSize, getBadgeBounds } from '@/lib/led-editor-svg/mask-contour';
 import { prepareScreensData } from '@/lib/led-editor-svg/mask-export';
@@ -38,6 +38,9 @@ interface MaskTabProps {
   onDuplicateMaskPage?: (id: string) => void;
   wiringPages?: WiringPage[];
   onAddScreensFromWiringPage?: (pageId: string) => void;
+  // Кастомный логотип бейджей масок
+  maskLogoConfig?: MaskLogoConfig;
+  onOpenMaskLogoModal?: () => void;
 }
 
 /** Поле ввода числа с кнопками вверх/вниз для пошагового изменения по 1 px */
@@ -460,6 +463,8 @@ export default function MaskTab({
   onDuplicateMaskPage,
   wiringPages = [],
   onAddScreensFromWiringPage,
+  maskLogoConfig,
+  onOpenMaskLogoModal,
 }: MaskTabProps) {
   const panelsById = new Map(panels.map(p => [p.id, p]));
   const currentMaskPage = maskPages.find(p => p.id === activeMaskPageId);
@@ -584,6 +589,53 @@ export default function MaskTab({
           </div>
         </div>
       )}
+
+      {/* ЛОГОТИП НА МАСКАХ (ЕДИНЫЙ ДЛЯ ВСЕХ БЕЙДЖИКОВ) */}
+      <div className="p-3 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+            Логотип в бейдже
+          </span>
+          <span className="text-[10px] text-neutral-400 font-mono">
+            {Math.round((maskLogoConfig?.scale ?? 1) * 100)}%
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-12 h-9 rounded-lg bg-[#090a0f] border border-white/[0.08] flex items-center justify-center p-1 shrink-0 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  maskLogoConfig?.customLogoDataUrl && maskLogoConfig.customLogoDataUrl.trim()
+                    ? maskLogoConfig.customLogoDataUrl
+                    : DEFAULT_MASK_LOGO_URL
+                }
+                alt="Mask Badge Logo"
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-neutral-200 truncate">
+                {maskLogoConfig?.customLogoDataUrl && maskLogoConfig.customLogoDataUrl.trim()
+                  ? (maskLogoConfig.customLogoFileName || 'Свой логотип')
+                  : 'Логотип приложения'}
+              </div>
+              <div className="text-[10px] text-neutral-400 truncate">
+                Стандарт под все бейджики
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenMaskLogoModal}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#181a24] hover:bg-[#222534] text-cyan-300 border border-cyan-500/30 transition shrink-0"
+          >
+            Настроить
+          </button>
+        </div>
+      </div>
 
       {/* Шапка вкладки */}
       <div className="flex items-center justify-between">
