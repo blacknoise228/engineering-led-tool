@@ -475,6 +475,7 @@ export default function EditorApp() {
           w: pr.w / 5, h: pr.h / 5, r: 0,
           resH: pr.resH, resW: pr.resW, pitch_mm: pr.pitch_mm,
           label: '', presetId: pr.id, presetName: pr.name,
+          special: pr.special,
         });
       }
     }
