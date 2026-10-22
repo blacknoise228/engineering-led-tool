@@ -11,6 +11,7 @@ interface PanelPresetsModalProps {
   onSavePresets: (newPresets: PanelPreset[]) => Promise<void> | void;
   activePresetId?: string;
   onSelectPreset?: (id: string) => void;
+  onAddPanelToCanvas?: (presetId: string) => void;
   filePath?: string;
 }
 
@@ -42,6 +43,7 @@ export default function PanelPresetsModal({
   onSavePresets,
   activePresetId,
   onSelectPreset,
+  onAddPanelToCanvas,
   filePath,
 }: PanelPresetsModalProps) {
   const [list, setList] = useState<PanelPreset[]>(presets);
@@ -531,6 +533,18 @@ export default function PanelPresetsModal({
                 <span className="text-[11px] text-neutral-500">
                   Всего моделей: {list.length}
                 </span>
+                <button
+                  type="button"
+                  onClick={handleStartNew}
+                  className="flex items-center gap-1.5 text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline font-medium transition"
+                  title="Создать новый прессет"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>+ Новый прессет</span>
+                </button>
               </div>
             </div>
 
@@ -548,6 +562,57 @@ export default function PanelPresetsModal({
                         ? 'Заполните параметры и нажмите "Создать и сохранить"'
                         : `Изменение параметров для ${formName || selectedId}`}
                     </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isCreatingNew && (
+                      <button
+                        type="button"
+                        onClick={handleStartNew}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 text-xs font-medium border border-cyan-500/30 transition flex items-center gap-1.5"
+                        title="Создать новый прессет панели"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>+ Добавить панель</span>
+                      </button>
+                    )}
+                    {!isCreatingNew && onAddPanelToCanvas && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAddPanelToCanvas(selectedId);
+                          showToast(`Панель "${formName}" добавлена на схему`);
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/30 transition flex items-center gap-1.5"
+                        title="Добавить панель в текущую схему"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>+ В схему</span>
+                      </button>
+                    )}
+                    {!isCreatingNew && onSelectPreset && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectPreset(selectedId);
+                          showToast(`Выбрана модель: ${formName}`);
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
+                        title="Выбрать эту модель в селекторе"
+                      >
+                        <svg className="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>Выбрать</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -754,7 +819,40 @@ export default function PanelPresetsModal({
                     >
                       Отмена
                     </button>
-                  ) : null}
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleStartNew}
+                        className="px-3.5 py-2.5 rounded-xl bg-[#161822] hover:bg-[#1e202d] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 text-xs font-medium transition active:scale-[0.98] flex items-center gap-1.5"
+                        title="Создать новый прессет панели"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>+ Новый прессет</span>
+                      </button>
+                      {onAddPanelToCanvas && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onAddPanelToCanvas(selectedId);
+                            showToast(`Панель "${formName}" добавлена на схему`);
+                            onClose();
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/30 transition active:scale-[0.98] flex items-center gap-1.5"
+                          title="Добавить панель в схему"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                          <span>Добавить в схему</span>
+                        </button>
+                      )}
+                    </>
+                  )}
 
                   <button
                     type="submit"

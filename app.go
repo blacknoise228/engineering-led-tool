@@ -526,3 +526,394 @@ func (a *App) SavePanelsFileDialog(defaultFilename string, content string) (stri
 	return chosen, nil
 }
 
+
+// ============================================================================
+// CARDS & PROCESSORS PRESETS CONFIGURATION
+// ============================================================================
+
+const defaultInitialCardsJSON = `[
+  {
+    "id": "mctrl300",
+    "name": "NovaStar MCTRL300",
+    "category": "sending",
+    "maxInput": "1920×1200 @60Hz",
+    "outputPorts": 2
+  },
+  {
+    "id": "mctrl660",
+    "name": "NovaStar MCTRL660",
+    "category": "sending",
+    "maxInput": "3840×600 @60Hz",
+    "outputPorts": 4
+  },
+  {
+    "id": "mctrl660pro",
+    "name": "NovaStar MCTRL660 PRO",
+    "category": "sending",
+    "maxInput": "3840×600 @60Hz",
+    "outputPorts": 6
+  },
+  {
+    "id": "mctrl4k",
+    "name": "NovaStar MCTRL4K",
+    "category": "sending",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  },
+  {
+    "id": "vx1000",
+    "name": "NovaStar VX1000",
+    "category": "processor",
+    "maxInput": "3840×1080 @60Hz",
+    "outputPorts": 10
+  },
+  {
+    "id": "novapro-jr",
+    "name": "NovaPro Junior",
+    "category": "processor",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  },
+  {
+    "id": "h2",
+    "name": "NovaStar H2",
+    "category": "processor",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  },
+  {
+    "id": "h5",
+    "name": "NovaStar H5",
+    "category": "processor",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  },
+  {
+    "id": "h5_e",
+    "name": "NovaStar H5 Enhanced",
+    "category": "processor",
+    "maxInput": "7680×2160 @60Hz",
+    "outputPorts": 40
+  },
+  {
+    "id": "h9",
+    "name": "NovaStar H9",
+    "category": "processor",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  },
+  {
+    "id": "h9_e",
+    "name": "NovaStar H9 Enhanced",
+    "category": "processor",
+    "maxInput": "7680×1080 @60Hz",
+    "outputPorts": 16
+  }
+]`
+
+// GetCardsConfigPath returns the absolute path to cards.json next to the executable.
+func (a *App) GetCardsConfigPath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return filepath.Abs("cards.json")
+	}
+	realExe, err := filepath.EvalSymlinks(exe)
+	if err == nil {
+		exe = realExe
+	}
+	dir := filepath.Dir(exe)
+	return filepath.Join(dir, "cards.json"), nil
+}
+
+// LoadCardPresets reads cards.json.
+func (a *App) LoadCardPresets() (*PanelsConfigResult, error) {
+	targetPath, err := a.GetCardsConfigPath()
+	if err != nil {
+		targetPath = "cards.json"
+	}
+
+	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
+		return &PanelsConfigResult{
+			FilePath: targetPath,
+			Content:  string(data),
+		}, nil
+	}
+
+	cwdFile := "cards.json"
+	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
+		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{
+				FilePath: absCwd,
+				Content:  string(data),
+			}, nil
+		}
+	}
+
+	dir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(dir, 0755); err == nil {
+		_ = os.WriteFile(targetPath, []byte(defaultInitialCardsJSON), 0644)
+	}
+
+	return &PanelsConfigResult{
+		FilePath: targetPath,
+		Content:  defaultInitialCardsJSON,
+	}, nil
+}
+
+// SaveCardPresets saves content string into cards.json next to the binary.
+func (a *App) SaveCardPresets(content string) (string, error) {
+	targetPath, err := a.GetCardsConfigPath()
+	if err != nil {
+		targetPath = "cards.json"
+	}
+
+	dir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("ошибка создания каталога для cards.json: %w", err)
+	}
+
+	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("ошибка записи cards.json: %w", err)
+	}
+
+	return targetPath, nil
+}
+
+// OpenCardsFileDialog opens a native file dialog to choose a cards json file.
+func (a *App) OpenCardsFileDialog() (*PanelsConfigResult, error) {
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Выбрать файл пресетов карт",
+		Filters: []runtime.FileFilter{
+			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
+			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
+		},
+	})
+	if err != nil || filePath == "" {
+		return nil, err
+	}
+
+	clean := strings.Trim(filePath, "\"'")
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
+	}
+
+	absPath, err := filepath.Abs(clean)
+	if err != nil {
+		absPath = clean
+	}
+
+	return &PanelsConfigResult{
+		FilePath: absPath,
+		Content:  string(data),
+	}, nil
+}
+
+// SaveCardsFileDialog opens a native save file dialog to export cards presets.
+func (a *App) SaveCardsFileDialog(defaultFilename string, content string) (string, error) {
+	if defaultFilename == "" {
+		defaultFilename = "cards.json"
+	}
+	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
+		defaultFilename += ".json"
+	}
+
+	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Экспорт пресетов карт",
+		DefaultFilename: defaultFilename,
+		Filters: []runtime.FileFilter{
+			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
+			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
+		},
+	})
+	if err != nil || chosen == "" {
+		return "", err
+	}
+
+	dir := filepath.Dir(chosen)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("ошибка создания каталога: %w", err)
+	}
+
+	if err := os.WriteFile(chosen, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("ошибка записи файла: %w", err)
+	}
+
+	return chosen, nil
+}
+
+
+// ============================================================================
+// SERVERS PRESETS CONFIGURATION
+// ============================================================================
+
+const defaultInitialServersJSON = `[
+  {
+    "id": "hp-z2",
+    "name": "HP Z2"
+  },
+  {
+    "id": "hp-z4",
+    "name": "HP Z4"
+  },
+  {
+    "id": "ss-z20",
+    "name": "SS Z20"
+  },
+  {
+    "id": "ss-c34",
+    "name": "SS C34"
+  },
+  {
+    "id": "acer-predator-new",
+    "name": "Acer Predator (new)"
+  },
+  {
+    "id": "acer-predator-old",
+    "name": "Acer Predator (old)"
+  },
+  {
+    "id": "lenovo-legion",
+    "name": "Lenovo Legion"
+  },
+  {
+    "id": "intel-nuc",
+    "name": "Intel NUC"
+  },
+  {
+    "id": "mf-ms02",
+    "name": "Minisforum MS-02"
+  }
+]`
+
+// GetServersConfigPath returns the absolute path to servers.json next to the executable.
+func (a *App) GetServersConfigPath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return filepath.Abs("servers.json")
+	}
+	realExe, err := filepath.EvalSymlinks(exe)
+	if err == nil {
+		exe = realExe
+	}
+	dir := filepath.Dir(exe)
+	return filepath.Join(dir, "servers.json"), nil
+}
+
+// LoadServerPresets reads servers.json.
+func (a *App) LoadServerPresets() (*PanelsConfigResult, error) {
+	targetPath, err := a.GetServersConfigPath()
+	if err != nil {
+		targetPath = "servers.json"
+	}
+
+	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
+		return &PanelsConfigResult{
+			FilePath: targetPath,
+			Content:  string(data),
+		}, nil
+	}
+
+	cwdFile := "servers.json"
+	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
+		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{
+				FilePath: absCwd,
+				Content:  string(data),
+			}, nil
+		}
+	}
+
+	dir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(dir, 0755); err == nil {
+		_ = os.WriteFile(targetPath, []byte(defaultInitialServersJSON), 0644)
+	}
+
+	return &PanelsConfigResult{
+		FilePath: targetPath,
+		Content:  defaultInitialServersJSON,
+	}, nil
+}
+
+// SaveServerPresets saves content string into servers.json next to the binary.
+func (a *App) SaveServerPresets(content string) (string, error) {
+	targetPath, err := a.GetServersConfigPath()
+	if err != nil {
+		targetPath = "servers.json"
+	}
+
+	dir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("ошибка создания каталога для servers.json: %w", err)
+	}
+
+	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("ошибка записи servers.json: %w", err)
+	}
+
+	return targetPath, nil
+}
+
+// OpenServersFileDialog opens a native file dialog to choose a servers json file.
+func (a *App) OpenServersFileDialog() (*PanelsConfigResult, error) {
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Выбрать файл пресетов серверов",
+		Filters: []runtime.FileFilter{
+			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
+			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
+		},
+	})
+	if err != nil || filePath == "" {
+		return nil, err
+	}
+
+	clean := strings.Trim(filePath, "\"'")
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
+	}
+
+	absPath, err := filepath.Abs(clean)
+	if err != nil {
+		absPath = clean
+	}
+
+	return &PanelsConfigResult{
+		FilePath: absPath,
+		Content:  string(data),
+	}, nil
+}
+
+// SaveServersFileDialog opens a native save file dialog to export servers presets.
+func (a *App) SaveServersFileDialog(defaultFilename string, content string) (string, error) {
+	if defaultFilename == "" {
+		defaultFilename = "servers.json"
+	}
+	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
+		defaultFilename += ".json"
+	}
+
+	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Экспорт пресетов серверов",
+		DefaultFilename: defaultFilename,
+		Filters: []runtime.FileFilter{
+			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
+			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
+		},
+	})
+	if err != nil || chosen == "" {
+		return "", err
+	}
+
+	dir := filepath.Dir(chosen)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("ошибка создания каталога: %w", err)
+	}
+
+	if err := os.WriteFile(chosen, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("ошибка записи файла: %w", err)
+	}
+
+	return chosen, nil
+}
+

@@ -34,6 +34,18 @@ interface WailsApp {
   GetPanelsConfigPath: () => Promise<string>;
   OpenPanelsFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
   SavePanelsFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadCardPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveCardPresets: (content: string) => Promise<string>;
+  GetCardsConfigPath: () => Promise<string>;
+  OpenCardsFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveCardsFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadServerPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveServerPresets: (content: string) => Promise<string>;
+  GetServersConfigPath: () => Promise<string>;
+  OpenServersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveServersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
 }
 
 interface WailsRuntime {
@@ -342,6 +354,258 @@ export async function saveDesktopPanelsFileDialog(defaultFilename: string, conte
       return defaultFilename;
     } catch (e) {
       console.error('Failed to download panels json:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+
+// ============================================================================
+// CARDS DESKTOP PRESETS
+// ============================================================================
+
+export async function loadDesktopCardPresets(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.LoadCardPresets) {
+    try {
+      const res = await app.LoadCardPresets();
+      if (res && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath || 'cards.json',
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load card presets from desktop:', e);
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('ss_cards_presets');
+      if (saved) {
+        return { filePath: 'localStorage:cards.json', content: saved };
+      }
+    } catch (e) {
+      console.error('Failed to load card presets from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function saveDesktopCardPresets(content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SaveCardPresets) {
+    try {
+      const path = await app.SaveCardPresets(content);
+      return path || 'cards.json';
+    } catch (e) {
+      console.error('Failed to save card presets to desktop:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ss_cards_presets', content);
+      return 'localStorage:cards.json';
+    } catch (e) {
+      console.error('Failed to save card presets to localStorage:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+export async function getDesktopCardsConfigPath(): Promise<string> {
+  const app = getWailsApp();
+  if (app?.GetCardsConfigPath) {
+    try {
+      return await app.GetCardsConfigPath();
+    } catch (e) {
+      console.error('Failed to get cards config path:', e);
+    }
+  }
+  return 'cards.json';
+}
+
+export async function openDesktopCardsFileDialog(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.OpenCardsFileDialog) {
+    try {
+      const res = await app.OpenCardsFileDialog();
+      if (res && res.filePath && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath,
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to open cards file dialog:', e);
+    }
+  }
+  return null;
+}
+
+export async function saveDesktopCardsFileDialog(defaultFilename: string, content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SaveCardsFileDialog) {
+    try {
+      const path = await app.SaveCardsFileDialog(defaultFilename, content);
+      return path || null;
+    } catch (e) {
+      console.error('Failed to save cards file dialog:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback download
+  if (typeof window !== 'undefined') {
+    try {
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = defaultFilename.endsWith('.json') ? defaultFilename : `${defaultFilename}.json`;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return defaultFilename;
+    } catch (e) {
+      console.error('Failed to download cards json:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+
+// ============================================================================
+// SERVERS DESKTOP PRESETS
+// ============================================================================
+
+export async function loadDesktopServerPresets(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.LoadServerPresets) {
+    try {
+      const res = await app.LoadServerPresets();
+      if (res && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath || 'servers.json',
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load server presets from desktop:', e);
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('ss_servers_presets');
+      if (saved) {
+        return { filePath: 'localStorage:servers.json', content: saved };
+      }
+    } catch (e) {
+      console.error('Failed to load server presets from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function saveDesktopServerPresets(content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SaveServerPresets) {
+    try {
+      const path = await app.SaveServerPresets(content);
+      return path || 'servers.json';
+    } catch (e) {
+      console.error('Failed to save server presets to desktop:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ss_servers_presets', content);
+      return 'localStorage:servers.json';
+    } catch (e) {
+      console.error('Failed to save server presets to localStorage:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+export async function getDesktopServersConfigPath(): Promise<string> {
+  const app = getWailsApp();
+  if (app?.GetServersConfigPath) {
+    try {
+      return await app.GetServersConfigPath();
+    } catch (e) {
+      console.error('Failed to get servers config path:', e);
+    }
+  }
+  return 'servers.json';
+}
+
+export async function openDesktopServersFileDialog(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.OpenServersFileDialog) {
+    try {
+      const res = await app.OpenServersFileDialog();
+      if (res && res.filePath && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath,
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to open servers file dialog:', e);
+    }
+  }
+  return null;
+}
+
+export async function saveDesktopServersFileDialog(defaultFilename: string, content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SaveServersFileDialog) {
+    try {
+      const path = await app.SaveServersFileDialog(defaultFilename, content);
+      return path || null;
+    } catch (e) {
+      console.error('Failed to save servers file dialog:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback download
+  if (typeof window !== 'undefined') {
+    try {
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = defaultFilename.endsWith('.json') ? defaultFilename : `${defaultFilename}.json`;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return defaultFilename;
+    } catch (e) {
+      console.error('Failed to download servers json:', e);
       throw e;
     }
   }

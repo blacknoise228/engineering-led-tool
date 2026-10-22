@@ -13,10 +13,14 @@ import {
   DEFAULT_PANEL_PRESETS,
   LINK_COLORS_16,
   CARDS,
+  DEFAULT_CARD_PRESETS,
   SERVERS,
+  DEFAULT_SERVER_PRESETS,
   CARD_COLORS,
   NOVASTAR_PORT_MAX_PIXELS_50HZ,
   type PanelPreset,
+  type CardPreset,
+  type ServerPreset,
 } from '@/lib/led-editor-svg/presets';
 import {
   autoSnakeH_TL, autoSnakeH_TR, autoSnakeH_BL, autoSnakeH_BR,
@@ -39,6 +43,8 @@ import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
 import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
+import CardPresetsModal from './CardPresetsModal';
+import ServerPresetsModal from './ServerPresetsModal';
 import PageBar from './PageBar';
 import {
   isDesktopApp,
@@ -52,6 +58,12 @@ import {
   loadDesktopPanelPresets,
   saveDesktopPanelPresets,
   getDesktopPanelsConfigPath,
+  loadDesktopCardPresets,
+  saveDesktopCardPresets,
+  getDesktopCardsConfigPath,
+  loadDesktopServerPresets,
+  saveDesktopServerPresets,
+  getDesktopServersConfigPath,
 } from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
@@ -67,6 +79,15 @@ export default function EditorApp() {
   const [panelsConfigPath, setPanelsConfigPath] = useState<string>('');
   const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
   const [presetId, setPresetId] = useState(DEFAULT_PANEL_PRESETS[0]?.id || PRESETS[0].id);
+
+  const [cardPresets, setCardPresets] = useState<CardPreset[]>(DEFAULT_CARD_PRESETS);
+  const [cardsConfigPath, setCardsConfigPath] = useState<string>('');
+  const [isCardPresetsModalOpen, setIsCardPresetsModalOpen] = useState(false);
+
+  const [serverPresets, setServerPresets] = useState<ServerPreset[]>(DEFAULT_SERVER_PRESETS);
+  const [serversConfigPath, setServersConfigPath] = useState<string>('');
+  const [isServerPresetsModalOpen, setIsServerPresetsModalOpen] = useState(false);
+
   const [rows, setRows] = useState(0);
   const [cols, setCols] = useState(0);
 
@@ -495,7 +516,7 @@ export default function EditorApp() {
     setSelectedCables(new Set());
     setDraft(null);
   }, [cols, rows, presetId, panelPresets, panels, pushHistory, setPanels]);
-
+  
   const clearAll = useCallback(() => {
     pushHistory();
     setWiringPages([{ id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] }]);
@@ -944,6 +965,58 @@ export default function EditorApp() {
         })
         .catch(e => console.error('Failed to initialize panels.json:', e));
     });
+
+    // Cards
+    getDesktopCardsConfigPath().then(path => {
+      if (path) setCardsConfigPath(path);
+    });
+    loadDesktopCardPresets().then(res => {
+      if (res) {
+        if (res.filePath) setCardsConfigPath(res.filePath);
+        if (res.content && res.content.trim()) {
+          try {
+            const parsed = JSON.parse(res.content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCardPresets(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to parse cards.json:', e);
+          }
+        }
+      }
+      saveDesktopCardPresets(JSON.stringify(DEFAULT_CARD_PRESETS, null, 2))
+        .then(savedPath => {
+          if (savedPath) setCardsConfigPath(savedPath);
+        })
+        .catch(e => console.error('Failed to initialize cards.json:', e));
+    });
+
+    // Servers
+    getDesktopServersConfigPath().then(path => {
+      if (path) setServersConfigPath(path);
+    });
+    loadDesktopServerPresets().then(res => {
+      if (res) {
+        if (res.filePath) setServersConfigPath(res.filePath);
+        if (res.content && res.content.trim()) {
+          try {
+            const parsed = JSON.parse(res.content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setServerPresets(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to parse servers.json:', e);
+          }
+        }
+      }
+      saveDesktopServerPresets(JSON.stringify(DEFAULT_SERVER_PRESETS, null, 2))
+        .then(savedPath => {
+          if (savedPath) setServersConfigPath(savedPath);
+        })
+        .catch(e => console.error('Failed to initialize servers.json:', e));
+    });
   }, []);
 
   const handleSavePresets = useCallback(async (newPresets: PanelPreset[]) => {
@@ -955,6 +1028,28 @@ export default function EditorApp() {
     } catch (e) {
       console.error('Failed to save panel presets:', e);
       showToast('Ошибка при сохранении panels.json');
+    }
+  }, [showToast]);
+
+  const handleSaveCardPresets = useCallback(async (newPresets: CardPreset[]) => {
+    setCardPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopCardPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setCardsConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save cards presets:', e);
+      showToast('Ошибка при сохранении cards.json');
+    }
+  }, [showToast]);
+
+  const handleSaveServerPresets = useCallback(async (newPresets: ServerPreset[]) => {
+    setServerPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopServerPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setServersConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save server presets:', e);
+      showToast('Ошибка при сохранении servers.json');
     }
   }, [showToast]);
 
@@ -1556,7 +1651,7 @@ export default function EditorApp() {
 
   // ======== КАРТЫ: add/select/remove ========
   const onCardAdd = useCallback((modelId: string) => {
-    const model = CARDS.find(m => m.id === modelId) ?? CARDS[0];
+    const model = cardPresets.find(m => m.id === modelId) ?? CARDS.find(m => m.id === modelId) ?? cardPresets[0];
     if (!model) return;
     const order = cards.length + 1;
     const id = uid('card');
@@ -1571,7 +1666,7 @@ export default function EditorApp() {
     setCards(prev => [...prev, inst]);
     setSelectedCardId(id);
     setActiveLink(0);
-  }, [cards, colorForOrder, pushHistory]);
+  }, [cards, colorForOrder, pushHistory, cardPresets]);
 
   const onCardSelect = useCallback((cardId: string) => {
     setSelectedCardId(cardId);
@@ -1644,12 +1739,16 @@ export default function EditorApp() {
         eventDate={eventDate} setEventDate={setEventDate}
         serverName={servers[0]?.modelId ?? ''} setServerId={(id) => onServerChange(servers[0]?.id ?? 'srv-1', id)}
         servers={servers}
+        serverPresets={serverPresets}
+        onOpenServerPresetsModal={() => setIsServerPresetsModalOpen(true)}
         onServerAdd={onServerAdd}
         onServerRemove={onServerRemove}
         onServerChange={onServerChange}
         cardName={cardId} setCardId={setCardId}
         // Карты
         cards={cards}
+        cardPresets={cardPresets}
+        onOpenCardPresetsModal={() => setIsCardPresetsModalOpen(true)}
         selectedCardId={selectedCardId}
         onCardAdd={onCardAdd}
         onCardSelect={onCardSelect}
@@ -1961,6 +2060,9 @@ export default function EditorApp() {
             eventDate,
             logoDataUrl,
             fiberCounts,
+            presets: panelPresets,
+            cardPresets,
+            serverPresets,
           }}
         />
 
@@ -1973,6 +2075,24 @@ export default function EditorApp() {
           activePresetId={presetId}
           onSelectPreset={(id) => setPresetId(id)}
           filePath={panelsConfigPath}
+        />
+
+        {/* Модальное окно управления прессетами карт */}
+        <CardPresetsModal
+          open={isCardPresetsModalOpen}
+          onClose={() => setIsCardPresetsModalOpen(false)}
+          presets={cardPresets}
+          onSavePresets={handleSaveCardPresets}
+          filePath={cardsConfigPath}
+        />
+
+        {/* Модальное окно управления прессетами серверов */}
+        <ServerPresetsModal
+          open={isServerPresetsModalOpen}
+          onClose={() => setIsServerPresetsModalOpen(false)}
+          presets={serverPresets}
+          onSavePresets={handleSaveServerPresets}
+          filePath={serversConfigPath}
         />
 
         {/* Модальное окно подтверждения нового проекта */}

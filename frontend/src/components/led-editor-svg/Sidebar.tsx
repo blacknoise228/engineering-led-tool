@@ -2,7 +2,7 @@
 'use client';
 import Image from "next/image";
 import React, { useMemo, useState, useCallback } from 'react';
-import { PRESETS, LINK_COLORS_16, CARDS, SERVERS, FIBER_CONVERTERS, type PanelPreset } from '@/lib/led-editor-svg/presets';
+import { PRESETS, LINK_COLORS_16, CARDS, SERVERS, FIBER_CONVERTERS, type PanelPreset, type CardPreset, type ServerPreset } from '@/lib/led-editor-svg/presets';
 import type { Tool, Panel, ScreenGroup, CableEx, WiringPage, MaskPage } from '@/lib/led-editor-svg/types';
 import { buildSpecText } from '@/lib/led-editor-svg/utils';
 import SnakeIcon from './icons/SnakeIcon';
@@ -117,12 +117,19 @@ type SidebarProps = {
   allCables?: CableEx[];
   allScreenGroups?: ScreenGroup[];
   onAddScreensFromWiringPage?: (pageId: string) => void;
+
+  cardPresets?: CardPreset[];
+  onOpenCardPresetsModal?: () => void;
+  serverPresets?: ServerPreset[];
+  onOpenServerPresetsModal?: () => void;
 };
 
 export default function Sidebar(props: SidebarProps) {
   const {
     tool, setTool,
     presetId, setPresetId, presets, onOpenPresetsModal, setRows, setCols,
+    cardPresets, onOpenCardPresetsModal,
+    serverPresets, onOpenServerPresetsModal,
     createMatrix, clearAll,
     exportPNG, saveJSON, openLoadJSONDialog, newProject,
     clearSelectedWiring, hasPanelSelection,
@@ -212,13 +219,16 @@ export default function Sidebar(props: SidebarProps) {
     ].join(', '),
   } as React.CSSProperties);
 
+  const cardPresetsList = cardPresets && cardPresets.length > 0 ? cardPresets : CARDS;
+  const serverPresetsList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
+
   // сервер → id
   const serverValue = useMemo(() => {
-    const byId = SERVERS.find(s => s.id === serverName)?.id;
+    const byId = serverPresetsList.find(s => s.id === serverName)?.id;
     if (byId) return byId;
-    const byName = SERVERS.find(s => s.name === serverName)?.id;
-    return byName ?? (SERVERS[0]?.id ?? '');
-  }, [serverName]);
+    const byName = serverPresetsList.find(s => s.name === serverName)?.id;
+    return byName ?? (serverPresetsList[0]?.id ?? '');
+  }, [serverName, serverPresetsList]);
 
   // выбранная карта (инстанс) и её модель
   const selectedCard: CardInstance | null = useMemo(
@@ -226,12 +236,12 @@ export default function Sidebar(props: SidebarProps) {
     [cards, selectedCardId]
   );
   const selectedCardModel = useMemo(() => {
-    if (selectedCard) return CARDS.find(m => m.id === selectedCard.modelId) ?? null;
+    if (selectedCard) return cardPresetsList.find(m => m.id === selectedCard.modelId) ?? null;
     // fallback на «старую» модель по cardName (id или name) — но расключение без инстанса отключаем
-    const mById = CARDS.find(m => m.id === cardName);
+    const mById = cardPresetsList.find(m => m.id === cardName);
     if (mById) return mById;
-    return CARDS.find(m => m.name === cardName) ?? null;
-  }, [selectedCard, cardName]);
+    return cardPresetsList.find(m => m.name === cardName) ?? null;
+  }, [selectedCard, cardName, cardPresetsList]);
 
   const portsCount = selectedCardModel?.outputPorts ?? 0;
   const portButtons = Array.from({ length: portsCount }, (_, i) => i);
@@ -239,10 +249,10 @@ export default function Sidebar(props: SidebarProps) {
     (selectedCard?.portColors?.[i]) ?? LINK_COLORS_16[i % LINK_COLORS_16.length];
 
   // выбор модели для добавления (во вкладке «Карты»)
-  const [newModelId, setNewModelId] = useState<string>(() => CARDS[0]?.id ?? '');
+  const [newModelId, setNewModelId] = useState<string>(() => cardPresetsList[0]?.id ?? '');
 
   // выбор модели для добавления сервера (во вкладке «Инфо»)
-  const [newServerModelId, setNewServerModelId] = useState<string>(() => SERVERS[0]?.id ?? 'hp-z2');
+  const [newServerModelId, setNewServerModelId] = useState<string>(() => serverPresetsList[0]?.id ?? 'hp-z2');
 
   // Спецификация оборудования в виде текста
   const specText = useMemo(() => {
@@ -257,8 +267,10 @@ export default function Sidebar(props: SidebarProps) {
       fiberCounts,
       screenGroups: allScreenGroups ?? screenGroups,
       presets,
+      cardPresets: cardPresetsList,
+      serverPresets: serverPresetsList,
     });
-  }, [allPanels, panels, allCables, cables, servers, cardName, cards, eventName, eventDate, fiberCounts, allScreenGroups, screenGroups, presets]);
+  }, [allPanels, panels, allCables, cables, servers, cardName, cards, eventName, eventDate, fiberCounts, allScreenGroups, screenGroups, presets, cardPresetsList, serverPresetsList]);
 
   const [copiedSpec, setCopiedSpec] = useState(false);
 
@@ -359,8 +371,23 @@ export default function Sidebar(props: SidebarProps) {
       {tab === 'cards' && (
         <>
           <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-              Добавление карты / процессора
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+                Добавление карты / процессора
+              </div>
+              {onOpenCardPresetsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenCardPresetsModal}
+                  className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-cyan-400 transition"
+                  title="Управление моделями карт и процессоров"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </button>
+              )}
             </div>
             <select
               className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
@@ -368,12 +395,12 @@ export default function Sidebar(props: SidebarProps) {
               onChange={(e) => setNewModelId(e.target.value)}
             >
               <optgroup label="Отправочные карты">
-                {CARDS.filter(c => c.category === 'sending').map(c => (
+                {cardPresetsList.filter(c => c.category === 'sending').map(c => (
                   <option key={c.id} value={c.id}>{c.name} — {c.outputPorts} порт(ов)</option>
                 ))}
               </optgroup>
               <optgroup label="Процессоры">
-                {CARDS.filter(c => c.category === 'processor').map(c => (
+                {cardPresetsList.filter(c => c.category === 'processor').map(c => (
                   <option key={c.id} value={c.id}>{c.name} — {c.outputPorts} порт(ов)</option>
                 ))}
               </optgroup>
@@ -402,7 +429,7 @@ export default function Sidebar(props: SidebarProps) {
               </div>
             )}
             {cards?.map((c) => {
-              const model = CARDS.find(m => m.id === c.modelId);
+              const model = cardPresetsList.find(m => m.id === c.modelId);
               const isActive = c.id === selectedCardId;
               return (
                 <div
@@ -986,9 +1013,24 @@ export default function Sidebar(props: SidebarProps) {
 
             {/* СЕРВЕРЫ */}
             <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
-              <label className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 block">
-                Медиасерверы
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 block">
+                  Медиасерверы
+                </label>
+                {onOpenServerPresetsModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenServerPresetsModal}
+                    className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-emerald-400 transition"
+                    title="Управление моделями медиасерверов"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
               {servers && servers.length > 0 ? (
                 <div className="space-y-2">
@@ -1000,7 +1042,7 @@ export default function Sidebar(props: SidebarProps) {
                         value={srv.modelId}
                         onChange={(e) => onServerChange?.(srv.id, e.target.value)}
                       >
-                        {SERVERS.map(s => (
+                        {serverPresetsList.map(s => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                       </select>
@@ -1023,7 +1065,7 @@ export default function Sidebar(props: SidebarProps) {
                   value={serverValue}
                   onChange={(e) => setServerId?.(e.target.value)}
                 >
-                  {SERVERS.map(s => (
+                  {serverPresetsList.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
@@ -1035,7 +1077,7 @@ export default function Sidebar(props: SidebarProps) {
                   value={newServerModelId}
                   onChange={(e) => setNewServerModelId(e.target.value)}
                 >
-                  {SERVERS.map(s => (
+                  {serverPresetsList.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>

@@ -56,7 +56,7 @@ export type CardPreset = {
   notes?: string;
 };
 
-export const CARDS: CardPreset[] = [
+export const DEFAULT_CARD_PRESETS: CardPreset[] = [
   // Sending cards
   { id: 'mctrl300', name: 'NovaStar MCTRL300', category: 'sending', maxInput: '1920×1200 @60Hz', outputPorts: 2 },
   { id: 'mctrl660', name: 'NovaStar MCTRL660', category: 'sending', maxInput: '3840×600 @60Hz', outputPorts: 4 },
@@ -73,9 +73,11 @@ export const CARDS: CardPreset[] = [
   { id: 'h9_e', name: 'NovaStar H9 Enhanced', category: 'processor', maxInput: '7680×1080 @60Hz', outputPorts: 16 },
 ];
 
+export const CARDS: CardPreset[] = DEFAULT_CARD_PRESETS;
+
 // Быстрые хелперы
-export const getCardById = (id: string) => CARDS.find(c => c.id === id) || null;
-export const getCardName = (id: string) => getCardById(id)?.name ?? id;
+export const getCardById = (id: string, list: CardPreset[] = CARDS) => list.find(c => c.id === id) || null;
+export const getCardName = (id: string, list: CardPreset[] = CARDS) => getCardById(id, list)?.name ?? id;
 
 // === Оптоволоконные конвертеры (привязка — к id из CARDS) ===
 export type FiberConverterPreset = {
@@ -97,7 +99,7 @@ export type ServerPreset = {
   notes?: string;
 };
 
-export const SERVERS: ServerPreset[] = [
+export const DEFAULT_SERVER_PRESETS: ServerPreset[] = [
   { id: 'hp-z2', name: 'HP Z2' },
   { id: 'hp-z4', name: 'HP Z4' },
   { id: 'ss-z20', name: 'SS Z20' },
@@ -112,6 +114,11 @@ export const SERVERS: ServerPreset[] = [
   { id: 'intel-nuc', name: 'Intel NUC' },
   { id: 'mf-ms02', name: 'Minisforum MS-02' },
 ];
+
+export const SERVERS: ServerPreset[] = DEFAULT_SERVER_PRESETS;
+
+export const getServerById = (id: string, list: ServerPreset[] = SERVERS) => list.find(s => s.id === id) || null;
+export const getServerName = (id: string, list: ServerPreset[] = SERVERS) => getServerById(id, list)?.name ?? id;
 
 // ===== Цвета 16 линков (как были у тебя) =====
 export const LINK_COLORS_16 = [

@@ -1,6 +1,6 @@
 // src/lib/led-editor-svg/utils.ts
 import type { Panel, Vec, CableEx, CardInstance, ScreenGroup } from './types';
-import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS } from './presets';
+import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS, type CardPreset, type ServerPreset } from './presets';
 import { savePngBlob, savePngFile, showToast } from '../desktop';
 
 export const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 9)}`;
@@ -105,6 +105,8 @@ export interface BuildLegendParams {
   logoDataUrl?: string;
   fiberCounts?: Record<string, number>;
   presets?: PanelPreset[];
+  cardPresets?: CardPreset[];
+  serverPresets?: ServerPreset[];
 }
 
 export function buildExportLegend(params: BuildLegendParams): ExportLegend {
@@ -119,9 +121,13 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     logoDataUrl = '',
     fiberCounts = {},
     presets,
+    cardPresets,
+    serverPresets,
   } = params;
 
   const presetsList = presets && presets.length > 0 ? presets : PRESETS;
+  const cardsList = cardPresets && cardPresets.length > 0 ? cardPresets : CARDS;
+  const serversList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
 
   const cablesCount = cables.length;
 
@@ -164,15 +170,15 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
   const totalAreaM2 = Math.round((n05 * 0.25 + n10 * 0.50 + otherArea) * 100) / 100;
 
   const serverName = Array.isArray(servers)
-    ? servers.map(s => SERVERS.find(m => m.id === s.modelId)?.name ?? s.modelId).join(', ')
-    : (servers ? (SERVERS.find(s => s.id === servers)?.name ?? servers) : '');
+    ? servers.map(s => serversList.find(m => m.id === s.modelId)?.name ?? s.modelId).join(', ')
+    : (servers ? (serversList.find(s => s.id === servers)?.name ?? servers) : '');
 
-  const modelName = CARDS.find(c => c.id === cardId)?.name ?? cardId;
+  const modelName = cardsList.find(c => c.id === cardId)?.name ?? cardId;
 
   const cardsLegend = cards
     .map(ci => ({
       order: ci.order,
-      name: (CARDS.find(m => m.id === ci.modelId)?.name) ?? ci.modelId,
+      name: (cardsList.find(m => m.id === ci.modelId)?.name) ?? ci.modelId,
       color: ci.color,
     }))
     .sort((a, b) => a.order - b.order);
