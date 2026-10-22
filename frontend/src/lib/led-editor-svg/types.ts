@@ -12,6 +12,7 @@ export type Panel = {
   r:Rotation; label:string; presetId:string;
   presetName:string;
   pitch_mm: number;
+  special: boolean;
   resW: number;   // пиксели
   resH: number;   // пиксели
 };

@@ -44,14 +44,9 @@ export function formatMeters(m: number): string {
  * Проверяет, является ли панель моделью Galaxy 3.9 - 7.8, для которой при создании/рисовании маски
  * требуется удвоение разрешения по вертикали (чтобы пиксели контента были квадратными).
  */
-export function isGalaxySpecialMaskPanel(p?: { id?: string; presetId?: string } | null): boolean {
+export function isGalaxySpecialMaskPanel(p?: { id?: string; special: boolean } | null): boolean {
   if (!p) return false;
-  return (
-    p.presetId === 'galaxy-1m-3p9-7p8' ||
-    p.presetId === 'galaxy-0p5m-3p9-7p8' ||
-    p.id === 'galaxy-1m-3p9-7p8' ||
-    p.id === 'galaxy-0p5m-3p9-7p8'
-  );
+  return p.special;
 }
 
 /**
