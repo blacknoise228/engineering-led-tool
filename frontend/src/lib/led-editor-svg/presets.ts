@@ -83,7 +83,7 @@ export const getCardName = (id: string, list: CardPreset[] = CARDS) => getCardBy
 export type FiberConverterPreset = {
   id: string;
   name: string;
-  pairedWith?: string[]; // id из CARDS
+  pairedWith?: string[];
   notes?: string;
 };
 
@@ -100,19 +100,8 @@ export type ServerPreset = {
 };
 
 export const DEFAULT_SERVER_PRESETS: ServerPreset[] = [
-  { id: 'hp-z2', name: 'HP Z2' },
-  { id: 'hp-z4', name: 'HP Z4' },
-  { id: 'ss-z20', name: 'SS Z20' },
-  { id: 'ss-c34', name: 'SS C34' },
-
-  // Наши ноутбуки (полные названия)
-  { id: 'acer-predator-new', name: 'Acer Predator (new)' },
-  { id: 'acer-predator-old', name: 'Acer Predator (old)' },
   { id: 'lenovo-legion', name: 'Lenovo Legion' },
-
-  // Наш NUC
   { id: 'intel-nuc', name: 'Intel NUC' },
-  { id: 'mf-ms02', name: 'Minisforum MS-02' },
 ];
 
 export const SERVERS: ServerPreset[] = DEFAULT_SERVER_PRESETS;

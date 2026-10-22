@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { PanelPreset } from '@/lib/led-editor-svg/presets';
+import { DEFAULT_PANEL_PRESETS, type PanelPreset } from '@/lib/led-editor-svg/presets';
 import ConfirmModal from './ConfirmModal';
 import { showToast, isDesktopApp, openDesktopPanelsFileDialog, saveDesktopPanelsFileDialog } from '@/lib/desktop';
 
@@ -187,6 +187,27 @@ export default function PanelPresetsModal({
     } catch (e) {
       console.error('Failed to export presets:', e);
       showToast('Ошибка при экспорте файла');
+    }
+  };
+
+  const handleCreateNewFile = async () => {
+    try {
+      const content = JSON.stringify(DEFAULT_PANEL_PRESETS, null, 2);
+      const saved = await saveDesktopPanelsFileDialog('panels.json', content);
+      if (saved) {
+        const fileName = saved.split(/[\\/]/).pop() || saved;
+        setList(DEFAULT_PANEL_PRESETS);
+        setCurrentFilePath(fileName);
+        const initialId = DEFAULT_PANEL_PRESETS[0]?.id || '';
+        setSelectedId(initialId);
+        setIsCreatingNew(false);
+        await onSavePresets(DEFAULT_PANEL_PRESETS);
+        if (onSelectPreset) onSelectPreset(initialId);
+        showToast(`Создан новый файл пресетов: ${fileName}`);
+      }
+    } catch (e) {
+      console.error('Failed to create new presets file:', e);
+      showToast('Ошибка при создании файла пресетов');
     }
   };
 
@@ -396,13 +417,9 @@ export default function PanelPresetsModal({
 
                 <button
                   type="button"
-                  onClick={handleStartNew}
-                  className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm ${
-                    isCreatingNew
-                      ? 'bg-cyan-500 text-white ring-2 ring-cyan-400/50 shadow-cyan-900/50'
-                      : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-900/30'
-                  }`}
-                  title="Создать новый прессет"
+                  onClick={handleCreateNewFile}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-900/30"
+                  title="Создать новый файл пресетов (.json)"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -537,13 +554,13 @@ export default function PanelPresetsModal({
                   type="button"
                   onClick={handleStartNew}
                   className="flex items-center gap-1.5 text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline font-medium transition"
-                  title="Создать новый прессет"
+                  title="Создать новую панель"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
-                  <span>+ Новый прессет</span>
+                  <span>+ Создать панель</span>
                 </button>
               </div>
             </div>
@@ -569,13 +586,13 @@ export default function PanelPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 text-xs font-medium border border-cyan-500/30 transition flex items-center gap-1.5"
-                        title="Создать новый прессет панели"
+                        title="Создать новую панель"
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Добавить панель</span>
+                        <span>+ Создать панель</span>
                       </button>
                     )}
                     {!isCreatingNew && onAddPanelToCanvas && (
@@ -825,13 +842,13 @@ export default function PanelPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3.5 py-2.5 rounded-xl bg-[#161822] hover:bg-[#1e202d] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 text-xs font-medium transition active:scale-[0.98] flex items-center gap-1.5"
-                        title="Создать новый прессет панели"
+                        title="Создать новую панель"
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Новый прессет</span>
+                        <span>+ Создать панель</span>
                       </button>
                       {onAddPanelToCanvas && (
                         <button

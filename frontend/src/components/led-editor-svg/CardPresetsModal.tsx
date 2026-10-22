@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { CardPreset } from '@/lib/led-editor-svg/presets';
+import { DEFAULT_CARD_PRESETS, type CardPreset } from '@/lib/led-editor-svg/presets';
 import ConfirmModal from './ConfirmModal';
 import { showToast, isDesktopApp, openDesktopCardsFileDialog, saveDesktopCardsFileDialog } from '@/lib/desktop';
 
@@ -164,6 +164,27 @@ export default function CardPresetsModal({
     } catch (e) {
       console.error('Failed to export presets:', e);
       showToast('Ошибка при экспорте файла');
+    }
+  };
+
+  const handleCreateNewFile = async () => {
+    try {
+      const content = JSON.stringify(DEFAULT_CARD_PRESETS, null, 2);
+      const saved = await saveDesktopCardsFileDialog('cards.json', content);
+      if (saved) {
+        const fileName = saved.split(/[\\/]/).pop() || saved;
+        setList(DEFAULT_CARD_PRESETS);
+        setCurrentFilePath(fileName);
+        const initialId = DEFAULT_CARD_PRESETS[0]?.id || '';
+        setSelectedId(initialId);
+        setIsCreatingNew(false);
+        await onSavePresets(DEFAULT_CARD_PRESETS);
+        if (onSelectPreset) onSelectPreset(initialId);
+        showToast(`Создан новый файл пресетов: ${fileName}`);
+      }
+    } catch (e) {
+      console.error('Failed to create new cards file:', e);
+      showToast('Ошибка при создании файла пресетов');
     }
   };
 
@@ -343,13 +364,9 @@ export default function CardPresetsModal({
                 </div>
                 <button
                   type="button"
-                  onClick={handleStartNew}
-                  className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm ${
-                    isCreatingNew
-                      ? 'bg-blue-500 text-white ring-2 ring-blue-400/50 shadow-blue-900/50'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30'
-                  }`}
-                  title="Создать новый прессет карты"
+                  onClick={handleCreateNewFile}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30"
+                  title="Создать новый файл пресетов (.json)"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -474,13 +491,13 @@ export default function CardPresetsModal({
                   type="button"
                   onClick={handleStartNew}
                   className="flex items-center gap-1.5 text-[11px] text-blue-400 hover:text-blue-300 hover:underline font-medium transition"
-                  title="Создать новый прессет"
+                  title="Создать новую карту"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
-                  <span>Новый прессет</span>
+                  <span>+ Создать карту</span>
                 </button>
               </div>
             </div>
@@ -505,13 +522,13 @@ export default function CardPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
-                        title="Создать новый прессет"
+                        title="Создать новую карту"
                       >
                         <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Новый прессет</span>
+                        <span>+ Создать карту</span>
                       </button>
                     )}
                   </div>

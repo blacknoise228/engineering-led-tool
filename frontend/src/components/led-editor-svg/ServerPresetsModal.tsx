@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { ServerPreset } from '@/lib/led-editor-svg/presets';
+import { DEFAULT_SERVER_PRESETS, type ServerPreset } from '@/lib/led-editor-svg/presets';
 import ConfirmModal from './ConfirmModal';
 import { showToast, isDesktopApp, openDesktopServersFileDialog, saveDesktopServersFileDialog } from '@/lib/desktop';
 
@@ -158,6 +158,27 @@ export default function ServerPresetsModal({
     } catch (e) {
       console.error('Failed to export presets:', e);
       showToast('Ошибка при экспорте файла');
+    }
+  };
+
+  const handleCreateNewFile = async () => {
+    try {
+      const content = JSON.stringify(DEFAULT_SERVER_PRESETS, null, 2);
+      const saved = await saveDesktopServersFileDialog('servers.json', content);
+      if (saved) {
+        const fileName = saved.split(/[\\/]/).pop() || saved;
+        setList(DEFAULT_SERVER_PRESETS);
+        setCurrentFilePath(fileName);
+        const initialId = DEFAULT_SERVER_PRESETS[0]?.id || '';
+        setSelectedId(initialId);
+        setIsCreatingNew(false);
+        await onSavePresets(DEFAULT_SERVER_PRESETS);
+        if (onSelectPreset) onSelectPreset(initialId);
+        showToast(`Создан новый файл пресетов: ${fileName}`);
+      }
+    } catch (e) {
+      console.error('Failed to create new servers file:', e);
+      showToast('Ошибка при создании файла пресетов');
     }
   };
 
@@ -326,13 +347,9 @@ export default function ServerPresetsModal({
                 </div>
                 <button
                   type="button"
-                  onClick={handleStartNew}
-                  className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm ${
-                    isCreatingNew
-                      ? 'bg-emerald-500 text-white ring-2 ring-emerald-400/50 shadow-emerald-900/50'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30'
-                  }`}
-                  title="Создать новый прессет сервера"
+                  onClick={handleCreateNewFile}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition active:scale-[0.98] shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/30"
+                  title="Создать новый файл пресетов (.json)"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -448,13 +465,13 @@ export default function ServerPresetsModal({
                   type="button"
                   onClick={handleStartNew}
                   className="flex items-center gap-1.5 text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline font-medium transition"
-                  title="Создать новый прессет"
+                  title="Создать новый сервер"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
-                  <span>Новый прессет</span>
+                  <span>+ Создать сервер</span>
                 </button>
               </div>
             </div>
@@ -479,13 +496,13 @@ export default function ServerPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
-                        title="Создать новый прессет"
+                        title="Создать новый сервер"
                       >
                         <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Новый прессет</span>
+                        <span>+ Создать сервер</span>
                       </button>
                     )}
                   </div>
