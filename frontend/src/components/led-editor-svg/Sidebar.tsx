@@ -312,9 +312,9 @@ export default function Sidebar(props: SidebarProps) {
         <div className="flex flex-col">
           <Image 
             src="/logo2.png" 
-            alt="Masker Studio" 
-            width={512}
-            height={120} 
+            alt="ELT logo" 
+            width={380}
+            height={64} 
             className="object-contain" 
             priority 
           />

@@ -542,10 +542,10 @@ export default function MaskLayer({
                 />
                 <image
                   href="/logo3.png"
-                  x={badgeCx - octSide * 0.28}
+                  x={badgeCx - octSide * 0.3}
                   y={oy + octSide * 0.1}
-                  width={octSide * 0.58}
-                  height={octSide * 0.24}
+                  width={octSide * 0.6}
+                  height={octSide * 0.26}
                   preserveAspectRatio="xMidYMid meet"
                   pointerEvents="none"
                 />

@@ -23,7 +23,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "SHOW SCREEN ENGINEERING",
+		Title:             "Engineering LED Tool",
 		Width:             1920,
 		Height:            1080,
 		MinWidth:          1024,
@@ -78,7 +78,7 @@ func main() {
 			WindowIsTranslucent:  true,
 			OnFileOpen:           app.onFileOpen,
 			About: &mac.AboutInfo{
-				Title:   "SHOW SCREEN ENGINEERING",
+				Title:   "Engineering LED Tool",
 				Message: "",
 				Icon:    icon,
 			},

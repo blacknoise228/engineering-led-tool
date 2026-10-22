@@ -1,6 +1,6 @@
 {
-  "name": "ss-engineering",
-  "outputfilename": "ss-engineering",
+  "name": "engineering-led-tool",
+  "outputfilename": "engineering-led-tool",
   "assetdir": "frontend/out",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
@@ -14,15 +14,15 @@
   },
   "info": {
     "companyName": "blacknoise",
-    "productName": "SHOW SCREEN ENGINEERING",
+    "productName": "Engineering LED Tool",
     "productVersion": "0.1.0",
     "copyright": "Copyright (C) blacknoise",
-    "comments": "SHOW SCREEN ENGINEERING",
+    "comments": "Engineering LED Tool",
     "fileAssociations": [
       {
         "ext": "ss",
-        "name": "SHOW SCREEN Engineering Project",
-        "description": "SHOW SCREEN Engineering Project File",
+        "name": "Engineering LED Tool Project",
+        "description": "Engineering LED Tool Project File",
         "iconName": "icon",
         "role": "Editor"
       }

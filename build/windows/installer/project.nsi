@@ -19,14 +19,14 @@ Unicode true
 ####
 ## The following information is taken from the ProjectInfo file, but they can be overwritten here.
 ####
-!define INFO_PROJECTNAME    "ss-engineering"
+!define INFO_PROJECTNAME    "engineering-led-tool"
 !define INFO_COMPANYNAME    "blacknoise"
-!define INFO_PRODUCTNAME    "SHOW SCREEN ENGINEERING"
+!define INFO_PRODUCTNAME    "Engineering LED Tool"
 !define INFO_PRODUCTVERSION "0.1.0"
 !define INFO_COPYRIGHT      "Copyright (C) blacknoise"
 ###
-!define PRODUCT_EXECUTABLE  "ss-engineering.exe"
-!define UNINST_KEY_NAME     "blacknoise-ss-engineering"
+!define PRODUCT_EXECUTABLE  "engineering-led-tool.exe"
+!define UNINST_KEY_NAME     "blacknoise-engineering-led-tool"
 ####
 !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
 ####

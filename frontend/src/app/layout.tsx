@@ -3,8 +3,8 @@ import "@/app/globals.css";
 import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
-  title: "SHOW SCREEN ENGINEERING",
-  description: "SHOW SCREEN ENGINEERING",
+  title: "Engineering LED Tool",
+  description: "Engineering LED Tool",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

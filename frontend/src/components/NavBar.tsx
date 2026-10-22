@@ -60,13 +60,13 @@ export default function NavBar() {
           <Image
             src="/logo.png"
             alt="Logo"
-            className="w-5 h-5 object-contain select-none pointer-events-none [-webkit-user-drag:none]"
+            className="w-6 h-6 object-contain select-none pointer-events-none [-webkit-user-drag:none]"
             style={{ "--wails-draggable": "drag" } as React.CSSProperties}
             width={32}
             height={32}
           />
           <span className="text-[14px] tracking-[2px] text-[#7a828e] font-semibold">
-            SHOW SCREEN ENGINEERING
+            Engineering LED Tool
           </span>
         </div>
 
