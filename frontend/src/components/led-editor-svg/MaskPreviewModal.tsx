@@ -1,10 +1,8 @@
-// src/components/led-editor-svg/MaskPreviewModal.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { renderFullMaskCanvas, exportMaskPNG, exportMaskZIP, ScreenRenderData } from '@/lib/led-editor-svg/mask-export';
 import { formatMeters } from '@/lib/led-editor-svg/mask-contour';
-import { BuildLegendParams } from '@/lib/led-editor-svg/utils';
 
 interface MaskPreviewModalProps {
   open: boolean;
@@ -13,7 +11,6 @@ interface MaskPreviewModalProps {
   groups: ScreenGroup[];
   eventName: string;
   pageName?: string;
-  legendParams?: Partial<BuildLegendParams>;
   maskLogoConfig?: MaskLogoConfig;
 }
 
@@ -24,7 +21,6 @@ export default function MaskPreviewModal({
   groups,
   eventName,
   pageName,
-  legendParams,
   maskLogoConfig,
 }: MaskPreviewModalProps) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -115,7 +111,7 @@ export default function MaskPreviewModal({
               Скачать PNG
             </button>
             <button
-              onClick={() => exportMaskZIP(panels, groups, eventName, legendParams, pageName, maskLogoConfig)}
+              onClick={() => exportMaskZIP(panels, groups, eventName, pageName, maskLogoConfig)}
               className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d28] text-white border border-white/[0.08] shadow-sm transition flex items-center gap-2"
             >
               Скачать ZIP

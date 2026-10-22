@@ -1,4 +1,3 @@
-// src/components/led-editor-svg/MaskLogoModal.tsx
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -6,7 +5,7 @@ import {
   DEFAULT_MASK_LOGO_CONFIG,
   DEFAULT_MASK_LOGO_URL,
 } from '@/lib/led-editor-svg/types';
-import { computeBadgeLogoRect } from '@/lib/led-editor-svg/mask-contour';
+import { computeBadgeLogoRect, OCT_POINTS } from '@/lib/led-editor-svg/mask-contour';
 import { showToast } from '@/lib/desktop';
 
 interface MaskLogoModalProps {
@@ -15,11 +14,6 @@ interface MaskLogoModalProps {
   config: MaskLogoConfig;
   onSaveConfig: (newConfig: MaskLogoConfig) => void;
 }
-
-const OCT_POINTS = [
-  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
-  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
-];
 
 export default function MaskLogoModal({
   open,

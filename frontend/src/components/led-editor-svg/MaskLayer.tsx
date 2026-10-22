@@ -1,9 +1,8 @@
-// src/components/led-editor-svg/MaskLayer.tsx
 'use client';
 import React, { useMemo, useState, useRef } from 'react';
 import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { getTextureById } from '@/lib/led-editor-svg/textures';
-import { computeContour, computePixelPanels, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds, computeBadgeLogoRect } from '@/lib/led-editor-svg/mask-contour';
+import { computeContour, computePixelPanels, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds, computeBadgeLogoRect, OCT_POINTS } from '@/lib/led-editor-svg/mask-contour';
 import { computeAutoPositions } from '@/lib/led-editor-svg/mask-export';
 
 interface MaskLayerProps {
@@ -20,11 +19,6 @@ interface MaskLayerProps {
   showBadges?: boolean;
   maskLogoConfig?: MaskLogoConfig;
 }
-
-const OCT_POINTS = [
-  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
-  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
-];
 
 export default function MaskLayer({
   panels,

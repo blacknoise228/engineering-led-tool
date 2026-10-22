@@ -29,7 +29,7 @@ import {
 } from '@/lib/led-editor-svg/autoconnect';
 import {
   boundsOfPanels, clientToStage,
-  rectsIntersect, uid, ensureDataUrl
+  rectsIntersect, uid
 } from '@/lib/led-editor-svg/utils';
 import type { CableEx, CardInstance, Panel, Tool, Vec, ScreenGroup, WiringPage, MaskPage, PanelClipboardData, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { DEFAULT_MASK_LOGO_CONFIG } from '@/lib/led-editor-svg/types';
@@ -47,7 +47,7 @@ import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
 import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
-import PageBar from './PageBar';
+import EditorToolbar from './EditorToolbar';
 import {
   isDesktopApp,
   openDesktopProject,
@@ -135,7 +135,6 @@ export default function EditorApp() {
     { id: 'srv-1', modelId: SERVERS[0]?.id ?? 'hp-z2' }
   ]);
   const [cardId, setCardId] = useState<string>(''); // селектор модели в Info
-  const [logoDataUrl, setLogoDataUrl] = useState('');
   // РУЧНОЙ УЧЁТ ОПТИКИ/ЦВТ: { converterId: count }
   const [fiberCounts, setFiberCounts] = useState<Record<string, number>>({});
 
@@ -847,15 +846,10 @@ export default function EditorApp() {
     }
   }, [activeTab, selectedGroupIds, selectedPanels, selectedCables, screenGroups, pushHistory, setPanels, setCables, setScreenGroups]);
 
-  // ======== PNG EXPORT (карточка: только кол-во портов, площадь, сервер внизу) ========
+  // ======== PNG EXPORT ========
   const exportPNG = useCallback(() => {
-    exportPNGFunc(
-      svgRef, panels, pan, scale, cables,
-      servers, cardId, cards, eventName,
-      eventDate, logoDataUrl, fiberCounts, activeWiringPage.name);
-  }, [svgRef, panels, cables, pan, scale,
-    eventName, eventDate, servers, cardId,
-    logoDataUrl, cards, fiberCounts, activeWiringPage.name]);
+    exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
+  }, [svgRef, panels, pan, scale, eventName, activeWiringPage.name]);
 
   // ======== APPLY LOADED PROJECT DATA ========
   const applyProjectData = useCallback((data: {
@@ -943,89 +937,68 @@ export default function EditorApp() {
     }
   }, [setSelectedGroupId]);
 
-  // ======== LOAD PANELS PRESETS FROM panels.json ========
+  // ======== LOAD PRESETS FROM CONFIG FILES ========
   useEffect(() => {
-    getDesktopPanelsConfigPath().then(path => {
-      if (path) setPanelsConfigPath(path);
-    });
-
-    loadDesktopPanelPresets().then(res => {
+    const initPresetConfig = async <T,>(
+      getPath: () => Promise<string>,
+      load: () => Promise<{ filePath: string; content: string } | null>,
+      save: (json: string) => Promise<string | null>,
+      defaults: T[],
+      setPresets: React.Dispatch<React.SetStateAction<T[]>>,
+      setPath: React.Dispatch<React.SetStateAction<string>>,
+      onLoaded?: (list: T[]) => void
+    ) => {
+      const p = await getPath();
+      if (p) setPath(p);
+      const res = await load();
       if (res) {
-        if (res.filePath) setPanelsConfigPath(res.filePath);
+        if (res.filePath) setPath(res.filePath);
         if (res.content && res.content.trim()) {
           try {
             const parsed = JSON.parse(res.content);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setPanelPresets(parsed);
-              setPresetId(prev => (parsed.some(p => p.id === prev) ? prev : parsed[0].id));
+              setPresets(parsed);
+              onLoaded?.(parsed);
               return;
             }
           } catch (e) {
-            console.error('Failed to parse panels.json:', e);
+            console.error('Failed to parse preset config:', e);
           }
         }
       }
-      // If panels.json doesn't exist or is empty, initialize it with DEFAULT_PANEL_PRESETS
-      saveDesktopPanelPresets(JSON.stringify(DEFAULT_PANEL_PRESETS, null, 2))
+      save(JSON.stringify(defaults, null, 2))
         .then(savedPath => {
-          if (savedPath) setPanelsConfigPath(savedPath);
+          if (savedPath) setPath(savedPath);
         })
-        .catch(e => console.error('Failed to initialize panels.json:', e));
-    });
+        .catch(e => console.error('Failed to initialize preset config:', e));
+    };
 
-    // Cards
-    getDesktopCardsConfigPath().then(path => {
-      if (path) setCardsConfigPath(path);
-    });
-    loadDesktopCardPresets().then(res => {
-      if (res) {
-        if (res.filePath) setCardsConfigPath(res.filePath);
-        if (res.content && res.content.trim()) {
-          try {
-            const parsed = JSON.parse(res.content);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setCardPresets(parsed);
-              return;
-            }
-          } catch (e) {
-            console.error('Failed to parse cards.json:', e);
-          }
-        }
-      }
-      saveDesktopCardPresets(JSON.stringify(DEFAULT_CARD_PRESETS, null, 2))
-        .then(savedPath => {
-          if (savedPath) setCardsConfigPath(savedPath);
-        })
-        .catch(e => console.error('Failed to initialize cards.json:', e));
-    });
+    initPresetConfig(
+      getDesktopPanelsConfigPath,
+      loadDesktopPanelPresets,
+      saveDesktopPanelPresets,
+      DEFAULT_PANEL_PRESETS,
+      setPanelPresets,
+      setPanelsConfigPath,
+      parsed => setPresetId(prev => (parsed.some(p => p.id === prev) ? prev : parsed[0].id))
+    );
+    initPresetConfig(
+      getDesktopCardsConfigPath,
+      loadDesktopCardPresets,
+      saveDesktopCardPresets,
+      DEFAULT_CARD_PRESETS,
+      setCardPresets,
+      setCardsConfigPath
+    );
+    initPresetConfig(
+      getDesktopServersConfigPath,
+      loadDesktopServerPresets,
+      saveDesktopServerPresets,
+      DEFAULT_SERVER_PRESETS,
+      setServerPresets,
+      setServersConfigPath
+    );
 
-    // Servers
-    getDesktopServersConfigPath().then(path => {
-      if (path) setServersConfigPath(path);
-    });
-    loadDesktopServerPresets().then(res => {
-      if (res) {
-        if (res.filePath) setServersConfigPath(res.filePath);
-        if (res.content && res.content.trim()) {
-          try {
-            const parsed = JSON.parse(res.content);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setServerPresets(parsed);
-              return;
-            }
-          } catch (e) {
-            console.error('Failed to parse servers.json:', e);
-          }
-        }
-      }
-      saveDesktopServerPresets(JSON.stringify(DEFAULT_SERVER_PRESETS, null, 2))
-        .then(savedPath => {
-          if (savedPath) setServersConfigPath(savedPath);
-        })
-        .catch(e => console.error('Failed to initialize servers.json:', e));
-    });
-
-    // Mask Logo Config (постоянные настройки логотипа на масках)
     loadDesktopMaskLogoConfig().then(raw => {
       if (raw && raw.trim()) {
         try {
@@ -1172,7 +1145,7 @@ export default function EditorApp() {
   }, [applyProjectData, showToast]);
 
   // ======== SAVE JSON ========
-  const saveJSON = useCallback(async () => {
+  const saveProjectToFile = useCallback(async (targetPath: string | null) => {
     const payload = {
       meta: { version: 4, presetId, rows, cols },
       wiringPages,
@@ -1196,51 +1169,7 @@ export default function EditorApp() {
     if (isDesktopApp()) {
       try {
         const defaultName = `${eventName || 'project'}.ss`;
-        const savedPath = await saveDesktopProject(currentFilePath, defaultName, jsonContent);
-        if (savedPath) {
-          setCurrentFilePath(savedPath);
-          showToast('Сохранено');
-        }
-      } catch (err) {
-        console.error('Failed to save project:', err);
-      }
-    } else {
-      const blob = new Blob([jsonContent], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${eventName || 'project'}.ss`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Сохранено');
-    }
-  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, currentFilePath, showToast]);
-
-  const saveJSONAs = useCallback(async () => {
-    const payload = {
-      meta: { version: 4, presetId, rows, cols },
-      wiringPages,
-      activeWiringPageId,
-      maskPages,
-      activeMaskPageId,
-      panels: activeWiringPage.panels,
-      cables: activeWiringPage.cables,
-      cards,
-      selectedCardId,
-      activeLink,
-      fiberCounts,
-      eventName,
-      eventDate,
-      serverId: servers[0]?.modelId ?? '',
-      servers,
-      screenGroups: activeMaskPage.screenGroups,
-    };
-    const jsonContent = JSON.stringify(payload, null, 2);
-
-    if (isDesktopApp()) {
-      try {
-        const defaultName = `${eventName || 'project'}.ss`;
-        const savedPath = await saveDesktopProject(null, defaultName, jsonContent);
+        const savedPath = await saveDesktopProject(targetPath, defaultName, jsonContent);
         if (savedPath) {
           setCurrentFilePath(savedPath);
           showToast('Сохранено');
@@ -1259,6 +1188,9 @@ export default function EditorApp() {
       showToast('Сохранено');
     }
   }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
+
+  const saveJSON = useCallback(() => saveProjectToFile(currentFilePath), [saveProjectToFile, currentFilePath]);
+  const saveJSONAs = useCallback(() => saveProjectToFile(null), [saveProjectToFile]);
 
   // ======== MASK HANDLERS ========
   const onAddGroup = useCallback(() => {
@@ -1334,16 +1266,8 @@ export default function EditorApp() {
   }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onExportMaskZIP = useCallback(() => {
-    exportMaskZIP(allPanels, screenGroups, eventName, {
-      cables: allCables,
-      servers,
-      cardId,
-      cards,
-      eventDate,
-      logoDataUrl,
-      fiberCounts,
-    }, activeMaskPage.name, maskLogoConfig);
-  }, [allPanels, screenGroups, eventName, allCables, servers, cardId, cards, eventDate, logoDataUrl, fiberCounts, activeMaskPage.name, maskLogoConfig]);
+    exportMaskZIP(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onPreviewMask = useCallback(() => {
     setPreviewModalOpen(true);
@@ -1408,20 +1332,6 @@ export default function EditorApp() {
     }
     resetProjectState();
   }, [allPanels.length, cards.length, currentFilePath, resetProjectState]);
-
-  // ======== LOGO PRELOAD ========
-  useEffect(() => {
-    (async () => {
-      try {
-        if (logoDataUrl === '') {
-          const data = await ensureDataUrl('/logo.png');
-          setLogoDataUrl(data);
-        }
-      } catch (e) {
-        console.warn('Logo preload failed', e);
-      }
-    })();
-  }, [logoDataUrl]);
 
   // ======== DUPLICATE SELECTED PANELS ========
   const duplicateSelectedPanels = useCallback(() => {
@@ -1880,184 +1790,39 @@ export default function EditorApp() {
         />
 
         {/* Верхняя инженерная панель студии */}
-        <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-          <div className="pointer-events-auto flex items-center gap-2 bg-[#0c0d14]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-2xl">
-            {activeTab === 'mask' && selectedGroupIds.size > 0 ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                </span>
-                <span className="text-xs text-neutral-300">
-                  Выбрано экранов: <strong className="text-white font-mono">{selectedGroupIds.size}</strong>
-                </span>
-                <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                <button
-                  onClick={deleteSelected}
-                  className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-                  title="Удалить выбранные экраны (Delete)"
-                >
-                  ✕
-                </button>
-              </>
-            ) : selectedPanels.size > 0 ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                </span>
-                <span className="text-xs text-neutral-300">
-                  Выбрано: <strong className="text-white font-mono">{selectedPanels.size}</strong>
-                </span>
-                <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                <button
-                  onClick={copySelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Копировать выделенные панели (Ctrl+C)"
-                >
-                  Копировать
-                </button>
-                <button
-                  onClick={cutSelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Вырезать выделенные панели (Ctrl+X)"
-                >
-                  Вырезать
-                </button>
-                {clipboard && clipboard.panels.length > 0 && (
-                  <button
-                    onClick={pastePanels}
-                    className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-600/30 hover:bg-blue-600/45 text-blue-200 border border-blue-500/40 transition"
-                    title="Вставить панели из буфера (Ctrl+V)"
-                  >
-                    Вставить ({clipboard.panels.length})
-                  </button>
-                )}
-                <button
-                  onClick={duplicateSelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Дублировать (Ctrl+D)"
-                >
-                  Дублировать
-                </button>
-                <button
-                  onClick={deleteSelected}
-                  className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-                  title="Удалить выбранное (Delete)"
-                >
-                  ✕
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
-                <span className="text-xs text-neutral-400">
-                  Панелей: <strong className="text-neutral-200 font-mono">{panels.length}</strong>
-                </span>
-                {cables.length > 0 && (
-                  <>
-                    <span className="text-neutral-600 text-xs">•</span>
-                    <span className="text-xs text-neutral-400">
-                      Премычек: <strong className="text-neutral-200 font-mono">{cables.length}</strong>
-                    </span>
-                  </>
-                )}
-                {clipboard && clipboard.panels.length > 0 && (
-                  <>
-                    <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                    <button
-                      onClick={pastePanels}
-                      className="px-2.5 py-0.5 rounded text-[11px] font-medium bg-blue-600/25 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 transition flex items-center gap-1.5"
-                      title="Вставить панели из буфера в эту схему (Ctrl+V)"
-                    >
-                      <span>Вставить ({clipboard.panels.length})</span>
-                      <span className="text-[9px] text-blue-400/80 font-mono">Ctrl+V</span>
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="pointer-events-auto flex items-center p-1 rounded-xl bg-[#0c0d14]/90 backdrop-blur-md border border-white/[0.08] shadow-2xl">
-              <button
-                onClick={() => setActiveTab('wiring')}
-                className={[
-                  'px-4 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2',
-                  activeTab !== 'mask'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
-                ].join(' ')}
-              >
-                <span>Расключение</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('mask')}
-                className={[
-                  'px-4 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2',
-                  activeTab === 'mask'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
-                ].join(' ')}
-              >
-                <span>Маска</span>
-              </button>
-            </div>
-
-            {/* Панель страниц (Wiring или Mask в зависимости от activeTab) */}
-            <div className="pointer-events-auto">
-              {activeTab === 'mask' ? (
-                <PageBar
-                  pages={maskPages.map(mp => ({
-                    id: mp.id,
-                    name: mp.name,
-                    count: mp.screenGroups.length,
-                    countLabel: 'экр.',
-                  }))}
-                  activePageId={activeMaskPageId}
-                  onSelectPage={switchMaskPage}
-                  onAddPage={addMaskPage}
-                  onRemovePage={removeMaskPage}
-                  onRenamePage={renameMaskPage}
-                  onDuplicatePage={duplicateMaskPage}
-                  addTitle="Add page"
-                  addBtnText="Page"
-                  badgeSuffix="scr."
-                />
-              ) : (
-                <PageBar
-                  pages={wiringPages.map(wp => ({
-                    id: wp.id,
-                    name: wp.name,
-                    count: wp.panels.length,
-                    countLabel: 'cab.',
-                  }))}
-                  activePageId={activeWiringPageId}
-                  onSelectPage={switchWiringPage}
-                  onAddPage={addWiringPage}
-                  onRemovePage={removeWiringPage}
-                  onRenamePage={renameWiringPage}
-                  onDuplicatePage={duplicateWiringPage}
-                  addTitle="Add schema"
-                  addBtnText="Schema"
-                  badgeSuffix="cab."
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="pointer-events-auto flex items-center gap-1.5 bg-[#0c0d14]/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/[0.08] shadow-2xl">
-            <button onClick={undo} title="Отменить (Ctrl+Z)" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs">↶</button>
-            <button onClick={redo} title="Повторить (Ctrl+Y)" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs">↷</button>
-            <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-            <button onClick={() => setScale(s => Math.max(0.1, s / 1.15))} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition" title="Уменьшить">−</button>
-            <span className="text-xs font-mono text-neutral-300 min-w-[38px] text-center">{(scale * 100).toFixed(0)}%</span>
-            <button onClick={() => setScale(s => Math.min(4, s * 1.15))} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition" title="Увеличить">+</button>
-            <button className="px-2 py-1 text-[11px] rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 transition" onClick={resetView} title="Сбросить масштаб к 100%">100%</button>
-          </div>
-        </div>
-
+        <EditorToolbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedGroupCount={selectedGroupIds.size}
+          selectedPanelCount={selectedPanels.size}
+          panelCount={panels.length}
+          cableCount={cables.length}
+          clipboard={clipboard}
+          deleteSelected={deleteSelected}
+          copySelectedPanels={copySelectedPanels}
+          cutSelectedPanels={cutSelectedPanels}
+          pastePanels={pastePanels}
+          duplicateSelectedPanels={duplicateSelectedPanels}
+          maskPages={maskPages}
+          activeMaskPageId={activeMaskPageId}
+          switchMaskPage={switchMaskPage}
+          addMaskPage={addMaskPage}
+          removeMaskPage={removeMaskPage}
+          renameMaskPage={renameMaskPage}
+          duplicateMaskPage={duplicateMaskPage}
+          wiringPages={wiringPages}
+          activeWiringPageId={activeWiringPageId}
+          switchWiringPage={switchWiringPage}
+          addWiringPage={addWiringPage}
+          removeWiringPage={removeWiringPage}
+          renameWiringPage={renameWiringPage}
+          duplicateWiringPage={duplicateWiringPage}
+          undo={undo}
+          redo={redo}
+          scale={scale}
+          setScale={setScale}
+          resetView={resetView}
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -2086,18 +1851,6 @@ export default function EditorApp() {
           groups={screenGroups}
           eventName={eventName}
           pageName={activeMaskPage.name}
-          legendParams={{
-            cables: allCables,
-            servers,
-            cardId,
-            cards,
-            eventDate,
-            logoDataUrl,
-            fiberCounts,
-            presets: panelPresets,
-            cardPresets,
-            serverPresets,
-          }}
           maskLogoConfig={maskLogoConfig}
         />
 

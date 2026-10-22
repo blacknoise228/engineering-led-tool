@@ -12,10 +12,24 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
 type App struct {
 	ctx             context.Context
 	initialFilePath string
+}
+
+type OpenProjectResult struct {
+	FilePath string `json:"filePath"`
+	Content  string `json:"content"`
+}
+
+type PanelsConfigResult struct {
+	FilePath string `json:"filePath"`
+	Content  string `json:"content"`
+}
+
+var jsonFileFilters = []runtime.FileFilter{
+	{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+	{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 }
 
 func findProjectArg(args []string) string {
@@ -42,7 +56,6 @@ func findProjectArg(args []string) string {
 	return ""
 }
 
-// NewApp creates a new App application struct
 func NewApp() *App {
 	app := &App{}
 	if len(os.Args) > 1 {
@@ -51,13 +64,10 @@ func NewApp() *App {
 	return app
 }
 
-// startup is called at application startup
 func (a *App) startup(ctx context.Context) {
-	// Perform your setup here
 	a.ctx = ctx
 }
 
-// onSecondInstanceLaunch is called when a second instance of the application is launched
 func (a *App) onSecondInstanceLaunch(secondInstanceData options.SecondInstanceData) {
 	if a.ctx != nil {
 		runtime.WindowUnminimise(a.ctx)
@@ -90,7 +100,6 @@ func (a *App) onSecondInstanceLaunch(secondInstanceData options.SecondInstanceDa
 	}
 }
 
-// onFileOpen is called on macOS when a file is opened with the application
 func (a *App) onFileOpen(filePath string) {
 	if a.ctx == nil {
 		a.initialFilePath = filePath
@@ -102,29 +111,16 @@ func (a *App) onFileOpen(filePath string) {
 	}
 }
 
-// domReady is called after front-end resources have been loaded
 func (a *App) domReady(ctx context.Context) {
 	runtime.WindowMaximise(ctx)
 }
 
-// beforeClose is called when the application is about to quit,
-// either by clicking the window close button or calling runtime.Quit.
-// Returning true will cause the application to continue, false will continue shutdown as normal.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	return false
 }
 
-// shutdown is called at application termination
-func (a *App) shutdown(ctx context.Context) {
-	// Perform your teardown here
-}
+func (a *App) shutdown(ctx context.Context) {}
 
-type OpenProjectResult struct {
-	FilePath string `json:"filePath"`
-	Content  string `json:"content"`
-}
-
-// ReadProjectFile reads a project file by path and returns its content.
 func (a *App) ReadProjectFile(filePath string) (*OpenProjectResult, error) {
 	clean := strings.Trim(filePath, "\"'")
 	data, err := os.ReadFile(clean)
@@ -143,8 +139,6 @@ func (a *App) ReadProjectFile(filePath string) (*OpenProjectResult, error) {
 	}, nil
 }
 
-// GetInitialProject returns the project file passed as CLI argument on startup.
-// Once returned, initialFilePath is cleared.
 func (a *App) GetInitialProject() (*OpenProjectResult, error) {
 	if a.initialFilePath == "" {
 		return nil, nil
@@ -154,20 +148,12 @@ func (a *App) GetInitialProject() (*OpenProjectResult, error) {
 	return a.ReadProjectFile(path)
 }
 
-// OpenProjectDialog opens a native file dialog to select a project file (.ss, .json)
-// and returns the file path and content. If user cancels, FilePath is empty.
 func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
 	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Загрузить проект",
 		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Файлы проекта (*.ss, *.json)",
-				Pattern:     "*.ss;*.json",
-			},
-			{
-				DisplayName: "Все файлы (*.*)",
-				Pattern:     "*.*",
-			},
+			{DisplayName: "Файлы проекта (*.ss, *.json)", Pattern: "*.ss;*.json"},
+			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 		},
 	})
 	if err != nil {
@@ -176,14 +162,9 @@ func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
 	if filePath == "" {
 		return &OpenProjectResult{FilePath: "", Content: ""}, nil
 	}
-
 	return a.ReadProjectFile(filePath)
 }
 
-// SaveProject saves the project content.
-// If targetPath is provided and not empty, it writes directly to targetPath.
-// If targetPath is empty, it opens a native SaveFileDialog using defaultName.
-// Returns the saved file path, or empty string if user cancelled.
 func (a *App) SaveProject(targetPath string, defaultName string, content string) (string, error) {
 	if targetPath == "" {
 		if defaultName == "" {
@@ -197,167 +178,176 @@ func (a *App) SaveProject(targetPath string, defaultName string, content string)
 			Title:           "Сохранить проект",
 			DefaultFilename: defaultName,
 			Filters: []runtime.FileFilter{
-				{
-					DisplayName: "Файлы проекта (*.ss)",
-					Pattern:     "*.ss",
-				},
-				{
-					DisplayName: "Файлы JSON (*.json)",
-					Pattern:     "*.json",
-				},
-				{
-					DisplayName: "Все файлы (*.*)",
-					Pattern:     "*.*",
-				},
+				{DisplayName: "Файлы проекта (*.ss)", Pattern: "*.ss"},
+				{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+				{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 			},
 		})
-		if err != nil {
+		if err != nil || chosen == "" {
 			return "", err
-		}
-		if chosen == "" {
-			return "", nil // Cancelled by user
 		}
 		targetPath = chosen
 	}
 
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога: %w", err)
+	if err := writeTextFile(targetPath, content); err != nil {
+		return "", err
 	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи файла: %w", err)
-	}
-
 	return targetPath, nil
 }
 
-// SavePNG prompts the user for a destination file path and writes base64-encoded PNG data to disk.
-// Returns the saved file path, or empty string if user cancelled.
 func (a *App) SavePNG(defaultFilename string, base64Data string) (string, error) {
-	if defaultFilename == "" {
-		defaultFilename = "export.png"
-	}
-	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".png") {
-		defaultFilename += ".png"
-	}
-
-	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Сохранить PNG",
-		DefaultFilename: defaultFilename,
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Изображение PNG (*.png)",
-				Pattern:     "*.png",
-			},
-			{
-				DisplayName: "Все файлы (*.*)",
-				Pattern:     "*.*",
-			},
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	if chosen == "" {
-		return "", nil // Cancelled by user
-	}
-
-	cleanBase64 := base64Data
-	commaIdx := strings.Index(cleanBase64, ",")
-	if commaIdx != -1 {
-		cleanBase64 = cleanBase64[commaIdx+1:]
-	}
-	cleanBase64 = strings.TrimSpace(cleanBase64)
-
-	data, err := base64.StdEncoding.DecodeString(cleanBase64)
-	if err != nil {
-		return "", fmt.Errorf("ошибка декодирования PNG: %w", err)
-	}
-
-	dir := filepath.Dir(chosen)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога: %w", err)
-	}
-
-	if err := os.WriteFile(chosen, data, 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи PNG: %w", err)
-	}
-
-	return chosen, nil
+	return a.saveBase64Dialog("Сохранить PNG", defaultFilename, "export.png", ".png", "Изображение PNG (*.png)", "*.png", base64Data)
 }
 
-// SaveZIP prompts user for destination file path and writes base64-encoded ZIP data to disk.
 func (a *App) SaveZIP(defaultFilename string, base64Data string) (string, error) {
-	if defaultFilename == "" {
-		defaultFilename = "export.zip"
+	return a.saveBase64Dialog("Сохранить ZIP архив", defaultFilename, "export.zip", ".zip", "ZIP архив (*.zip)", "*.zip", base64Data)
+}
+
+func writeTextFile(targetPath string, content string) error {
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("ошибка создания каталога: %w", err)
 	}
-	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".zip") {
-		defaultFilename += ".zip"
+	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("ошибка записи файла: %w", err)
+	}
+	return nil
+}
+
+func (a *App) saveBase64Dialog(title, defaultFilename, fallbackName, ext, filterName, filterPattern, base64Data string) (string, error) {
+	if defaultFilename == "" {
+		defaultFilename = fallbackName
+	}
+	if !strings.HasSuffix(strings.ToLower(defaultFilename), ext) {
+		defaultFilename += ext
 	}
 
 	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Сохранить ZIP архив",
+		Title:           title,
 		DefaultFilename: defaultFilename,
 		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "ZIP архив (*.zip)",
-				Pattern:     "*.zip",
-			},
-			{
-				DisplayName: "Все файлы (*.*)",
-				Pattern:     "*.*",
-			},
+			{DisplayName: filterName, Pattern: filterPattern},
+			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 		},
 	})
-	if err != nil {
+	if err != nil || chosen == "" {
 		return "", err
-	}
-	if chosen == "" {
-		return "", nil
 	}
 
 	cleanBase64 := base64Data
-	commaIdx := strings.Index(cleanBase64, ",")
-	if commaIdx != -1 {
+	if commaIdx := strings.Index(cleanBase64, ","); commaIdx != -1 {
 		cleanBase64 = cleanBase64[commaIdx+1:]
 	}
 	cleanBase64 = strings.TrimSpace(cleanBase64)
 
 	data, err := base64.StdEncoding.DecodeString(cleanBase64)
 	if err != nil {
-		return "", fmt.Errorf("ошибка декодирования ZIP: %w", err)
+		return "", fmt.Errorf("ошибка декодирования файла: %w", err)
 	}
 
-	dir := filepath.Dir(chosen)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(chosen), 0755); err != nil {
 		return "", fmt.Errorf("ошибка создания каталога: %w", err)
 	}
-
 	if err := os.WriteFile(chosen, data, 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи ZIP: %w", err)
+		return "", fmt.Errorf("ошибка записи файла: %w", err)
 	}
-
 	return chosen, nil
 }
 
-type PanelsConfigResult struct {
-	FilePath string `json:"filePath"`
-	Content  string `json:"content"`
-}
-
-// GetPanelsConfigPath returns the absolute path to panels.json next to the executable.
-func (a *App) GetPanelsConfigPath() (string, error) {
+func getExeRelativePath(filename string) (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return filepath.Abs("panels.json")
+		return filepath.Abs(filename)
 	}
-	realExe, err := filepath.EvalSymlinks(exe)
-	if err == nil {
+	if realExe, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = realExe
 	}
-	dir := filepath.Dir(exe)
-	return filepath.Join(dir, "panels.json"), nil
+	return filepath.Join(filepath.Dir(exe), filename), nil
+}
+
+func loadConfigFileWithDefault(filename string, defaultContent string) (*PanelsConfigResult, error) {
+	targetPath, err := getExeRelativePath(filename)
+	if err != nil {
+		targetPath = filename
+	}
+
+	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
+		return &PanelsConfigResult{FilePath: targetPath, Content: string(data)}, nil
+	}
+
+	if absCwd, err := filepath.Abs(filename); err == nil && absCwd != targetPath {
+		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{FilePath: absCwd, Content: string(data)}, nil
+		}
+	}
+
+	if defaultContent != "" {
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err == nil {
+			_ = os.WriteFile(targetPath, []byte(defaultContent), 0644)
+		}
+	}
+
+	return &PanelsConfigResult{FilePath: targetPath, Content: defaultContent}, nil
+}
+
+func saveConfigFile(filename string, content string) (string, error) {
+	targetPath, err := getExeRelativePath(filename)
+	if err != nil {
+		targetPath = filename
+	}
+	if err := writeTextFile(targetPath, content); err != nil {
+		return "", err
+	}
+	return targetPath, nil
+}
+
+func (a *App) openJSONConfigDialog(title string) (*PanelsConfigResult, error) {
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   title,
+		Filters: jsonFileFilters,
+	})
+	if err != nil || filePath == "" {
+		return nil, err
+	}
+
+	clean := strings.Trim(filePath, "\"'")
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
+	}
+
+	absPath, err := filepath.Abs(clean)
+	if err != nil {
+		absPath = clean
+	}
+
+	return &PanelsConfigResult{FilePath: absPath, Content: string(data)}, nil
+}
+
+func (a *App) saveJSONConfigDialog(title string, defaultFilename string, fallbackName string, content string) (string, error) {
+	if defaultFilename == "" {
+		defaultFilename = fallbackName
+	}
+	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
+		defaultFilename += ".json"
+	}
+
+	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           title,
+		DefaultFilename: defaultFilename,
+		Filters:         jsonFileFilters,
+	})
+	if err != nil || chosen == "" {
+		return "", err
+	}
+
+	if err := writeTextFile(chosen, content); err != nil {
+		return "", err
+	}
+	return chosen, nil
+}
+
+func (a *App) GetPanelsConfigPath() (string, error) {
+	return getExeRelativePath("panels.json")
 }
 
 const defaultInitialPanelsJSON = `[
@@ -385,145 +375,20 @@ const defaultInitialPanelsJSON = `[
   }
 ]`
 
-// LoadPanelPresets reads panels.json.
-// It checks next to the binary, and falls back to the working directory if not found.
-// If the file exists, it returns its content and the path.
-// If it doesn't exist, it creates panels.json with 2 default Dicolor panels (0.5m & 1m) and returns it.
 func (a *App) LoadPanelPresets() (*PanelsConfigResult, error) {
-	targetPath, err := a.GetPanelsConfigPath()
-	if err != nil {
-		targetPath = "panels.json"
-	}
-
-	// 1. Try next to binary
-	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
-		return &PanelsConfigResult{
-			FilePath: targetPath,
-			Content:  string(data),
-		}, nil
-	}
-
-	// 2. Fallback to current working directory if different
-	cwdFile := "panels.json"
-	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
-		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
-			return &PanelsConfigResult{
-				FilePath: absCwd,
-				Content:  string(data),
-			}, nil
-		}
-	}
-
-	// 3. File not found yet: create default panels.json next to binary
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err == nil {
-		_ = os.WriteFile(targetPath, []byte(defaultInitialPanelsJSON), 0644)
-	}
-
-	return &PanelsConfigResult{
-		FilePath: targetPath,
-		Content:  defaultInitialPanelsJSON,
-	}, nil
+	return loadConfigFileWithDefault("panels.json", defaultInitialPanelsJSON)
 }
 
-// SavePanelPresets saves content string into panels.json located next to the binary.
 func (a *App) SavePanelPresets(content string) (string, error) {
-	targetPath, err := a.GetPanelsConfigPath()
-	if err != nil {
-		targetPath = "panels.json"
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога для panels.json: %w", err)
-	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи panels.json: %w", err)
-	}
-
-	return targetPath, nil
+	return saveConfigFile("panels.json", content)
 }
 
-// OpenPanelsFileDialog opens a native file dialog to choose a panels json file and returns its path and content.
 func (a *App) OpenPanelsFileDialog() (*PanelsConfigResult, error) {
-	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Выбрать файл пресетов панелей",
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Файлы JSON (*.json)",
-				Pattern:     "*.json",
-			},
-			{
-				DisplayName: "Все файлы (*.*)",
-				Pattern:     "*.*",
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if filePath == "" {
-		return nil, nil // User cancelled
-	}
-
-	clean := strings.Trim(filePath, "\"'")
-	data, err := os.ReadFile(clean)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
-	}
-
-	absPath, err := filepath.Abs(clean)
-	if err != nil {
-		absPath = clean
-	}
-
-	return &PanelsConfigResult{
-		FilePath: absPath,
-		Content:  string(data),
-	}, nil
+	return a.openJSONConfigDialog("Выбрать файл пресетов панелей")
 }
 
-// SavePanelsFileDialog opens a native save file dialog to export panels presets to a chosen json file.
 func (a *App) SavePanelsFileDialog(defaultFilename string, content string) (string, error) {
-	if defaultFilename == "" {
-		defaultFilename = "panels.json"
-	}
-	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
-		defaultFilename += ".json"
-	}
-
-	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Экспорт пресетов панелей",
-		DefaultFilename: defaultFilename,
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Файлы JSON (*.json)",
-				Pattern:     "*.json",
-			},
-			{
-				DisplayName: "Все файлы (*.*)",
-				Pattern:     "*.*",
-			},
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	if chosen == "" {
-		return "", nil // Cancelled by user
-	}
-
-	dir := filepath.Dir(chosen)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога: %w", err)
-	}
-
-	if err := os.WriteFile(chosen, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи файла: %w", err)
-	}
-
-	return chosen, nil
+	return a.saveJSONConfigDialog("Экспорт пресетов панелей", defaultFilename, "panels.json", content)
 }
 
 
@@ -611,135 +476,24 @@ const defaultInitialCardsJSON = `[
   }
 ]`
 
-// GetCardsConfigPath returns the absolute path to cards.json next to the executable.
 func (a *App) GetCardsConfigPath() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return filepath.Abs("cards.json")
-	}
-	realExe, err := filepath.EvalSymlinks(exe)
-	if err == nil {
-		exe = realExe
-	}
-	dir := filepath.Dir(exe)
-	return filepath.Join(dir, "cards.json"), nil
+	return getExeRelativePath("cards.json")
 }
 
-// LoadCardPresets reads cards.json.
 func (a *App) LoadCardPresets() (*PanelsConfigResult, error) {
-	targetPath, err := a.GetCardsConfigPath()
-	if err != nil {
-		targetPath = "cards.json"
-	}
-
-	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
-		return &PanelsConfigResult{
-			FilePath: targetPath,
-			Content:  string(data),
-		}, nil
-	}
-
-	cwdFile := "cards.json"
-	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
-		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
-			return &PanelsConfigResult{
-				FilePath: absCwd,
-				Content:  string(data),
-			}, nil
-		}
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err == nil {
-		_ = os.WriteFile(targetPath, []byte(defaultInitialCardsJSON), 0644)
-	}
-
-	return &PanelsConfigResult{
-		FilePath: targetPath,
-		Content:  defaultInitialCardsJSON,
-	}, nil
+	return loadConfigFileWithDefault("cards.json", defaultInitialCardsJSON)
 }
 
-// SaveCardPresets saves content string into cards.json next to the binary.
 func (a *App) SaveCardPresets(content string) (string, error) {
-	targetPath, err := a.GetCardsConfigPath()
-	if err != nil {
-		targetPath = "cards.json"
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога для cards.json: %w", err)
-	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи cards.json: %w", err)
-	}
-
-	return targetPath, nil
+	return saveConfigFile("cards.json", content)
 }
 
-// OpenCardsFileDialog opens a native file dialog to choose a cards json file.
 func (a *App) OpenCardsFileDialog() (*PanelsConfigResult, error) {
-	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Выбрать файл пресетов карт",
-		Filters: []runtime.FileFilter{
-			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
-			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
-		},
-	})
-	if err != nil || filePath == "" {
-		return nil, err
-	}
-
-	clean := strings.Trim(filePath, "\"'")
-	data, err := os.ReadFile(clean)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
-	}
-
-	absPath, err := filepath.Abs(clean)
-	if err != nil {
-		absPath = clean
-	}
-
-	return &PanelsConfigResult{
-		FilePath: absPath,
-		Content:  string(data),
-	}, nil
+	return a.openJSONConfigDialog("Выбрать файл пресетов карт")
 }
 
-// SaveCardsFileDialog opens a native save file dialog to export cards presets.
 func (a *App) SaveCardsFileDialog(defaultFilename string, content string) (string, error) {
-	if defaultFilename == "" {
-		defaultFilename = "cards.json"
-	}
-	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
-		defaultFilename += ".json"
-	}
-
-	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Экспорт пресетов карт",
-		DefaultFilename: defaultFilename,
-		Filters: []runtime.FileFilter{
-			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
-			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
-		},
-	})
-	if err != nil || chosen == "" {
-		return "", err
-	}
-
-	dir := filepath.Dir(chosen)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога: %w", err)
-	}
-
-	if err := os.WriteFile(chosen, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи файла: %w", err)
-	}
-
-	return chosen, nil
+	return a.saveJSONConfigDialog("Экспорт пресетов карт", defaultFilename, "cards.json", content)
 }
 
 
@@ -786,198 +540,36 @@ const defaultInitialServersJSON = `[
   }
 ]`
 
-// GetServersConfigPath returns the absolute path to servers.json next to the executable.
 func (a *App) GetServersConfigPath() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return filepath.Abs("servers.json")
-	}
-	realExe, err := filepath.EvalSymlinks(exe)
-	if err == nil {
-		exe = realExe
-	}
-	dir := filepath.Dir(exe)
-	return filepath.Join(dir, "servers.json"), nil
+	return getExeRelativePath("servers.json")
 }
 
-// LoadServerPresets reads servers.json.
 func (a *App) LoadServerPresets() (*PanelsConfigResult, error) {
-	targetPath, err := a.GetServersConfigPath()
-	if err != nil {
-		targetPath = "servers.json"
-	}
-
-	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
-		return &PanelsConfigResult{
-			FilePath: targetPath,
-			Content:  string(data),
-		}, nil
-	}
-
-	cwdFile := "servers.json"
-	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
-		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
-			return &PanelsConfigResult{
-				FilePath: absCwd,
-				Content:  string(data),
-			}, nil
-		}
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err == nil {
-		_ = os.WriteFile(targetPath, []byte(defaultInitialServersJSON), 0644)
-	}
-
-	return &PanelsConfigResult{
-		FilePath: targetPath,
-		Content:  defaultInitialServersJSON,
-	}, nil
+	return loadConfigFileWithDefault("servers.json", defaultInitialServersJSON)
 }
 
-// SaveServerPresets saves content string into servers.json next to the binary.
 func (a *App) SaveServerPresets(content string) (string, error) {
-	targetPath, err := a.GetServersConfigPath()
-	if err != nil {
-		targetPath = "servers.json"
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога для servers.json: %w", err)
-	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи servers.json: %w", err)
-	}
-
-	return targetPath, nil
+	return saveConfigFile("servers.json", content)
 }
 
-// OpenServersFileDialog opens a native file dialog to choose a servers json file.
 func (a *App) OpenServersFileDialog() (*PanelsConfigResult, error) {
-	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Выбрать файл пресетов серверов",
-		Filters: []runtime.FileFilter{
-			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
-			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
-		},
-	})
-	if err != nil || filePath == "" {
-		return nil, err
-	}
-
-	clean := strings.Trim(filePath, "\"'")
-	data, err := os.ReadFile(clean)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения файла: %w", err)
-	}
-
-	absPath, err := filepath.Abs(clean)
-	if err != nil {
-		absPath = clean
-	}
-
-	return &PanelsConfigResult{
-		FilePath: absPath,
-		Content:  string(data),
-	}, nil
+	return a.openJSONConfigDialog("Выбрать файл пресетов серверов")
 }
 
-// SaveServersFileDialog opens a native save file dialog to export servers presets.
 func (a *App) SaveServersFileDialog(defaultFilename string, content string) (string, error) {
-	if defaultFilename == "" {
-		defaultFilename = "servers.json"
-	}
-	if !strings.HasSuffix(strings.ToLower(defaultFilename), ".json") {
-		defaultFilename += ".json"
-	}
-
-	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Экспорт пресетов серверов",
-		DefaultFilename: defaultFilename,
-		Filters: []runtime.FileFilter{
-			{ DisplayName: "Файлы JSON (*.json)", Pattern: "*.json" },
-			{ DisplayName: "Все файлы (*.*)", Pattern: "*.*" },
-		},
-	})
-	if err != nil || chosen == "" {
-		return "", err
-	}
-
-	dir := filepath.Dir(chosen)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога: %w", err)
-	}
-
-	if err := os.WriteFile(chosen, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи файла: %w", err)
-	}
-
-	return chosen, nil
+	return a.saveJSONConfigDialog("Экспорт пресетов серверов", defaultFilename, "servers.json", content)
 }
 
-// GetMaskLogoConfigPath returns the absolute path to mask_logo.json next to the executable.
 func (a *App) GetMaskLogoConfigPath() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return filepath.Abs("mask_logo.json")
-	}
-	realExe, err := filepath.EvalSymlinks(exe)
-	if err == nil {
-		exe = realExe
-	}
-	dir := filepath.Dir(exe)
-	return filepath.Join(dir, "mask_logo.json"), nil
+	return getExeRelativePath("mask_logo.json")
 }
 
-// LoadMaskLogoConfig reads mask_logo.json if present.
 func (a *App) LoadMaskLogoConfig() (*PanelsConfigResult, error) {
-	targetPath, err := a.GetMaskLogoConfigPath()
-	if err != nil {
-		targetPath = "mask_logo.json"
-	}
-
-	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
-		return &PanelsConfigResult{
-			FilePath: targetPath,
-			Content:  string(data),
-		}, nil
-	}
-
-	cwdFile := "mask_logo.json"
-	if absCwd, err := filepath.Abs(cwdFile); err == nil && absCwd != targetPath {
-		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
-			return &PanelsConfigResult{
-				FilePath: absCwd,
-				Content:  string(data),
-			}, nil
-		}
-	}
-
-	return &PanelsConfigResult{
-		FilePath: targetPath,
-		Content:  "",
-	}, nil
+	return loadConfigFileWithDefault("mask_logo.json", "")
 }
 
-// SaveMaskLogoConfig saves content string into mask_logo.json next to the binary.
 func (a *App) SaveMaskLogoConfig(content string) (string, error) {
-	targetPath, err := a.GetMaskLogoConfigPath()
-	if err != nil {
-		targetPath = "mask_logo.json"
-	}
-
-	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", fmt.Errorf("ошибка создания каталога для mask_logo.json: %w", err)
-	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("ошибка записи mask_logo.json: %w", err)
-	}
-
-	return targetPath, nil
+	return saveConfigFile("mask_logo.json", content)
 }
 
 

@@ -1,17 +1,20 @@
-// src/lib/led-editor-svg/mask-export.ts
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { savePngFile, saveDesktopZIP, blobToBase64, isDesktopApp, showToast } from '../desktop';
 import { Panel, ScreenGroup, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
 import { getTextureById } from './textures';
-import { computePixelPanels, computeContour, GroupContourResult, PixelPanel, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds, computeBadgeLogoRect } from './mask-contour';
-import type { BuildLegendParams } from './utils';
-
-/* Нормированный восьмиугольник 30-70-100 % */
-const OCT_PATH = [
-  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
-  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
-] as const;
+import {
+  computePixelPanels,
+  computeContour,
+  GroupContourResult,
+  PixelPanel,
+  formatMeters,
+  getMaskPanelResolution,
+  computeBadgeSize,
+  getBadgeBounds,
+  computeBadgeLogoRect,
+  OCT_POINTS,
+} from './mask-contour';
 
 export interface ScreenRenderData {
   group: ScreenGroup;
@@ -53,7 +56,7 @@ function drawOctagon(
   lineWidth = 1
 ) {
   ctx.beginPath();
-  OCT_PATH.forEach(([px, py], i) => {
+  OCT_POINTS.forEach(([px, py], i) => {
     const vx = ox + px * side;
     const vy = oy + py * side;
     if (i === 0) ctx.moveTo(vx, vy);
@@ -325,7 +328,7 @@ export async function renderScreenOnCanvas(
   // 5. Текст и логотип на плашке (обрезаем по восьмиугольнику)
   ctx.save();
   ctx.beginPath();
-  OCT_PATH.forEach(([px, py], i) => {
+  OCT_POINTS.forEach(([px, py], i) => {
     const vx = ox + px * octSide;
     const vy = oy + py * octSide;
     if (i === 0) ctx.moveTo(vx, vy);
@@ -445,11 +448,9 @@ export async function exportMaskZIP(
   panels: Panel[],
   groups: ScreenGroup[],
   eventName = 'Mask',
-  _legendParams?: Partial<BuildLegendParams>,
   pageName?: string,
   logoConfig?: Partial<MaskLogoConfig> | null
 ): Promise<void> {
-  void _legendParams;
   const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups, logoConfig);
   if (totalW === 0 || totalH === 0) return;
 

@@ -1,7 +1,7 @@
 // src/lib/led-editor-svg/autoconnect.ts
 import { CableEx, CardInstance, Panel } from './types';
 import { uid } from './utils';
-import { CARDS, LINK_COLORS_16 } from './presets';
+import { CARDS, LINK_COLORS_16, type CardPreset } from './presets';
 
 // «Сырой» кабель: только концы (и опционально штриховка). Оформление делаем в EditorApp.
 export type RawCable = { id: string; a: string; b: string; dash?: number[] };
@@ -161,73 +161,67 @@ export function autoSnakeV_BL(panels: Panel[], subset: Set<string> | null) { ret
 export function autoSnakeV_BR(panels: Panel[], subset: Set<string> | null) { return snakeV(subsetPanels(panels, subset), 'BR'); }
 
 export function buildAddEdges(
-    base: { a: string; b: string; dash?: number[]; id?: string }[],
-    selection: Set<string> | null,
-    selectedCard: CardInstance | null,
-    cables: CableEx[],
-    activeLinkRef: React.RefObject<number>,
-    panelHasOtherAssignment: (panelId: string, cardNo: number, link: number) => boolean,
-    willPortFit: (cardNo: number, link: number, extras?: string[]) => boolean
-  ) {
-    if (!selectedCard) return { existing: cables, add: [] as CableEx[] };
+  base: { a: string; b: string; dash?: number[]; id?: string }[],
+  selection: Set<string> | null,
+  selectedCard: CardInstance | null,
+  cables: CableEx[],
+  activeLinkRef: React.RefObject<number>,
+  panelHasOtherAssignment: (panelId: string, cardNo: number, link: number) => boolean,
+  willPortFit: (cardNo: number, link: number, extras?: string[]) => boolean,
+  cardPresets: CardPreset[] = CARDS
+) {
+  if (!selectedCard) return { existing: cables, add: [] as CableEx[] };
 
-    const model = CARDS.find(m => m.id === selectedCard.modelId)!;
-    const ports = model.outputPorts;
+  const model = cardPresets.find(m => m.id === selectedCard.modelId) ?? CARDS.find(m => m.id === selectedCard.modelId);
+  const ports = model?.outputPorts ?? selectedCard.portColors.length;
 
-    // существующие кабели (если выделение — то за его пределами)
-    const existing = selection
-      ? cables.filter(c => !(selection.has(c.a) || selection.has(c.b)))
-      : cables.slice();
+  const existing = selection
+    ? cables.filter(c => !(selection.has(c.a) || selection.has(c.b)))
+    : cables.slice();
 
-    const add: CableEx[] = [];
-    const pairSet = new Set<string>(
-      existing.map(c => (c.a < c.b ? `${c.a}|${c.b}` : `${c.b}|${c.a}`))
-    );
-    const degMap = new Map<string, number>();
-    for (const c of existing) {
-      degMap.set(c.a, (degMap.get(c.a) || 0) + 1);
-      degMap.set(c.b, (degMap.get(c.b) || 0) + 1);
-    }
-
-    // один порт — текущий активный
-    const link = activeLinkRef.current;
-    if (link >= ports) return { existing, add };
-
-    // ⬅️ НОВОЕ: панели, уже "запланированные" в этом проходе на (card,link)
-    const plannedNodes = new Set<string>();
-
-    for (const e of base) {
-      const k = e.a < e.b ? `${e.a}|${e.b}` : `${e.b}|${e.a}`;
-      if (pairSet.has(k)) continue;
-      if ((degMap.get(e.a) || 0) >= 2 || (degMap.get(e.b) || 0) >= 2) continue;
-
-      // запрет: панель уже относится к другой карте/порту
-      if (panelHasOtherAssignment(e.a, selectedCard.order, link)) continue;
-      if (panelHasOtherAssignment(e.b, selectedCard.order, link)) continue;
-
-      // ⬅️ НОВОЕ: считаем лимит с учётом всех уже запланированных в этом же проходе
-      const extrasForCheck = [...plannedNodes, e.a, e.b];
-      if (!willPortFit(selectedCard.order, link, extrasForCheck)) continue;
-
-      // ок — принимаем
-      degMap.set(e.a, (degMap.get(e.a) || 0) + 1);
-      degMap.set(e.b, (degMap.get(e.b) || 0) + 1);
-      pairSet.add(k);
-
-      add.push({
-        id: e.id ?? uid('c'),
-        a: e.a,
-        b: e.b,
-        link,
-        color: selectedCard.portColors[link] ?? LINK_COLORS_16[link] ?? '#9ca3af',
-        dash: e.dash,
-        card: selectedCard.order,
-      });
-
-      // ⬅️ НОВОЕ: фиксируем в рабочем наборе
-      plannedNodes.add(e.a);
-      plannedNodes.add(e.b);
-    }
-
-    return { existing, add };
+  const add: CableEx[] = [];
+  const pairSet = new Set<string>(
+    existing.map(c => (c.a < c.b ? `${c.a}|${c.b}` : `${c.b}|${c.a}`))
+  );
+  const degMap = new Map<string, number>();
+  for (const c of existing) {
+    degMap.set(c.a, (degMap.get(c.a) || 0) + 1);
+    degMap.set(c.b, (degMap.get(c.b) || 0) + 1);
   }
+
+  const link = activeLinkRef.current;
+  if (link >= ports) return { existing, add };
+
+  const plannedNodes = new Set<string>();
+
+  for (const e of base) {
+    const k = e.a < e.b ? `${e.a}|${e.b}` : `${e.b}|${e.a}`;
+    if (pairSet.has(k)) continue;
+    if ((degMap.get(e.a) || 0) >= 2 || (degMap.get(e.b) || 0) >= 2) continue;
+
+    if (panelHasOtherAssignment(e.a, selectedCard.order, link)) continue;
+    if (panelHasOtherAssignment(e.b, selectedCard.order, link)) continue;
+
+    const extrasForCheck = [...plannedNodes, e.a, e.b];
+    if (!willPortFit(selectedCard.order, link, extrasForCheck)) continue;
+
+    degMap.set(e.a, (degMap.get(e.a) || 0) + 1);
+    degMap.set(e.b, (degMap.get(e.b) || 0) + 1);
+    pairSet.add(k);
+
+    add.push({
+      id: e.id ?? uid('c'),
+      a: e.a,
+      b: e.b,
+      link,
+      color: selectedCard.portColors[link] ?? LINK_COLORS_16[link] ?? '#9ca3af',
+      dash: e.dash,
+      card: selectedCard.order,
+    });
+
+    plannedNodes.add(e.a);
+    plannedNodes.add(e.b);
+  }
+
+  return { existing, add };
+}

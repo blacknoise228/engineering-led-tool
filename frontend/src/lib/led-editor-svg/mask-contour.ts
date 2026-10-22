@@ -451,10 +451,15 @@ export function getBadgeBounds(
   return { minX, maxX, minY, maxY };
 }
 
-/**
- * Вычисляет координаты и размеры области логотипа внутри восьмиугольного бейджа
- * на основе глобальных настроек логотипа (единых для всех бейджей).
- */
+export const OCT_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
+  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
+];
+
+export function getOctagonPointsStr(ox: number, oy: number, side: number): string {
+  return OCT_POINTS.map(([px, py]) => `${ox + px * side},${oy + py * side}`).join(' ');
+}
+
 export function computeBadgeLogoRect(
   octSide: number,
   badgeCx: number,
