@@ -1,6 +1,6 @@
 // src/lib/led-editor-svg/utils.ts
 import type { Panel, Vec, CableEx, CardInstance, ScreenGroup } from './types';
-import { PRESETS, SERVERS, CARDS, FIBER_CONVERTERS } from './presets';
+import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS } from './presets';
 import { savePngBlob, savePngFile, showToast } from '../desktop';
 
 export const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 9)}`;
@@ -104,6 +104,7 @@ export interface BuildLegendParams {
   eventDate?: string;
   logoDataUrl?: string;
   fiberCounts?: Record<string, number>;
+  presets?: PanelPreset[];
 }
 
 export function buildExportLegend(params: BuildLegendParams): ExportLegend {
@@ -117,7 +118,10 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     eventDate = new Date().toISOString().slice(0, 10),
     logoDataUrl = '',
     fiberCounts = {},
+    presets,
   } = params;
+
+  const presetsList = presets && presets.length > 0 ? presets : PRESETS;
 
   const cablesCount = cables.length;
 
@@ -133,9 +137,9 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
 
   const groupsMap = new Map<string, { label: string; sub?: string; count: number }>();
   for (const p of panels) {
-    const pr = PRESETS.find(pp => pp.id === p.presetId);
+    const pr = presetsList.find(pp => pp.id === p.presetId);
     const res = pr ? `${pr.resW}×${pr.resH}` : `${p.resW}×${p.resH}`;
-    const name = pr?.name ?? String(p.presetId);
+    const name = pr?.name ?? String(p.presetName || p.presetId);
     const key = `${name}__${res ?? ''}`;
     const existed = groupsMap.get(key);
     if (existed) existed.count += 1;
@@ -143,7 +147,7 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
   }
   const panelGroups = Array.from(groupsMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 
-  const byId = new Map(PRESETS.map(p => [p.id, p]));
+  const byId = new Map(presetsList.map(p => [p.id, p]));
   let power = 0;
   let n05 = 0, n10 = 0, otherArea = 0;
   for (const p of panels) {

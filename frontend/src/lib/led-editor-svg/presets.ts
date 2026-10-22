@@ -13,39 +13,33 @@ export type PanelPreset = {
   power: number;
 };
 
-export const PRESETS: PanelPreset[] = [
-  { id: 'infiled-1m-4p6', name: 'InfiLed 1m (500×1000) 4.6', w: 500, h: 1000, pitch_mm: 4.6, special: false, resW: 108, resH: 216, power: 600 },
-  { id: 'infiled-0p5m-4p6', name: 'InfiLed 0.5m (500×500) 4.6', w: 500, h: 500, pitch_mm: 4.6, special: false, resW: 108, resH: 108, power: 600 },
-
-  { id: 'truelight-1m-3p9', name: 'TrueLight-P 1m (500×1000) 3.9', w: 500, h: 1000, pitch_mm: 3.9, special: false, resW: 128, resH: 256, power: 206 },
-  { id: 'truelight-0p5m-3p9', name: 'TrueLight-P 0.5m (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 103 },
-
-  { id: 'rpro-1m-3p9', name: 'TrueLight-R Pro 1m (500×1000) 3.9', w: 500, h: 1000, pitch_mm: 3.9, special: false, resW: 128, resH: 256, power: 206 },
-  { id: 'rpro-0p5m-3p9', name: 'TrueLight-R Pro 0.5m (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 103 },
-  { id: 'rpro-fc-0p5m-3p9', name: 'TrueLight-R Pro FC 0.5m (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 103 },
-
-  { id: 'alpha-0p5m-1p9', name: 'ALPHA (500×500) 1.9', w: 500, h: 500, pitch_mm: 1.9, special: false, resW: 256, resH: 256, power: 115 },
-  { id: 'alpha-fc-0p5m-1p9', name: 'ALPHA FC (500×500) 1.9', w: 500, h: 500, pitch_mm: 1.9, special: false, resW: 256, resH: 256, power: 115 },
-  { id: 'alpha-vr-1p9', name: 'ALPHA VR 1.9', w: 250, h: 500, pitch_mm: 1.9, special: false, resW: 128, resH: 256, power: 75 },
-
-  { id: 'alpha-0p5m-2p6', name: 'ALPHA (500×500) 2.6', w: 500, h: 500, pitch_mm: 2.6, special: false, resW: 192, resH: 192, power: 115 },
-  { id: 'alpha-fc-0p5m-2p6', name: 'ALPHA FC (500×500) 2.6', w: 500, h: 500, pitch_mm: 2.6, special: false, resW: 192, resH: 192, power: 115 },
-  { id: 'alpha-vr-2p6', name: 'ALPHA VR 2.6', w: 250, h: 500, pitch_mm: 2.6, special: false, resW: 96, resH: 192, power: 75 },
-
-  { id: 'ipro-floor-0p5m-3p9', name: 'IPro Led Floor (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 310 },
-
-  { id: 'galaxy-1m-3p9-7p8', name: 'Galaxy (1000×500) 3.9 - 7.8', w: 1000, h: 500, pitch_mm: 3.9, special: true, resW: 256, resH: 64, power: 268 },
-  { id: 'galaxy-0p5m-3p9-7p8', name: 'Galaxy (500×500) 3.9 - 7.8', w: 500, h: 500, pitch_mm: 3.9, special: true, resW: 128, resH: 64, power: 136 },
-  { id: 'galaxy-1m-7p8', name: 'Galaxy (1000×500) 7.8', w: 1000, h: 500, pitch_mm: 7.8, special: false, resW: 128, resH: 64, power: 180 },
-  { id: 'galaxy-0p5m-7p8', name: 'Galaxy (500×500) 7.8', w: 500, h: 500, pitch_mm: 7.8, special: false, resW: 64, resH: 64, power: 90 },
-
-  { id: 'dicolor-1m-4p8', name: 'Dicolor-C 1m (500×1000) 4.8', w: 500, h: 1000, pitch_mm: 4.8, special: false, resW: 104, resH: 208, power: 322 },
-  { id: 'dicolor-0p5m-4p8', name: 'Dicolor-C 0.5m (500×500) 4.8', w: 500, h: 500, pitch_mm: 4.8, special: false, resW: 104, resH: 104, power: 161 },
-
-  { id: 'rocketsign-0p5m-3p9', name: 'RocketSign Mecanus (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 115 },
-
-  { id: 'manarbek-arena-0p5m-3p9', name: 'Arena Manarbek (500×500) 3.9', w: 500, h: 500, pitch_mm: 3.9, special: false, resW: 128, resH: 128, power: 160 },
+export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
+  {
+    id: 'dicolor-0p5m-4p8',
+    name: 'Dicolor-C 0.5m (500×500) 4.8',
+    w: 500,
+    h: 500,
+    pitch_mm: 4.8,
+    special: false,
+    resW: 104,
+    resH: 104,
+    power: 161,
+  },
+  {
+    id: 'dicolor-1m-4p8',
+    name: 'Dicolor-C 1m (500×1000) 4.8',
+    w: 500,
+    h: 1000,
+    pitch_mm: 4.8,
+    special: false,
+    resW: 104,
+    resH: 208,
+    power: 322,
+  },
 ];
+
+export const PRESETS: PanelPreset[] = DEFAULT_PANEL_PRESETS;
+
 
 // Полезные (по гайду) константы по ёмкости порта NovaStar (px):
 export const NOVASTAR_PORT_MAX_PIXELS_50HZ = 791_667;

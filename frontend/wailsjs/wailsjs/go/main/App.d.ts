@@ -4,11 +4,21 @@ import {main} from '../models';
 
 export function GetInitialProject():Promise<main.OpenProjectResult>;
 
+export function GetPanelsConfigPath():Promise<string>;
+
+export function LoadPanelPresets():Promise<main.PanelsConfigResult>;
+
+export function OpenPanelsFileDialog():Promise<main.PanelsConfigResult>;
+
 export function OpenProjectDialog():Promise<main.OpenProjectResult>;
 
 export function ReadProjectFile(arg1:string):Promise<main.OpenProjectResult>;
 
 export function SavePNG(arg1:string,arg2:string):Promise<string>;
+
+export function SavePanelPresets(arg1:string):Promise<string>;
+
+export function SavePanelsFileDialog(arg1:string,arg2:string):Promise<string>;
 
 export function SaveProject(arg1:string,arg2:string,arg3:string):Promise<string>;
 

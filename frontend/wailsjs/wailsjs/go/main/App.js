@@ -6,6 +6,18 @@ export function GetInitialProject() {
   return window['go']['main']['App']['GetInitialProject']();
 }
 
+export function GetPanelsConfigPath() {
+  return window['go']['main']['App']['GetPanelsConfigPath']();
+}
+
+export function LoadPanelPresets() {
+  return window['go']['main']['App']['LoadPanelPresets']();
+}
+
+export function OpenPanelsFileDialog() {
+  return window['go']['main']['App']['OpenPanelsFileDialog']();
+}
+
 export function OpenProjectDialog() {
   return window['go']['main']['App']['OpenProjectDialog']();
 }
@@ -16,6 +28,14 @@ export function ReadProjectFile(arg1) {
 
 export function SavePNG(arg1, arg2) {
   return window['go']['main']['App']['SavePNG'](arg1, arg2);
+}
+
+export function SavePanelPresets(arg1) {
+  return window['go']['main']['App']['SavePanelPresets'](arg1);
+}
+
+export function SavePanelsFileDialog(arg1, arg2) {
+  return window['go']['main']['App']['SavePanelsFileDialog'](arg1, arg2);
 }
 
 export function SaveProject(arg1, arg2, arg3) {

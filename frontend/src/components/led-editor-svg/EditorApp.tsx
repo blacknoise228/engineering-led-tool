@@ -10,11 +10,13 @@ import Sidebar from './Sidebar';
 
 import {
   PRESETS,
+  DEFAULT_PANEL_PRESETS,
   LINK_COLORS_16,
   CARDS,
   SERVERS,
   CARD_COLORS,
   NOVASTAR_PORT_MAX_PIXELS_50HZ,
+  type PanelPreset,
 } from '@/lib/led-editor-svg/presets';
 import {
   autoSnakeH_TL, autoSnakeH_TR, autoSnakeH_BL, autoSnakeH_BR,
@@ -36,6 +38,7 @@ import { exportMaskPNG, exportMaskZIP, prepareScreensData } from '@/lib/led-edit
 import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
 import ConfirmModal from './ConfirmModal';
+import PanelPresetsModal from './PanelPresetsModal';
 import PageBar from './PageBar';
 import {
   isDesktopApp,
@@ -46,6 +49,9 @@ import {
   readDesktopProjectFile,
   onDesktopProjectOpen,
   setupDesktopFileDrop,
+  loadDesktopPanelPresets,
+  saveDesktopPanelPresets,
+  getDesktopPanelsConfigPath,
 } from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
@@ -57,7 +63,10 @@ export default function EditorApp() {
   const [scale, setScale] = useState(1);
 
   // ======== DATA ========
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
+  const [panelPresets, setPanelPresets] = useState<PanelPreset[]>(DEFAULT_PANEL_PRESETS);
+  const [panelsConfigPath, setPanelsConfigPath] = useState<string>('');
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
+  const [presetId, setPresetId] = useState(DEFAULT_PANEL_PRESETS[0]?.id || PRESETS[0].id);
   const [rows, setRows] = useState(0);
   const [cols, setCols] = useState(0);
 
@@ -454,7 +463,7 @@ export default function EditorApp() {
 
   // ======== МАТРИЦА ПАНЕЛЕЙ ========
   const createMatrix = useCallback(() => {
-    const pr = PRESETS.find(p => p.id === presetId)!;
+    const pr = panelPresets.find(p => p.id === presetId) || panelPresets[0] || PRESETS[0];
     const gap = 0;
     const margin = 40;
 
@@ -485,7 +494,7 @@ export default function EditorApp() {
     setSelectedPanels(new Set());
     setSelectedCables(new Set());
     setDraft(null);
-  }, [cols, rows, presetId, panels, pushHistory, setPanels]);
+  }, [cols, rows, presetId, panelPresets, panels, pushHistory, setPanels]);
 
   const clearAll = useCallback(() => {
     pushHistory();
@@ -906,6 +915,50 @@ export default function EditorApp() {
     }
   }, [setSelectedGroupId]);
 
+  // ======== LOAD PANELS PRESETS FROM panels.json ========
+  useEffect(() => {
+    getDesktopPanelsConfigPath().then(path => {
+      if (path) setPanelsConfigPath(path);
+    });
+
+    loadDesktopPanelPresets().then(res => {
+      if (res) {
+        if (res.filePath) setPanelsConfigPath(res.filePath);
+        if (res.content && res.content.trim()) {
+          try {
+            const parsed = JSON.parse(res.content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPanelPresets(parsed);
+              setPresetId(prev => (parsed.some(p => p.id === prev) ? prev : parsed[0].id));
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to parse panels.json:', e);
+          }
+        }
+      }
+      // If panels.json doesn't exist or is empty, initialize it with DEFAULT_PANEL_PRESETS
+      saveDesktopPanelPresets(JSON.stringify(DEFAULT_PANEL_PRESETS, null, 2))
+        .then(savedPath => {
+          if (savedPath) setPanelsConfigPath(savedPath);
+        })
+        .catch(e => console.error('Failed to initialize panels.json:', e));
+    });
+  }, []);
+
+  const handleSavePresets = useCallback(async (newPresets: PanelPreset[]) => {
+    setPanelPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopPanelPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setPanelsConfigPath(savedPath);
+      setPresetId(prev => (newPresets.some(p => p.id === prev) ? prev : newPresets[0]?.id || ''));
+    } catch (e) {
+      console.error('Failed to save panel presets:', e);
+      showToast('Ошибка при сохранении panels.json');
+    }
+  }, [showToast]);
+
+
   // ======== AUTO LOAD / CLI / SECOND INSTANCE / DRAG & DROP ========
   useEffect(() => {
     // 1. Initial project passed via CLI argument (e.g. double-click in explorer)
@@ -1198,7 +1251,7 @@ export default function EditorApp() {
     setCards([]);
     setSelectedCardId(null);
     setActiveLink(0);
-    setPresetId(PRESETS[0].id);
+    setPresetId(panelPresets[0]?.id || PRESETS[0].id);
     setRows(0);
     setCols(0);
     setEventName('Event');
@@ -1219,7 +1272,7 @@ export default function EditorApp() {
     setPan({ x: 0, y: 0 });
     setScale(1);
     showToast('Новый проект создан');
-  }, [setSelectedGroupId, showToast]);
+  }, [panelPresets, setSelectedGroupId, showToast]);
 
   const newProject = useCallback(() => {
     const hasContent = allPanels.length > 0 || cards.length > 0 || currentFilePath !== null;
@@ -1560,6 +1613,8 @@ export default function EditorApp() {
       <Sidebar
         tool={tool} setTool={setTool}
         presetId={presetId} setPresetId={setPresetId}
+        presets={panelPresets}
+        onOpenPresetsModal={() => setIsPresetsModalOpen(true)}
         setRows={setRows} setCols={setCols}
         createMatrix={createMatrix} clearAll={clearAll}
         exportPNG={exportPNG} saveJSON={saveJSON} openLoadJSONDialog={openLoadJSONDialog}
@@ -1907,6 +1962,17 @@ export default function EditorApp() {
             logoDataUrl,
             fiberCounts,
           }}
+        />
+
+        {/* Модальное окно управления прессетами панелей */}
+        <PanelPresetsModal
+          open={isPresetsModalOpen}
+          onClose={() => setIsPresetsModalOpen(false)}
+          presets={panelPresets}
+          onSavePresets={handleSavePresets}
+          activePresetId={presetId}
+          onSelectPreset={(id) => setPresetId(id)}
+          filePath={panelsConfigPath}
         />
 
         {/* Модальное окно подтверждения нового проекта */}

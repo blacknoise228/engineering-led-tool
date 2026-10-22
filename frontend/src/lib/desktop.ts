@@ -29,6 +29,11 @@ interface WailsApp {
   SaveZIP: (defaultFilename: string, base64Data: string) => Promise<string>;
   GetInitialProject: () => Promise<{ filePath?: string; content?: string } | null>;
   ReadProjectFile: (filePath: string) => Promise<{ filePath?: string; content?: string }>;
+  LoadPanelPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SavePanelPresets: (content: string) => Promise<string>;
+  GetPanelsConfigPath: () => Promise<string>;
+  OpenPanelsFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SavePanelsFileDialog: (defaultFilename: string, content: string) => Promise<string>;
 }
 
 interface WailsRuntime {
@@ -222,4 +227,127 @@ export function setupDesktopFileDrop(onFilePaths: (paths: string[]) => void): ()
   }
   return () => {};
 }
+
+export async function loadDesktopPanelPresets(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.LoadPanelPresets) {
+    try {
+      const res = await app.LoadPanelPresets();
+      if (res && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath || 'panels.json',
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load panel presets from desktop:', e);
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('ss_panels_presets');
+      if (saved) {
+        return { filePath: 'localStorage:panels.json', content: saved };
+      }
+    } catch (e) {
+      console.error('Failed to load presets from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function saveDesktopPanelPresets(content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SavePanelPresets) {
+    try {
+      const path = await app.SavePanelPresets(content);
+      return path || 'panels.json';
+    } catch (e) {
+      console.error('Failed to save panel presets to desktop:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback using localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ss_panels_presets', content);
+      return 'localStorage:panels.json';
+    } catch (e) {
+      console.error('Failed to save presets to localStorage:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+export async function getDesktopPanelsConfigPath(): Promise<string> {
+  const app = getWailsApp();
+  if (app?.GetPanelsConfigPath) {
+    try {
+      return await app.GetPanelsConfigPath();
+    } catch (e) {
+      console.error('Failed to get panels config path:', e);
+    }
+  }
+  return 'panels.json';
+}
+
+export async function openDesktopPanelsFileDialog(): Promise<{ filePath: string; content: string } | null> {
+  const app = getWailsApp();
+  if (app?.OpenPanelsFileDialog) {
+    try {
+      const res = await app.OpenPanelsFileDialog();
+      if (res && res.filePath && typeof res.content === 'string') {
+        return {
+          filePath: res.filePath,
+          content: res.content,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to open panels file dialog:', e);
+    }
+  }
+  return null;
+}
+
+export async function saveDesktopPanelsFileDialog(defaultFilename: string, content: string): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.SavePanelsFileDialog) {
+    try {
+      const path = await app.SavePanelsFileDialog(defaultFilename, content);
+      return path || null;
+    } catch (e) {
+      console.error('Failed to save panels file dialog:', e);
+      throw e;
+    }
+  }
+
+  // Browser fallback download
+  if (typeof window !== 'undefined') {
+    try {
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = defaultFilename.endsWith('.json') ? defaultFilename : `${defaultFilename}.json`;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return defaultFilename;
+    } catch (e) {
+      console.error('Failed to download panels json:', e);
+      throw e;
+    }
+  }
+
+  return null;
+}
+
+
 

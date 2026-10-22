@@ -2,7 +2,7 @@
 'use client';
 import Image from "next/image";
 import React, { useMemo, useState, useCallback } from 'react';
-import { PRESETS, LINK_COLORS_16, CARDS, SERVERS, FIBER_CONVERTERS } from '@/lib/led-editor-svg/presets';
+import { PRESETS, LINK_COLORS_16, CARDS, SERVERS, FIBER_CONVERTERS, type PanelPreset } from '@/lib/led-editor-svg/presets';
 import type { Tool, Panel, ScreenGroup, CableEx, WiringPage, MaskPage } from '@/lib/led-editor-svg/types';
 import { buildSpecText } from '@/lib/led-editor-svg/utils';
 import SnakeIcon from './icons/SnakeIcon';
@@ -20,6 +20,8 @@ type SidebarProps = {
   tool: Tool; setTool: (t: Tool) => void;
 
   presetId: string; setPresetId: (id: string) => void;
+  presets?: PanelPreset[];
+  onOpenPresetsModal?: () => void;
   setRows: (n: number) => void;
   setCols: (n: number) => void;
 
@@ -120,7 +122,7 @@ type SidebarProps = {
 export default function Sidebar(props: SidebarProps) {
   const {
     tool, setTool,
-    presetId, setPresetId, setRows, setCols,
+    presetId, setPresetId, presets, onOpenPresetsModal, setRows, setCols,
     createMatrix, clearAll,
     exportPNG, saveJSON, openLoadJSONDialog, newProject,
     clearSelectedWiring, hasPanelSelection,
@@ -254,8 +256,9 @@ export default function Sidebar(props: SidebarProps) {
       eventDate,
       fiberCounts,
       screenGroups: allScreenGroups ?? screenGroups,
+      presets,
     });
-  }, [allPanels, panels, allCables, cables, servers, cardName, cards, eventName, eventDate, fiberCounts, allScreenGroups, screenGroups]);
+  }, [allPanels, panels, allCables, cables, servers, cardName, cards, eventName, eventDate, fiberCounts, allScreenGroups, screenGroups, presets]);
 
   const [copiedSpec, setCopiedSpec] = useState(false);
 
@@ -580,18 +583,35 @@ export default function Sidebar(props: SidebarProps) {
 
           {/* Сетка панелей */}
           <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-              Модель LED кабинета
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+                Модель LED кабинета
+              </div>
             </div>
-            <select
-              className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
-              value={presetId}
-              onChange={(e) => setPresetId(e.target.value)}
-            >
-              {PRESETS.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <select
+                className="flex-1 bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                value={presetId}
+                onChange={(e) => setPresetId(e.target.value)}
+              >
+                {(presets ?? PRESETS).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {onOpenPresetsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenPresetsModal}
+                  className="p-2 rounded-lg bg-[#181a24] hover:bg-[#202330] border border-white/[0.08] hover:border-cyan-500/50 text-neutral-400 hover:text-cyan-400 transition shrink-0"
+                  title="Открыть окно управления панелями"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18M9 21V9" />
+                  </svg>
+                </button>
+              )}
+            </div>
 
             <div
               className="grid grid-cols-2 gap-2"
