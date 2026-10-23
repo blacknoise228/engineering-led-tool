@@ -7,6 +7,7 @@ import {
 } from '@/lib/led-editor-svg/types';
 import { computeBadgeLogoRect, OCT_POINTS } from '@/lib/led-editor-svg/mask-contour';
 import { showToast } from '@/lib/desktop';
+import { useI18n } from '@/lib/i18n';
 
 interface MaskLogoModalProps {
   open: boolean;
@@ -21,6 +22,7 @@ export default function MaskLogoModal({
   config,
   onSaveConfig,
 }: MaskLogoModalProps) {
+  const { language, t } = useI18n();
   const [draft, setDraft] = useState<MaskLogoConfig>(config);
   const draftRef = useRef<MaskLogoConfig>(config);
   draftRef.current = draft;
@@ -77,7 +79,7 @@ export default function MaskLogoModal({
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      showToast('Выберите файл изображения (PNG, SVG, JPG, WEBP)');
+      showToast(t('toast.selectImageWarning'));
       return;
     }
     const reader = new FileReader();
@@ -88,7 +90,7 @@ export default function MaskLogoModal({
           customLogoDataUrl: dataUrl,
           customLogoFileName: file.name,
         });
-        showToast('Кастомный логотип установлен');
+        showToast(t('toast.customLogoSet'));
       }
     };
     reader.readAsDataURL(file);
@@ -99,7 +101,7 @@ export default function MaskLogoModal({
       customLogoDataUrl: '',
       customLogoFileName: '',
     });
-    showToast('Возвращен стандартный логотип приложения');
+    showToast(t('toast.defaultLogoRestored'));
   };
 
   const handleResetTransform = () => {
@@ -189,10 +191,10 @@ export default function MaskLogoModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#090a0f]">
           <div>
             <h2 className="text-base font-semibold text-white">
-              Настройка логотипа на масках
+              {t('logo.modalTitle')}
             </h2>
             <p className="text-xs text-neutral-400 mt-0.5">
-              Логотип, его размер и расположение сохраняются постоянно и применяются ко всем бейджикам
+              {t('logo.modalSubtitle')}
             </p>
           </div>
           <button
@@ -202,7 +204,7 @@ export default function MaskLogoModal({
               onClose();
             }}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-lg"
-            title="Закрыть"
+            title={t('presets.close')}
           >
             ✕
           </button>
@@ -212,7 +214,7 @@ export default function MaskLogoModal({
           <div className="md:col-span-6 flex flex-col items-center justify-between bg-[#07080b] border border-white/[0.07] rounded-2xl p-4">
             <div className="w-full flex items-center justify-between mb-2">
               <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-                Превью в бейджике
+                {t('logo.previewBadge')}
               </span>
               <span className="text-[11px] text-cyan-400 font-mono">
                 {Math.round(draft.scale * 100)}% • X:{draft.offsetX > 0 ? `+${draft.offsetX}` : draft.offsetX}% Y:{draft.offsetY > 0 ? `+${draft.offsetY}` : draft.offsetY}%
@@ -246,7 +248,7 @@ export default function MaskLogoModal({
                 <polygon points={octPointsStr} fill="rgba(8, 9, 11, 0.92)" stroke="#ffffff" strokeWidth={2} />
                 <g clipPath="url(#preview-badge-clip)">
                   <g onMouseDown={onLogoMouseDown} className="cursor-grab active:cursor-grabbing">
-                    <title>Перетащите логотип мышью для изменения позиции. Колесо мыши — масштаб</title>
+                    <title>{t('logo.dragHint')}</title>
                     <rect
                       x={logoRect.x}
                       y={logoRect.y}
@@ -272,7 +274,7 @@ export default function MaskLogoModal({
                     1920×1080 px
                   </text>
                   <text x={badgeCx} y={oy + octSide * 0.62} textAnchor="middle" fill="rgba(255, 255, 255, 0.85)" fontSize={baseFs * 0.9} fontFamily="sans-serif" pointerEvents="none">
-                    4×2.5 м
+                    4×2.5 {language === 'en' ? 'm' : 'м'}
                   </text>
                   <text x={badgeCx} y={oy + octSide * 0.77} textAnchor="middle" fill="#ffffff" fontSize={baseFs * 0.85} fontWeight="bold" fontFamily="sans-serif" pointerEvents="none">
                     Screen 1
@@ -282,7 +284,7 @@ export default function MaskLogoModal({
             </div>
 
             <p className="text-[11px] text-neutral-400 text-center mt-2.5 leading-relaxed">
-              Перетаскивайте логотип мышью прямо в превью или используйте ползунки справа. Колесо мыши меняет размер.
+              {t('logo.dragInstruction')}
             </p>
           </div>
           <div className="md:col-span-6 flex flex-col justify-between space-y-4">
@@ -307,7 +309,7 @@ export default function MaskLogoModal({
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-                  Изображение логотипа
+                  {t('logo.logoImage')}
                 </span>
                 <span
                   className={[
@@ -317,7 +319,7 @@ export default function MaskLogoModal({
                       : 'bg-white/[0.05] text-neutral-400 border-white/[0.08]',
                   ].join(' ')}
                 >
-                  {hasCustomLogo ? 'Кастомный логотип' : 'Логотип приложения'}
+                  {hasCustomLogo ? t('logo.customLogoBadge') : t('logo.appLogoBadge')}
                 </span>
               </div>
 
@@ -333,13 +335,13 @@ export default function MaskLogoModal({
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-white truncate">
                     {hasCustomLogo
-                      ? (draft.customLogoFileName || 'Пользовательский логотип')
-                      : 'Стандартный логотип (logo3.png)'}
+                      ? (draft.customLogoFileName || t('logo.customLogoName'))
+                      : t('logo.defaultLogoName')}
                   </div>
                   <div className="text-[11px] text-neutral-400 mt-0.5">
                     {hasCustomLogo
-                      ? 'Сохранен постоянно для всех масок'
-                      : 'Используется по умолчанию, если не выбран свой'}
+                      ? t('logo.customLogoDesc')
+                      : t('logo.defaultLogoDesc')}
                   </div>
                 </div>
               </div>
@@ -362,16 +364,16 @@ export default function MaskLogoModal({
                   onClick={() => fileInputRef.current?.click()}
                   className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/15 transition flex items-center justify-center gap-1.5"
                 >
-                  <span>{hasCustomLogo ? 'Заменить логотип...' : 'Выбрать свой логотип...'}</span>
+                  <span>{hasCustomLogo ? t('logo.replaceLogo') : t('logo.chooseLogo')}</span>
                 </button>
                 {hasCustomLogo && (
                   <button
                     type="button"
                     onClick={handleResetToAppLogo}
                     className="py-2 px-3 rounded-xl text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/25 transition"
-                    title="Удалить кастомный логотип и вернуть стандартный логотип приложения"
+                    title={t('logo.resetToAppLogoTitle')}
                   >
-                    Сбросить к лого приложения
+                    {t('logo.resetToAppLogo')}
                   </button>
                 )}
               </div>
@@ -379,7 +381,7 @@ export default function MaskLogoModal({
             <div className="p-4 rounded-xl bg-[#10121a] border border-white/[0.08] space-y-3.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-                  Размер и расположение в бейдже
+                  {t('logo.sizeAndPosition')}
                 </span>
                 {(draft.scale !== 1 || draft.offsetX !== 0 || draft.offsetY !== 0) && (
                   <button
@@ -387,14 +389,14 @@ export default function MaskLogoModal({
                     onClick={handleResetTransform}
                     className="text-[11px] text-cyan-400 hover:text-cyan-300 transition"
                   >
-                    Сбросить (100% / 0, 0)
+                    {t('logo.resetTransform')}
                   </button>
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-300">Размер логотипа</span>
+                  <span className="text-neutral-300">{t('logo.logoSize')}</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -428,7 +430,7 @@ export default function MaskLogoModal({
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-300">Смещение по горизонтали (X)</span>
+                  <span className="text-neutral-300">{t('logo.offsetX')}</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -462,7 +464,7 @@ export default function MaskLogoModal({
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-300">Смещение по вертикали (Y)</span>
+                  <span className="text-neutral-300">{t('logo.offsetY')}</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -499,7 +501,7 @@ export default function MaskLogoModal({
 
         <div className="px-6 py-4 border-t border-white/[0.08] bg-[#090a0f] flex items-center justify-between gap-3">
           <div className="text-[11px] text-neutral-400">
-            Настройки применяются стандартно ко всем бейджам экранов
+            {t('logo.bottomNote')}
           </div>
           <div className="flex items-center gap-2.5">
             <button
@@ -510,18 +512,18 @@ export default function MaskLogoModal({
               }}
               className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d28] text-neutral-300 hover:text-white border border-white/[0.08] transition"
             >
-              Отмена
+              {t('presets.cancel')}
             </button>
             <button
               type="button"
               onClick={() => {
                 onSaveConfig(draft);
-                showToast('Настройки логотипа сохранены');
+                showToast(t('logo.savedToast'));
                 onClose();
               }}
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 transition"
             >
-              Сохранить
+              {t('logo.save')}
             </button>
           </div>
         </div>

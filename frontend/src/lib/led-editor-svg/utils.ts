@@ -212,9 +212,11 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
 
 export interface BuildSpecTextParams extends BuildLegendParams {
   screenGroups?: ScreenGroup[];
+  language?: 'ru' | 'en';
 }
 
 export function buildSpecText(params: BuildSpecTextParams): string {
+  const isEn = params.language === 'en';
   const legend = buildExportLegend(params);
   const { panels, screenGroups = [], servers, serverPresets, presets } = params;
   const serversList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
@@ -223,36 +225,36 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   const panelMap = new Map(panels.map(p => [p.id, p]));
 
   const lines: string[] = [
-    'СПЕЦИФИКАЦИЯ ОБОРУДОВАНИЯ',
+    isEn ? 'EQUIPMENT SPECIFICATION' : 'СПЕЦИФИКАЦИЯ ОБОРУДОВАНИЯ',
     '',
-    `Мероприятие: ${legend.eventName || 'Event'}`,
-    `Дата: ${legend.eventDate || new Date().toISOString().slice(0, 10)}`,
+    `${isEn ? 'Event' : 'Мероприятие'}: ${legend.eventName || (isEn ? 'Event' : 'Концерт')}`,
+    `${isEn ? 'Date' : 'Дата'}: ${legend.eventDate || new Date().toISOString().slice(0, 10)}`,
     ''
   ];
 
   lines.push('----------------------');
-  lines.push('СВОДКА:');
+  lines.push(isEn ? 'SUMMARY:' : 'СВОДКА:');
   if (screenGroups.length > 0) {
-    lines.push(`Количество экранов: ${screenGroups.length}`);
+    lines.push(`${isEn ? 'Number of screens' : 'Количество экранов'}: ${screenGroups.length}`);
   }
-  lines.push(`Всего панелей: ${panels.length} шт.`);
+  lines.push(`${isEn ? 'Total panels' : 'Всего панелей'}: ${panels.length} ${isEn ? 'pcs.' : 'шт.'}`);
   if (typeof legend.totalAreaM2 === 'number') {
-    lines.push(`Общая площадь: ${legend.totalAreaM2} м²`);
+    lines.push(`${isEn ? 'Total area' : 'Общая площадь'}: ${legend.totalAreaM2} ${isEn ? 'm²' : 'м²'}`);
   }
   if (typeof legend.totalWeight === 'number' && legend.totalWeight > 0) {
-    lines.push(`Общий вес экранов: ${legend.totalWeight} кг`);
+    lines.push(`${isEn ? 'Total screens weight' : 'Общий вес экранов'}: ${legend.totalWeight} ${isEn ? 'kg' : 'кг'}`);
   }
-  lines.push(`Перемычки: ${legend.cablesCount} шт.`);
-  lines.push(`Занято портов: ${legend.linksUsedCount}`);
+  lines.push(`${isEn ? 'Cables' : 'Перемычки'}: ${legend.cablesCount} ${isEn ? 'pcs.' : 'шт.'}`);
+  lines.push(`${isEn ? 'Ports used' : 'Занято портов'}: ${legend.linksUsedCount}`);
   if (typeof legend.refreshRate === 'number' && legend.refreshRate > 0) {
     const limit = getPortMaxPixels(legend.refreshRate);
-    lines.push(`Частота обновления: ${legend.refreshRate} Hz (лимит порта: ${limit.toLocaleString('ru-RU')} px)`);
+    lines.push(`${isEn ? 'Refresh rate' : 'Частота обновления'}: ${legend.refreshRate} Hz (${isEn ? 'port limit' : 'лимит порта'}: ${limit.toLocaleString(isEn ? 'en-US' : 'ru-RU')} px)`);
   }
   lines.push('');
 
   if (screenGroups.length > 0) {
     lines.push('----------------------');
-    lines.push('ЭКРАНЫ');
+    lines.push(isEn ? 'SCREENS' : 'ЭКРАНЫ');
     screenGroups.forEach((g, idx) => {
       let screenWeight = 0;
       let screenPower = 0;
@@ -273,22 +275,22 @@ export function buildSpecText(params: BuildSpecTextParams): string {
         }
       }
       const roundedWeight = Math.round(screenWeight * 100) / 100;
-      const weightStr = (hasWeight && roundedWeight > 0) ? `, вес: ${roundedWeight} кг` : '';
-      const powerStr = (hasPower && screenPower > 0) ? `, потребление: ${(screenPower / 1000).toFixed(2)} кВт (${screenPower} Вт)` : '';
-      lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${g.panelIds.length} панелей${weightStr}${powerStr}`);
+      const weightStr = (hasWeight && roundedWeight > 0) ? `, ${isEn ? 'weight' : 'вес'}: ${roundedWeight} ${isEn ? 'kg' : 'кг'}` : '';
+      const powerStr = (hasPower && screenPower > 0) ? `, ${isEn ? 'power' : 'потребление'}: ${(screenPower / 1000).toFixed(2)} ${isEn ? 'kW' : 'кВт'} (${screenPower} ${isEn ? 'W' : 'Вт'})` : '';
+      lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${g.panelIds.length} ${isEn ? 'panels' : 'панелей'}${weightStr}${powerStr}`);
     });
     lines.push('');
   }
 
   lines.push('----------------------');
-  lines.push('МОДЕЛИ ПАНЕЛЕЙ');
+  lines.push(isEn ? 'PANEL MODELS' : 'МОДЕЛИ ПАНЕЛЕЙ');
   if (legend.panelGroups.length > 0) {
     legend.panelGroups.forEach(pg => {
       const details: string[] = [];
       if (pg.sub) details.push(pg.sub);
-      if (typeof pg.weight === 'number' && pg.weight > 0) details.push(`${pg.weight} кг`);
+      if (typeof pg.weight === 'number' && pg.weight > 0) details.push(`${pg.weight} ${isEn ? 'kg' : 'кг'}`);
       const subText = details.length > 0 ? ` (${details.join(', ')})` : '';
-      lines.push(`• ${pg.label}${subText}: ${pg.count} шт.`);
+      lines.push(`• ${pg.label}${subText}: ${pg.count} ${isEn ? 'pcs.' : 'шт.'}`);
     });
   } else {
     lines.push('  —');
@@ -296,7 +298,7 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   lines.push('');
 
   lines.push('----------------------');
-  lines.push('КАРТЫ');
+  lines.push(isEn ? 'CARDS' : 'КАРТЫ');
   if (legend.cards && legend.cards.length > 0) {
     legend.cards.forEach(c => {
       lines.push(`• S${c.order} — ${c.name}`);
@@ -313,16 +315,16 @@ export function buildSpecText(params: BuildSpecTextParams): string {
     lines.push('CVT');
     lines.push('');
     activeFibers.forEach(f => {
-      lines.push(`• ${f.name}: ${f.count} шт.`);
+      lines.push(`• ${f.name}: ${f.count} ${isEn ? 'pcs.' : 'шт.'}`);
     });
     lines.push('');
   }
   lines.push('----------------------');
-  lines.push('ЭЛЕКТРОПИТАНИЕ (СИЛА)');
-  lines.push(`Общее потребление: ${(legend.power / 1000).toFixed(2)} кВт (${legend.power} Вт)`);
-  lines.push(`Ток (3 фазы, 230В): ${(legend.power / 230 / 3).toFixed(2)} A`);
+  lines.push(isEn ? 'POWER CONSUMPTION' : 'ЭЛЕКТРОПИТАНИЕ (СИЛА)');
+  lines.push(`${isEn ? 'Total power' : 'Общее потребление'}: ${(legend.power / 1000).toFixed(2)} ${isEn ? 'kW' : 'кВт'} (${legend.power} ${isEn ? 'W' : 'Вт'})`);
+  lines.push(`${isEn ? 'Current (3 phases, 230V)' : 'Ток (3 фазы, 230В)'}: ${(legend.power / 230 / 3).toFixed(2)} A`);
   if (screenGroups.length > 1) {
-    lines.push('По экранам:');
+    lines.push(isEn ? 'By screen:' : 'По экранам:');
     screenGroups.forEach((g, idx) => {
       let sp = 0;
       for (const pid of g.panelIds) {
@@ -331,28 +333,28 @@ export function buildSpecText(params: BuildSpecTextParams): string {
         if (pr?.power) sp += pr.power;
       }
       if (sp > 0) {
-        lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${(sp / 1000).toFixed(2)} кВт (${sp} Вт, ${(sp / 230 / 3).toFixed(1)} A/фаза)`);
+        lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${(sp / 1000).toFixed(2)} ${isEn ? 'kW' : 'кВт'} (${sp} ${isEn ? 'W' : 'Вт'}, ${(sp / 230 / 3).toFixed(1)} ${isEn ? 'A/phase' : 'A/фаза'})`);
       }
     });
   }
   lines.push('');
 
   lines.push('----------------------');
-  lines.push('МЕДИАСЕРВЕРЫ');
+  lines.push(isEn ? 'MEDIA SERVERS' : 'МЕДИАСЕРВЕРЫ');
   if (Array.isArray(servers) && servers.length > 0) {
     if (servers.length === 1) {
       const found = serversList.find(m => m.id === servers[0].modelId);
       const name = found ? (found.specs ? `${found.name} (${found.specs})` : found.name) : servers[0].modelId;
-      lines.push(`Сервер: ${name}`);
+      lines.push(`${isEn ? 'Server' : 'Сервер'}: ${name}`);
     } else {
       servers.forEach((s, idx) => {
         const found = serversList.find(m => m.id === s.modelId);
         const name = found ? (found.specs ? `${found.name} (${found.specs})` : found.name) : s.modelId;
-        lines.push(`• Сервер ${idx + 1}: ${name}`);
+        lines.push(`• ${isEn ? 'Server' : 'Сервер'} ${idx + 1}: ${name}`);
       });
     }
   } else if (legend.serverName) {
-    lines.push(`Сервер: ${legend.serverName}`);
+    lines.push(`${isEn ? 'Server' : 'Сервер'}: ${legend.serverName}`);
   } else {
     lines.push('  —');
   }

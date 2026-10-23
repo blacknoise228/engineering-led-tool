@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -15,11 +16,15 @@ export default function ConfirmModal({
   open,
   title,
   description,
-  confirmText = 'Подтвердить',
-  cancelText = 'Отмена',
+  confirmText,
+  cancelText,
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
+  const { t } = useI18n();
+  const effectiveConfirm = confirmText ?? t('confirm.confirm');
+  const effectiveCancel = cancelText ?? t('confirm.cancel');
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,7 +56,7 @@ export default function ConfirmModal({
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-sm"
-          title="Закрыть (Esc)"
+          title={t('presets.close')}
         >
           ✕
         </button>
@@ -89,14 +94,14 @@ export default function ConfirmModal({
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-[#161822] hover:bg-[#1e202d] text-neutral-300 hover:text-white border border-white/[0.08] text-xs font-medium transition active:scale-[0.98]"
           >
-            {cancelText}
+            {effectiveCancel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-medium text-xs shadow-lg shadow-red-500/25 transition active:scale-[0.98]"
           >
-            {confirmText}
+            {effectiveConfirm}
           </button>
         </div>
       </div>

@@ -37,18 +37,21 @@ export interface UpdaterContextType {
 
 const UpdaterContext = createContext<UpdaterContextType | null>(null);
 
-export function formatBytes(bytes: number, decimals = 1): string {
-  if (!bytes || bytes <= 0) return '0 Б';
+export function formatBytes(bytes: number, decimals = 1, lang: 'ru' | 'en' = 'ru'): string {
+  if (!bytes || bytes <= 0) return lang === 'en' ? '0 B' : '0 Б';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  const sizes = lang === 'en'
+    ? ['B', 'KB', 'MB', 'GB', 'TB']
+    : ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-export function formatSpeed(bytesPerSec: number): string {
-  if (!bytesPerSec || bytesPerSec <= 0) return '0 Б/с';
-  return `${formatBytes(bytesPerSec)}/с`;
+export function formatSpeed(bytesPerSec: number, lang: 'ru' | 'en' = 'ru'): string {
+  if (!bytesPerSec || bytesPerSec <= 0) return lang === 'en' ? '0 B/s' : '0 Б/с';
+  const unit = lang === 'en' ? '/s' : '/с';
+  return `${formatBytes(bytesPerSec, 1, lang)}${unit}`;
 }
 
 export function UpdaterProvider({ children }: { children: ReactNode }) {

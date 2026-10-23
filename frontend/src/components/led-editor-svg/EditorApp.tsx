@@ -48,6 +48,7 @@ import MaskPreviewModal from './MaskPreviewModal';
 import MaskLogoModal from './MaskLogoModal';
 import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
+import { useI18n } from '@/lib/i18n';
 import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
 import FiberPresetsModal from './FiberPresetsModal';
@@ -80,6 +81,7 @@ import {
 export type { CableEx, CardInstance };
 
 export default function EditorApp() {
+  const { language, t } = useI18n();
   // ======== VIEW ========
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [pan, setPan] = useState<Vec>({ x: 0, y: 0 });
@@ -703,11 +705,15 @@ export default function EditorApp() {
     // лимит пикселей прямоугольника для этого (cardNo, link)
     const { ok, pixels, limit, hz } = bboxPixelsFor(cardNo, link, [aId, bId]);
     if (!ok) {
-      showToast('Панели имеют разную плотность пикселей');
+      showToast(t('toast.densityMismatch'));
       return;
     }
     if (pixels > limit) {
-      showToast(`Превышен лимит области порта: ${pixels.toLocaleString('ru-RU')} > ${limit.toLocaleString('ru-RU')} px (@${hz}Hz)`);
+      showToast(t('toast.portLimitExceeded', {
+        pixels: pixels.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU'),
+        limit: limit.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU'),
+        hz,
+      }));
       return;
     }
 
@@ -720,7 +726,7 @@ export default function EditorApp() {
       color: selectedCard.portColors[link] ?? LINK_COLORS_16[link] ?? '#9ca3af',
       card: cardNo,
     }]);
-  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables, showToast]);
+  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables, showToast, language, t]);
 
   // ======== PANEL MOUSE DOWN ========
   const onPanelMouseDown = useCallback((e: React.MouseEvent, id: string) => {
@@ -1086,9 +1092,9 @@ export default function EditorApp() {
       setPresetId(prev => (newPresets.some(p => p.id === prev) ? prev : newPresets[0]?.id || ''));
     } catch (e) {
       console.error('Failed to save panel presets:', e);
-      showToast('Ошибка при сохранении panels.json');
+      showToast(language === 'en' ? 'Failed to save panels.json' : 'Ошибка при сохранении panels.json');
     }
-  }, [showToast]);
+  }, [language, showToast]);
 
   const handleSaveCardPresets = useCallback(async (newPresets: CardPreset[]) => {
     setCardPresets(newPresets);
@@ -1097,9 +1103,9 @@ export default function EditorApp() {
       if (savedPath) setCardsConfigPath(savedPath);
     } catch (e) {
       console.error('Failed to save cards presets:', e);
-      showToast('Ошибка при сохранении cards.json');
+      showToast(language === 'en' ? 'Failed to save cards.json' : 'Ошибка при сохранении cards.json');
     }
-  }, [showToast]);
+  }, [language, showToast]);
 
   const handleSaveServerPresets = useCallback(async (newPresets: ServerPreset[]) => {
     setServerPresets(newPresets);
@@ -1108,9 +1114,9 @@ export default function EditorApp() {
       if (savedPath) setServersConfigPath(savedPath);
     } catch (e) {
       console.error('Failed to save server presets:', e);
-      showToast('Ошибка при сохранении servers.json');
+      showToast(language === 'en' ? 'Failed to save servers.json' : 'Ошибка при сохранении servers.json');
     }
-  }, [showToast]);
+  }, [language, showToast]);
 
   const handleSaveFiberPresets = useCallback(async (newPresets: FiberConverterPreset[]) => {
     setFiberPresets(newPresets);
@@ -1119,9 +1125,9 @@ export default function EditorApp() {
       if (savedPath) setFibersConfigPath(savedPath);
     } catch (e) {
       console.error('Failed to save fiber presets:', e);
-      showToast('Ошибка при сохранении fibers.json');
+      showToast(language === 'en' ? 'Failed to save fibers.json' : 'Ошибка при сохранении fibers.json');
     }
-  }, [showToast]);
+  }, [language, showToast]);
 
 
   // ======== AUTO LOAD / CLI / SECOND INSTANCE / DRAG & DROP ========
@@ -1133,7 +1139,7 @@ export default function EditorApp() {
           const data = JSON.parse(res.content);
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
-          showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+          showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
         } catch (e) {
           console.error('Failed to parse initial project:', e);
         }
@@ -1147,7 +1153,7 @@ export default function EditorApp() {
           const data = JSON.parse(res.content);
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
-          showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+          showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
         } catch (e) {
           console.error('Failed to parse project from second instance:', e);
         }
@@ -1167,7 +1173,7 @@ export default function EditorApp() {
             const data = JSON.parse(res.content);
             applyProjectData(data);
             setCurrentFilePath(res.filePath);
-            showToast(`Проект загружен: ${res.filePath.split(/[\\/]/).pop()}`);
+            showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
           }
         } catch (e) {
           console.error('Failed to load dropped desktop file:', e);
@@ -1191,7 +1197,7 @@ export default function EditorApp() {
             const data = JSON.parse(String(reader.result));
             applyProjectData(data);
             setCurrentFilePath(null);
-            showToast(`Проект загружен: ${file.name}`);
+            showToast(t('toast.projectLoaded', { file: file.name }));
           } catch (err) {
             console.error('Failed to parse dropped file:', err);
           }
@@ -1208,7 +1214,7 @@ export default function EditorApp() {
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('drop', handleDrop);
     };
-  }, [applyProjectData, showToast]);
+  }, [applyProjectData, showToast, t]);
 
   // ======== SAVE JSON ========
   const saveProjectToFile = useCallback(async (targetPath: string | null) => {
@@ -1239,7 +1245,7 @@ export default function EditorApp() {
         const savedPath = await saveDesktopProject(targetPath, defaultName, jsonContent);
         if (savedPath) {
           setCurrentFilePath(savedPath);
-          showToast('Сохранено');
+          showToast(t('toast.saved'));
         }
       } catch (err) {
         console.error('Failed to save project:', err);
@@ -1252,9 +1258,9 @@ export default function EditorApp() {
       a.download = `${eventName || 'project'}.ss`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Сохранено');
+      showToast(t('toast.saved'));
     }
-  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
+  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast, t]);
 
   const saveJSON = useCallback(() => saveProjectToFile(currentFilePath), [saveProjectToFile, currentFilePath]);
   const saveJSONAs = useCallback(() => saveProjectToFile(null), [saveProjectToFile]);
@@ -1388,8 +1394,8 @@ export default function EditorApp() {
     redoRef.current = [];
     setPan({ x: 0, y: 0 });
     setScale(1);
-    showToast('Новый проект создан');
-  }, [panelPresets, setSelectedGroupId, showToast]);
+    showToast(t('toast.newProjectCreated'));
+  }, [panelPresets, setSelectedGroupId, showToast, t]);
 
   const newProject = useCallback(() => {
     const hasContent = allPanels.length > 0 || cards.length > 0 || currentFilePath !== null;
@@ -1447,8 +1453,8 @@ export default function EditorApp() {
       }
     } catch {}
 
-    showToast(`Скопировано панелей: ${srcPanels.length}`);
-  }, [selectedPanels, panels, cables, activeWiringPageId, showToast]);
+    showToast(t('toast.copiedPanels', { count: srcPanels.length }));
+  }, [selectedPanels, panels, cables, activeWiringPageId, showToast, t]);
 
   const cutSelectedPanels = useCallback(() => {
     if (!selectedPanels.size) return;
@@ -1492,8 +1498,8 @@ export default function EditorApp() {
     setSelectedCables(new Set());
     setDraft(null);
 
-    showToast(`Вырезано панелей: ${srcPanels.length}`);
-  }, [selectedPanels, panels, cables, activeWiringPageId, pushHistory, setPanels, setCables, setScreenGroups, showToast]);
+    showToast(t('toast.cutPanels', { count: srcPanels.length }));
+  }, [selectedPanels, panels, cables, activeWiringPageId, pushHistory, setPanels, setCables, setScreenGroups, showToast, t]);
 
   const pastePanels = useCallback(() => {
     let clip = clipboard;
@@ -1572,8 +1578,8 @@ export default function EditorApp() {
       sessionStorage.setItem('masker_panel_clipboard', JSON.stringify(nextClip));
     } catch {}
 
-    showToast(`Вставлено панелей: ${clonedPanels.length}`);
-  }, [clipboard, activeWiringPageId, panels, pushHistory, setPanels, setCables, showToast]);
+    showToast(t('toast.pastedPanels', { count: clonedPanels.length }));
+  }, [clipboard, activeWiringPageId, panels, pushHistory, setPanels, setCables, showToast, t]);
 
   // ======== LABELS: S{card}-{port}-{n} (жёсткие типы) ========
 
@@ -1977,10 +1983,10 @@ export default function EditorApp() {
         {/* Модальное окно подтверждения нового проекта */}
         <ConfirmModal
           open={confirmNewProjectOpen}
-          title="Начать новый проект?"
-          description="Все текущие панели, схемы и настройки будут удалены. Несохраненные изменения будут потеряны."
-          confirmText="Начать новый проект"
-          cancelText="Отмена"
+          title={t('toast.newProjectPromptTitle')}
+          description={t('toast.newProjectPromptDesc')}
+          confirmText={t('toast.newProjectConfirmBtn')}
+          cancelText={t('presets.cancel')}
           onConfirm={() => {
             setConfirmNewProjectOpen(false);
             resetProjectState();

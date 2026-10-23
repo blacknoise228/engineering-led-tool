@@ -1,6 +1,7 @@
 // src/components/led-editor-svg/PageBar.tsx
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 export interface PageItem {
   id: string;
@@ -34,6 +35,7 @@ export default function PageBar({
   addBtnText = 'Page',
   badgeSuffix = '',
 }: PageBarProps) {
+  const { t } = useI18n();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -117,7 +119,7 @@ export default function PageBar({
                 <button
                   type="button"
                   onClick={(e) => startRename(p, e)}
-                  title="Переименовать"
+                  title={t('pagebar.rename')}
                   className="p-0.5 hover:text-white rounded hover:bg-white/10 transition"
                 >
                   ✎
@@ -131,7 +133,7 @@ export default function PageBar({
                     e.stopPropagation();
                     onDuplicatePage(p.id);
                   }}
-                  title="Дублировать страницу"
+                  title={t('pagebar.duplicatePage')}
                   className="p-0.5 hover:text-white rounded hover:bg-white/10 transition"
                 >
                   ⧉
@@ -145,7 +147,7 @@ export default function PageBar({
                     e.stopPropagation();
                     onRemovePage(p.id);
                   }}
-                  title="Удалить страницу"
+                  title={t('pagebar.deletePage')}
                   className="p-0.5 hover:text-red-300 text-red-400 rounded hover:bg-red-500/20 transition ml-0.5"
                 >
                   ✕

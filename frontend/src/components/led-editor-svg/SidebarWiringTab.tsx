@@ -12,6 +12,7 @@ import {
 import type { Tool, WiringPage } from '@/lib/led-editor-svg/types';
 import SnakeIcon from './icons/SnakeIcon';
 import type { SidebarCardInstance } from './SidebarCardsTab';
+import { useI18n } from '@/lib/i18n';
 
 export type PortStats = {
   ok: boolean;
@@ -73,6 +74,7 @@ interface SidebarWiringTabProps {
 }
 
 export default function SidebarWiringTab(props: SidebarWiringTabProps) {
+  const { language, t } = useI18n();
   const {
     wiringPages,
     activeWiringPageId,
@@ -138,7 +140,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
         <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-              Схемы
+              {t('wiring.schemas')}
             </div>
             {onAddWiringPage && (
               <button
@@ -176,7 +178,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                         onDuplicateWiringPage(wp.id);
                       }}
                       className="opacity-0 group-hover:opacity-100 hover:text-white text-neutral-400 text-[11px]"
-                      title="Дублировать схему (copy)"
+                      title={t('pagebar.duplicateSchema')}
                     >
                       ⧉
                     </button>
@@ -189,7 +191,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                         onRemoveWiringPage(wp.id);
                       }}
                       className="opacity-40 group-hover:opacity-100 hover:text-red-400 text-neutral-400 ml-0.5"
-                      title="Удалить схему"
+                      title={t('pagebar.deleteSchema')}
                     >
                       ✕
                     </button>
@@ -203,7 +205,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Модель LED кабинета
+            {t('wiring.panelModel')}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -223,7 +225,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
               type="button"
               onClick={onOpenPresetsModal}
               className="p-2 rounded-lg bg-[#181a24] hover:bg-[#202330] border border-white/[0.08] hover:border-cyan-500/50 text-neutral-400 hover:text-cyan-400 transition shrink-0"
-              title="Открыть окно управления панелями"
+              title={t('wiring.managePanels')}
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
@@ -236,7 +238,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
         <div className="grid grid-cols-2 gap-2" onClick={() => setSelectedPanels(new Set())}>
           <div>
             <label className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 block mb-1">
-              Колонки (Cols)
+              {t('wiring.cols')}
             </label>
             <input
               type="number"
@@ -247,7 +249,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
           </div>
           <div>
             <label className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 block mb-1">
-              Строки (Rows)
+              {t('wiring.rows')}
             </label>
             <input
               type="number"
@@ -263,22 +265,22 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             className="py-2 px-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-sm transition active:scale-[0.99]"
             onClick={createMatrix}
           >
-            + Создать сетку
+            {t('wiring.createGrid')}
           </button>
           <button
             className="py-2 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-medium transition"
             onClick={clearAll}
           >
-            Очистить всё
+            {t('wiring.clearAll')}
           </button>
         </div>
         <button
           className="w-full py-1.5 px-3 rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5"
           onClick={duplicateSelectedPanels}
           disabled={!hasPanelSelection}
-          title="Дублировать выбранные панели (Ctrl+D)"
+          title={t('wiring.duplicateTitle')}
         >
-          <span>Дублировать выделение</span>
+          <span>{t('wiring.duplicateSelection')}</span>
           <span className="text-[10px] text-neutral-400 font-mono">Ctrl+D</span>
         </button>
 
@@ -288,9 +290,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             className="py-1.5 px-2 rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition flex flex-col items-center justify-center gap-0.5"
             onClick={copySelectedPanels}
             disabled={!hasPanelSelection}
-            title="Копировать выбранные панели (Ctrl+C)"
+            title={t('wiring.copyTitle')}
           >
-            <span>Копировать</span>
+            <span>{t('wiring.copySelection')}</span>
             <span className="text-[9px] text-neutral-500 font-mono">Ctrl+C</span>
           </button>
           <button
@@ -298,9 +300,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             className="py-1.5 px-2 rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition flex flex-col items-center justify-center gap-0.5"
             onClick={cutSelectedPanels}
             disabled={!hasPanelSelection}
-            title="Вырезать выбранные панели (Ctrl+X)"
+            title={t('wiring.cutTitle')}
           >
-            <span>Вырезать</span>
+            <span>{t('wiring.cutSelection')}</span>
             <span className="text-[9px] text-neutral-500 font-mono">Ctrl+X</span>
           </button>
           <button
@@ -308,9 +310,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             className="py-1.5 px-2 rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition flex flex-col items-center justify-center gap-0.5"
             onClick={pastePanels}
             disabled={!canPaste}
-            title="Вставить панели в активную схему (Ctrl+V)"
+            title={t('wiring.pasteTitle')}
           >
-            <span>Вставить {clipboardCount > 0 ? `(${clipboardCount})` : ''}</span>
+            <span>{t('wiring.pasteSelection', { count: clipboardCount > 0 ? `(${clipboardCount})` : '' })}</span>
             <span className="text-[9px] text-neutral-500 font-mono">Ctrl+V</span>
           </button>
         </div>
@@ -322,8 +324,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
         </div>
         {cards.length === 0 ? (
           <div className="text-xs text-neutral-400">
-            Нет добавленных карт. Перейдите на вкладку «Карты», добавьте карту и
-            вернитесь сюда.
+            {t('wiring.noCards')}
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -362,7 +363,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                       S{c.order} — {model?.name ?? c.modelId}
                     </div>
                     <div className="text-[10px] text-neutral-400">
-                      {model?.outputPorts ?? c.portColors.length} портов
+                      {t('cards.ports', { count: model?.outputPorts ?? c.portColors.length })}
                     </div>
                   </div>
 
@@ -398,7 +399,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
           ].join(' ')}
           onClick={() => setTool('select')}
         >
-          <span>Выделение</span>
+          <span>{t('wiring.toolSelect')}</span>
         </button>
         <button
           className={[
@@ -408,10 +409,10 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
               : 'text-neutral-400 hover:text-neutral-200',
           ].join(' ')}
           onClick={() => setTool('cable')}
-          title={selectedCard ? `Карта: S${selectedCard.order}` : 'Выберите карту выше'}
+          title={selectedCard ? `${t('wiring.cardSelected', { order: selectedCard.order })}` : t('wiring.chooseCardAbove')}
           disabled={!selectedCard}
         >
-          <span>Ручное расключение</span>
+          <span>{t('wiring.toolManual')}</span>
         </button>
       </div>
 
@@ -419,7 +420,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Частота обновления
+            {t('wiring.refreshRate')}
           </div>
           <span className="font-mono text-cyan-400 text-xs font-semibold">
             {currentHz} Hz
@@ -441,14 +442,14 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-400/40 shadow-sm shadow-blue-500/20'
                       : 'bg-[#181a24] text-neutral-400 hover:text-white border-white/[0.06] hover:border-white/[0.12]',
                   ].join(' ')}
-                  title={`${p.label} (макс. ${p.maxPixels.toLocaleString('ru-RU')} px)`}
+                  title={`${p.label} (max ${p.maxPixels.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} px)`}
                 >
                   {p.hz}
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center gap-1 bg-[#181a24] border border-white/[0.08] rounded-lg px-2 py-1 shrink-0" title="Пользовательская частота (Hz)">
+          <div className="flex items-center gap-1 bg-[#181a24] border border-white/[0.08] rounded-lg px-2 py-1 shrink-0" title={t('wiring.customHz')}>
             <input
               type="number"
               min={1}
@@ -467,16 +468,16 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
         </div>
 
         <div className="flex items-center justify-between text-[11px] bg-[#141622] px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
-          <span className="text-neutral-400">Лимит расключаемой области:</span>
+          <span className="text-neutral-400">{t('wiring.rateLimit', { limit: '' })}</span>
           <span className="font-mono text-cyan-400 font-semibold">
-            {currentLimit.toLocaleString('ru-RU')} px
+            {currentLimit.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} px
           </span>
         </div>
       </div>
 
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-          <span>Порты вывода</span>
+          <span>{t('wiring.outputPorts')}</span>
           {selectedCard && selectedCardModel && (
             <span className="font-mono text-cyan-400 font-medium">
               S{selectedCard.order} • {portsCount}p
@@ -486,7 +487,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
 
         {!selectedCard || !selectedCardModel ? (
           <div className="text-xs text-neutral-400 py-1">
-            Выберите карту выше для расключения портов.
+            {t('wiring.selectCardToWire')}
           </div>
         ) : (
           <>
@@ -517,7 +518,10 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                         : 'opacity-85 hover:opacity-100 hover:scale-105',
                     ].filter(Boolean).join(' ')}
                     style={{ backgroundColor: color }}
-                    title={`Порт P${i + 1}${stats && stats.panelCount > 0 ? ` (${stats.panelCount} пан., ${stats.pixels.toLocaleString('ru-RU')} / ${stats.limit.toLocaleString('ru-RU')} px)` : ''}`}
+                    title={t('wiring.portStatsTitle', {
+                      port: i + 1,
+                      stats: stats && stats.panelCount > 0 ? ` (${stats.panelCount} p., ${stats.pixels.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} / ${stats.limit.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} px)` : '',
+                    })}
                   >
                     <span
                       className="font-mono text-[18px] font-bold leading-none select-none"
@@ -528,7 +532,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                     {isOver && (
                       <span
                         className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 border border-[#10121a] rounded-full text-[9px] font-extrabold text-white flex items-center justify-center leading-none shadow"
-                        title="Превышен лимит области порта!"
+                        title={t('wiring.portOverflow')}
                       >
                         !
                       </span>
@@ -557,10 +561,10 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                       style={{ backgroundColor: portColor(activeLink) }}
                     />
                     <span className="font-semibold text-white">
-                      Порт P{activeLink + 1}
+                      {t('wiring.activePortTitle', { port: activeLink + 1 })}
                     </span>
                     <span className="text-neutral-400 font-mono text-[11px]">
-                      ({activeStats.panelCount} {activeStats.panelCount === 1 ? 'панель' : activeStats.panelCount < 5 ? 'панели' : 'панелей'})
+                      ({activeStats.panelCount} {language === 'en' ? (activeStats.panelCount === 1 ? t('wiring.panelUnit1') : t('wiring.panelUnit2')) : (activeStats.panelCount === 1 ? t('wiring.panelUnit1') : activeStats.panelCount < 5 ? t('wiring.panelUnit2') : t('wiring.panelUnit5'))})
                     </span>
                   </div>
                   {activeStats.panelCount > 0 && (
@@ -581,13 +585,13 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                 {activeStats.panelCount > 0 ? (
                   <>
                     <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                      <span>Область (W×H):</span>
+                      <span>{t('wiring.area')}</span>
                       <span className="font-mono text-neutral-200 font-medium">
                         {activeStats.widthPx} × {activeStats.heightPx} px
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                      <span>Загрузка пикселей:</span>
+                      <span>{t('wiring.pixelLoad')}</span>
                       <span className="font-mono text-neutral-200">
                         <strong
                           className={
@@ -596,9 +600,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                               : 'text-white font-semibold'
                           }
                         >
-                          {activeStats.pixels.toLocaleString('ru-RU')}
+                          {activeStats.pixels.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')}
                         </strong>{' '}
-                        / {activeStats.limit.toLocaleString('ru-RU')} px
+                        / {activeStats.limit.toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} px
                       </span>
                     </div>
 
@@ -622,22 +626,21 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
                       <div className="text-[11px] text-red-300 font-medium bg-red-500/15 p-2 rounded-lg border border-red-500/30 flex items-start gap-1.5">
                         <span>⚠️</span>
                         <span>
-                          Превышен лимит области порта на{' '}
-                          <strong>{(activeStats.pixels - activeStats.limit).toLocaleString('ru-RU')} px</strong> (@{activeStats.hz}Hz)!
+                          {t('wiring.limitExceededBy', { pixels: (activeStats.pixels - activeStats.limit).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU') })} (@{activeStats.hz}Hz)!
                         </span>
                       </div>
                     ) : (
                       <div className="text-[10px] text-neutral-400 flex items-center justify-between">
-                        <span>Свободно:</span>
+                        <span>{t('wiring.available')}</span>
                         <span className="font-mono text-emerald-400">
-                          {(activeStats.limit - activeStats.pixels).toLocaleString('ru-RU')} px
+                          {(activeStats.limit - activeStats.pixels).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} px
                         </span>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="text-[11px] text-neutral-400 py-0.5">
-                    К порту P{activeLink + 1} пока не подключены кабинеты.
+                    {t('wiring.noCabinets', { port: activeLink + 1 })}
                   </div>
                 )}
               </div>
@@ -648,7 +651,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
         <div>
           <div className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1.5">
-            Горизонтальная змейка (H-snake)
+            {t('wiring.hSnake')}
           </div>
           <div className="grid grid-cols-4 gap-1.5">
             {([
@@ -671,7 +674,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
 
         <div>
           <div className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1.5">
-            Вертикальная змейка (V-snake)
+            {t('wiring.vSnake')}
           </div>
           <div className="grid grid-cols-4 gap-1.5">
             {([
@@ -698,9 +701,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
           className="w-full py-2 px-3 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed transition"
           onClick={clearSelectedWiring}
           disabled={!hasPanelSelection}
-          title="Удалить все кабели у выбранных панелей"
+          title={t('wiring.clearWiringTitle')}
         >
-          Очистить расключение выделенных
+          {t('wiring.clearWiring')}
         </button>
       </div>
 
@@ -711,9 +714,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             setSelectedPanels(new Set());
             setTimeout(() => exportPNG(), 50);
           }}
-          title="Экспорт расключения текущей схемы в PNG"
+          title={t('wiring.downloadPngTitle')}
         >
-          Скачать PNG {currentWiringPage ? `(${currentWiringPage.name})` : 'схемы'}
+          {t('wiring.downloadPng', { name: currentWiringPage ? `(${currentWiringPage.name})` : '' })}
         </button>
       </div>
     </>

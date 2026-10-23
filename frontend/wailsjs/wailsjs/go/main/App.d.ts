@@ -6,6 +6,8 @@ export function CancelUpdateDownload():Promise<void>;
 
 export function CheckForUpdates():Promise<main.UpdateInfo>;
 
+export function GetAppConfigPath():Promise<string>;
+
 export function GetAppVersion():Promise<string>;
 
 export function GetCardsConfigPath():Promise<string>;
@@ -22,7 +24,11 @@ export function GetPanelsConfigPath():Promise<string>;
 
 export function GetServersConfigPath():Promise<string>;
 
+export function GetSystemLanguage():Promise<string>;
+
 export function InstallUpdate(arg1:string):Promise<void>;
+
+export function LoadAppConfig():Promise<main.PanelsConfigResult>;
 
 export function LoadCardPresets():Promise<main.PanelsConfigResult>;
 
@@ -48,6 +54,8 @@ export function OpenURLInBrowser(arg1:string):Promise<void>;
 
 export function ReadProjectFile(arg1:string):Promise<main.OpenProjectResult>;
 
+export function SaveAppConfig(arg1:string):Promise<string>;
+
 export function SaveCardPresets(arg1:string):Promise<string>;
 
 export function SaveCardsFileDialog(arg1:string,arg2:string):Promise<string>;
@@ -71,6 +79,8 @@ export function SaveServerPresets(arg1:string):Promise<string>;
 export function SaveServersFileDialog(arg1:string,arg2:string):Promise<string>;
 
 export function SaveZIP(arg1:string,arg2:string):Promise<string>;
+
+export function SetLanguage(arg1:string):Promise<void>;
 
 export function ShowFileInFolder(arg1:string):Promise<void>;
 

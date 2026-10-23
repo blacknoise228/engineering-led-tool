@@ -4,6 +4,7 @@ import { DEFAULT_SERVER_PRESETS, type ServerPreset } from '@/lib/led-editor-svg/
 import { slugify } from '@/lib/led-editor-svg/utils';
 import { showToast, openDesktopServersFileDialog, saveDesktopServersFileDialog } from '@/lib/desktop';
 import PresetsModalLayout from './PresetsModalLayout';
+import { useI18n } from '@/lib/i18n';
 
 interface ServerPresetsModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ export default function ServerPresetsModal({
   onSelectPreset,
   filePath,
 }: ServerPresetsModalProps) {
+  const { language, t } = useI18n();
   const [list, setList] = useState<ServerPreset[]>(presets);
   const [selectedId, setSelectedId] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -90,11 +92,11 @@ export default function ServerPresetsModal({
         setIsCreatingNew(false);
         await onSavePresets(DEFAULT_SERVER_PRESETS);
         if (onSelectPreset) onSelectPreset(initialId);
-        showToast(`Создан новый файл пресетов: ${fileName}`);
+        showToast(language === 'en' ? `Created new presets file: ${fileName}` : `Создан новый файл пресетов: ${fileName}`);
       }
     } catch (e) {
       console.error('Failed to create new servers file:', e);
-      showToast('Ошибка при создании файла пресетов');
+      showToast(language === 'en' ? 'Error creating presets file' : 'Ошибка при создании файла пресетов');
     }
   };
 
@@ -118,14 +120,14 @@ export default function ServerPresetsModal({
     const cloned: ServerPreset = {
       ...preset,
       id: nextId,
-      name: `${preset.name} (Копия)`,
+      name: `${preset.name} (${t('panels.copy')})`,
     };
     const nextList = [...list, cloned];
     setList(nextList);
     setSelectedId(nextId);
     setIsCreatingNew(false);
     onSavePresets(nextList);
-    showToast(`Сервер "${cloned.name}" скопирован`);
+    showToast(language === 'en' ? `Server "${cloned.name}" copied` : `Сервер "${cloned.name}" скопирован`);
   };
 
   const handleSaveForm = async (e: React.FormEvent) => {
@@ -134,24 +136,24 @@ export default function ServerPresetsModal({
 
     const name = formName.trim();
     if (!name) {
-      setErrorMessage('Укажите название модели сервера');
+      setErrorMessage(language === 'en' ? 'Specify server model name' : 'Укажите название модели сервера');
       return;
     }
 
     const id = formId.trim() || slugify(name);
     if (!id) {
-      setErrorMessage('Укажите идентификатор ID');
+      setErrorMessage(language === 'en' ? 'Specify ID identifier' : 'Укажите идентификатор ID');
       return;
     }
 
     if (isCreatingNew) {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase())) {
-        setErrorMessage(`Сервер с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Server with ID "${id}" already exists` : `Сервер с ID "${id}" уже существует`);
         return;
       }
     } else {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase() && p.id !== selectedId)) {
-        setErrorMessage(`Сервер с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Server with ID "${id}" already exists` : `Сервер с ID "${id}" уже существует`);
         return;
       }
     }
@@ -174,13 +176,13 @@ export default function ServerPresetsModal({
     setSelectedId(id);
     setIsCreatingNew(false);
     await onSavePresets(nextList);
-    showToast(`Сервер "${name}" успешно сохранен`);
+    showToast(language === 'en' ? `Server "${name}" successfully saved` : `Сервер "${name}" успешно сохранен`);
   };
 
   const handleDeleteConfirmed = async () => {
     if (!confirmDeleteId) return;
     if (list.length <= 1) {
-      showToast('Нельзя удалить последнюю модель');
+      showToast(language === 'en' ? 'Cannot delete the last model' : 'Нельзя удалить последнюю модель');
       setConfirmDeleteId(null);
       return;
     }
@@ -198,7 +200,7 @@ export default function ServerPresetsModal({
 
     setConfirmDeleteId(null);
     await onSavePresets(nextList);
-    showToast(`Сервер "${target?.name || confirmDeleteId}" удален`);
+    showToast(language === 'en' ? `Server "${target?.name || confirmDeleteId}" deleted` : `Сервер "${target?.name || confirmDeleteId}" удален`);
   };
 
   if (!open) return null;
@@ -206,8 +208,8 @@ export default function ServerPresetsModal({
     <PresetsModalLayout<ServerPreset>
       open={open}
       onClose={onClose}
-      title="Управление медиасерверами"
-      subtitle="База медиасерверов и источников видеосигнала"
+      title={t('servers.modalTitle')}
+      subtitle={t('servers.modalSubtitle')}
       accentColor="emerald"
       headerIcon={
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -224,13 +226,13 @@ export default function ServerPresetsModal({
       isCreatingNew={isCreatingNew}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Поиск сервера..."
-      createNewButtonLabel="+ Создать сервер"
-      emptyListText="Серверы не найдены"
+      searchPlaceholder={t('servers.searchPlaceholder')}
+      createNewButtonLabel={t('servers.createBtn')}
+      emptyListText={t('servers.emptyList')}
       errorMessage={errorMessage}
       confirmDeleteId={confirmDeleteId}
-      confirmDeleteTitle="Удаление медиасервера"
-      confirmDeleteDescription={`Вы уверены, что хотите удалить медиасервер "${list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId}"?`}
+      confirmDeleteTitle={t('servers.deleteTitle')}
+      confirmDeleteDescription={t('servers.deleteDesc', { name: list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId || '' })}
       onSetConfirmDeleteId={setConfirmDeleteId}
       onConfirmDelete={handleDeleteConfirmed}
       onSelectItem={id => {
@@ -269,12 +271,12 @@ export default function ServerPresetsModal({
                 <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                   <div>
                     <h3 className="text-base font-semibold text-white">
-                      {isCreatingNew ? 'Создание нового медиасервера' : 'Редактирование медиасервера'}
+                      {isCreatingNew ? t('servers.createNewHeader') : t('servers.editHeader')}
                     </h3>
                     <p className="text-xs text-neutral-400 mt-0.5">
                       {isCreatingNew
-                        ? 'Заполните параметры и нажмите "Создать и сохранить"'
-                        : `Изменение параметров для ${formName || selectedId}`}
+                        ? t('panels.createSubtitle')
+                        : t('panels.editSubtitle', { name: formName || selectedId })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -283,13 +285,13 @@ export default function ServerPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
-                        title="Создать новый сервер"
+                        title={t('servers.createBtn')}
                       >
                         <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Создать сервер</span>
+                        <span>{t('servers.createBtn')}</span>
                       </button>
                     )}
                   </div>
@@ -300,7 +302,7 @@ export default function ServerPresetsModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Название сервера / ноутбука <span className="text-red-400">*</span>
+                        {t('servers.nameLabel')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -313,20 +315,20 @@ export default function ServerPresetsModal({
                             setFormId(slugify(val));
                           }
                         }}
-                        placeholder="Например: HP Z2 или Acer Predator"
+                        placeholder={t('servers.namePh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        ID (Идентификатор) <span className="text-red-400">*</span>
+                        {t('servers.idLabel')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={formId}
                         onChange={e => setFormId(e.target.value.toLowerCase().trim())}
-                        placeholder="Например: hp-z2"
+                        placeholder={t('servers.idPh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
@@ -334,26 +336,26 @@ export default function ServerPresetsModal({
 
                   <div>
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                      Характеристики
+                      {t('servers.specsLabel')}
                     </label>
                     <input
                       type="text"
                       value={formSpecs}
                       onChange={e => setFormSpecs(e.target.value)}
-                      placeholder="Например: Intel i9, RTX 4090, 4x DP 1.4, 64GB RAM"
+                      placeholder={t('servers.specsPh')}
                       className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                      Примечания
+                      {t('servers.notesLabel')}
                     </label>
                     <input
                       type="text"
                       value={formNotes}
                       onChange={e => setFormNotes(e.target.value)}
-                      placeholder="Опциональное примечание или комментарий"
+                      placeholder={t('servers.notesPh')}
                       className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                     />
                   </div>
@@ -371,7 +373,7 @@ export default function ServerPresetsModal({
                       }}
                       className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-white/[0.06] transition"
                     >
-                      Отмена
+                      {t('presets.cancel')}
                     </button>
                   )}
                   <button
@@ -381,7 +383,7 @@ export default function ServerPresetsModal({
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <span>{isCreatingNew ? 'Создать прессет' : 'Сохранить изменения'}</span>
+                    <span>{isCreatingNew ? t('presets.createPreset') : t('presets.saveChanges')}</span>
                   </button>
                 </div>
               </form>

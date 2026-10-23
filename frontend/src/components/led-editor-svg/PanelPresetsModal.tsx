@@ -4,6 +4,7 @@ import { DEFAULT_PANEL_PRESETS, type PanelPreset } from '@/lib/led-editor-svg/pr
 import { slugify } from '@/lib/led-editor-svg/utils';
 import { showToast, openDesktopPanelsFileDialog, saveDesktopPanelsFileDialog } from '@/lib/desktop';
 import PresetsModalLayout from './PresetsModalLayout';
+import { useI18n } from '@/lib/i18n';
 
 interface PanelPresetsModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export default function PanelPresetsModal({
   onAddPanelToCanvas,
   filePath,
 }: PanelPresetsModalProps) {
+  const { language, t } = useI18n();
   const [list, setList] = useState<PanelPreset[]>(presets);
   const [selectedId, setSelectedId] = useState<string>(activePresetId || presets[0]?.id || '');
   const [currentFilePath, setCurrentFilePath] = useState<string>(filePath || '');
@@ -108,11 +110,11 @@ export default function PanelPresetsModal({
         setIsCreatingNew(false);
         await onSavePresets(DEFAULT_PANEL_PRESETS);
         if (onSelectPreset) onSelectPreset(initialId);
-        showToast(`Создан новый файл пресетов: ${fileName}`);
+        showToast(language === 'en' ? `Created new presets file: ${fileName}` : `Создан новый файл пресетов: ${fileName}`);
       }
     } catch (e) {
       console.error('Failed to create new presets file:', e);
-      showToast('Ошибка при создании файла пресетов');
+      showToast(language === 'en' ? 'Error creating presets file' : 'Ошибка при создании файла пресетов');
     }
   };
 
@@ -144,14 +146,14 @@ export default function PanelPresetsModal({
     const cloned: PanelPreset = {
       ...preset,
       id: nextId,
-      name: `${preset.name} (Копия)`,
+      name: `${preset.name} (${t('panels.copy')})`,
     };
     const nextList = [...list, cloned];
     setList(nextList);
     setSelectedId(nextId);
     setIsCreatingNew(false);
     onSavePresets(nextList);
-    showToast(`Панель "${cloned.name}" скопирована`);
+    showToast(language === 'en' ? `Panel "${cloned.name}" copied` : `Панель "${cloned.name}" скопирована`);
   };
 
   const handleSaveForm = async (e: React.FormEvent) => {
@@ -160,46 +162,46 @@ export default function PanelPresetsModal({
 
     const name = formName.trim();
     if (!name) {
-      setErrorMessage('Укажите название модели панели');
+      setErrorMessage(language === 'en' ? 'Specify panel model name' : 'Укажите название модели панели');
       return;
     }
 
     const id = formId.trim() || slugify(name);
     if (!id) {
-      setErrorMessage('Укажите идентификатор ID');
+      setErrorMessage(language === 'en' ? 'Specify ID identifier' : 'Укажите идентификатор ID');
       return;
     }
 
     if (isCreatingNew) {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase())) {
-        setErrorMessage(`Панель с ID "${id}" уже существует. Выберите другой ID.`);
+        setErrorMessage(language === 'en' ? `Panel with ID "${id}" already exists. Choose another ID.` : `Панель с ID "${id}" уже существует. Выберите другой ID.`);
         return;
       }
     } else {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase() && p.id !== selectedId)) {
-        setErrorMessage(`Панель с ID "${id}" уже существует. Выберите другой ID.`);
+        setErrorMessage(language === 'en' ? `Panel with ID "${id}" already exists. Choose another ID.` : `Панель с ID "${id}" уже существует. Выберите другой ID.`);
         return;
       }
     }
 
     if (formW <= 0 || formH <= 0) {
-      setErrorMessage('Размеры панели должны быть больше 0');
+      setErrorMessage(language === 'en' ? 'Panel dimensions must be greater than 0' : 'Размеры панели должны быть больше 0');
       return;
     }
     if (formResW <= 0 || formResH <= 0) {
-      setErrorMessage('Разрешение панели должно быть больше 0');
+      setErrorMessage(language === 'en' ? 'Panel resolution must be greater than 0' : 'Разрешение панели должно быть больше 0');
       return;
     }
     if (formPitch <= 0) {
-      setErrorMessage('Шаг пикселя должен быть больше 0');
+      setErrorMessage(language === 'en' ? 'Pixel pitch must be greater than 0' : 'Шаг пикселя должен быть больше 0');
       return;
     }
     if (formPower < 0) {
-      setErrorMessage('Мощность не может быть отрицательной');
+      setErrorMessage(language === 'en' ? 'Power cannot be negative' : 'Мощность не может быть отрицательной');
       return;
     }
     if (formWeight < 0) {
-      setErrorMessage('Вес не может быть отрицательным');
+      setErrorMessage(language === 'en' ? 'Weight cannot be negative' : 'Вес не может быть отрицательным');
       return;
     }
 
@@ -231,13 +233,13 @@ export default function PanelPresetsModal({
     if (onSelectPreset) {
       onSelectPreset(id);
     }
-    showToast(`Панель "${name}" сохранена`);
+    showToast(language === 'en' ? `Panel "${name}" saved` : `Панель "${name}" сохранена`);
   };
 
   const handleDeleteConfirmed = async () => {
     if (!confirmDeleteId) return;
     if (list.length <= 1) {
-      showToast('Нельзя удалить последнюю панель');
+      showToast(language === 'en' ? 'Cannot delete the last model' : 'Нельзя удалить последнюю панель');
       setConfirmDeleteId(null);
       return;
     }
@@ -255,7 +257,7 @@ export default function PanelPresetsModal({
 
     setConfirmDeleteId(null);
     await onSavePresets(nextList);
-    showToast(`Панель "${target?.name || confirmDeleteId}" удалена`);
+    showToast(language === 'en' ? `Panel "${target?.name || confirmDeleteId}" deleted` : `Панель "${target?.name || confirmDeleteId}" удалена`);
   };
 
   if (!open) return null;
@@ -264,8 +266,8 @@ export default function PanelPresetsModal({
     <PresetsModalLayout<PanelPreset>
       open={open}
       onClose={onClose}
-      title="Управление прессетами LED панелей"
-      subtitle="База моделей LED-кабинетов"
+      title={t('panels.modalTitle')}
+      subtitle={t('panels.modalSubtitle')}
       accentColor="cyan"
       headerIcon={
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -280,13 +282,13 @@ export default function PanelPresetsModal({
       isCreatingNew={isCreatingNew}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Поиск по названию..."
-      createNewButtonLabel="+ Создать панель"
-      emptyListText="Панели не найдены"
+      searchPlaceholder={t('panels.searchPlaceholder')}
+      createNewButtonLabel={t('panels.createBtn')}
+      emptyListText={t('panels.emptyList')}
       errorMessage={errorMessage}
       confirmDeleteId={confirmDeleteId}
-      confirmDeleteTitle="Удаление модели панели"
-      confirmDeleteDescription={`Вы действительно хотите удалить панель "${list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId}"? Это действие удалит её из списка доступных моделей.`}
+      confirmDeleteTitle={t('panels.deleteTitle')}
+      confirmDeleteDescription={t('panels.deleteDesc', { name: list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId || '' })}
       onSetConfirmDeleteId={setConfirmDeleteId}
       onConfirmDelete={handleDeleteConfirmed}
       onSelectItem={id => {
@@ -319,15 +321,15 @@ export default function PanelPresetsModal({
       }
       renderListItemSubtext={p => (
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span>{p.w}×{p.h} мм</span>
+          <span>{p.w}×{p.h} mm</span>
           <span>•</span>
           <span>{p.resW}×{p.resH} px</span>
           <span>•</span>
           <span>P{p.pitch_mm}</span>
           <span>•</span>
-          <span>{p.power} Вт</span>
+          <span>{p.power} W</span>
           <span>•</span>
-          <span>{p.weight ?? 0} кг</span>
+          <span>{p.weight ?? 0} kg</span>
         </span>
       )}
     >
@@ -335,12 +337,12 @@ export default function PanelPresetsModal({
                 <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                   <div>
                     <h3 className="text-base font-semibold text-white">
-                      {isCreatingNew ? 'Создание нового прессета' : 'Редактирование параметров панели'}
+                      {isCreatingNew ? t('panels.createNewHeader') : t('panels.editHeader')}
                     </h3>
                     <p className="text-xs text-neutral-400 mt-0.5">
                       {isCreatingNew
-                        ? 'Заполните параметры и нажмите "Создать и сохранить"'
-                        : `Изменение параметров для ${formName || selectedId}`}
+                        ? t('panels.createSubtitle')
+                        : t('panels.editSubtitle', { name: formName || selectedId })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -402,7 +404,7 @@ export default function PanelPresetsModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Название модели <span className="text-red-400">*</span>
+                        {t('panels.modelName')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -415,25 +417,25 @@ export default function PanelPresetsModal({
                             setFormId(slugify(val));
                           }
                         }}
-                        placeholder="Например: InfiLed 1m (500×1000) 4.6"
+                        placeholder={t('panels.modelNamePh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
 
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        ID (Идентификатор) <span className="text-red-400">*</span>
+                        {t('panels.id')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={formId}
                         onChange={e => setFormId(e.target.value.toLowerCase().trim())}
-                        placeholder="Например: infiled-1m-4p6"
+                        placeholder={t('panels.idPh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:border-cyan-500 focus:outline-none"
                       />
                       <span className="text-[10px] text-neutral-500 mt-1 block">
-                        Уникальный код модели для файлов проектов (.ss)
+                        {t('panels.idDesc')}
                       </span>
                     </div>
                   </div>
@@ -441,7 +443,7 @@ export default function PanelPresetsModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Ширина (мм) <span className="text-red-400">*</span>
+                        {t('panels.width')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -454,7 +456,7 @@ export default function PanelPresetsModal({
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Высота (мм) <span className="text-red-400">*</span>
+                        {t('panels.height')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -471,7 +473,7 @@ export default function PanelPresetsModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Разрешение W (px) <span className="text-red-400">*</span>
+                        {t('panels.resW')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -484,7 +486,7 @@ export default function PanelPresetsModal({
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Разрешение H (px) <span className="text-red-400">*</span>
+                        {t('panels.resH')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -501,7 +503,7 @@ export default function PanelPresetsModal({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Шаг пикселя (мм) <span className="text-red-400">*</span>
+                        {t('panels.pitch')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -515,7 +517,7 @@ export default function PanelPresetsModal({
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Мощность (Вт) <span className="text-red-400">*</span>
+                        {t('panels.power')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -528,7 +530,7 @@ export default function PanelPresetsModal({
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Вес (кг)
+                        {t('panels.weight')}
                       </label>
                       <input
                         type="number"
@@ -552,10 +554,10 @@ export default function PanelPresetsModal({
                     />
                     <div>
                       <label htmlFor="special-mode-toggle" className="text-xs font-medium text-white cursor-pointer select-none">
-                        Специальный режим маски
+                        {t('panels.special')}
                       </label>
                       <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                        Удваивает вертикальное разрешение при формировании маски контента. Используется для экрана с через-строчным пропуском пикселей.
+                        {t('panels.specialDesc')}
                       </p>
                     </div>
                   </div>
@@ -564,16 +566,16 @@ export default function PanelPresetsModal({
                   <div className="p-3.5 rounded-xl bg-[#0e1017] border border-white/[0.06] flex items-center justify-between">
                     <div className="space-y-1">
                       <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
-                        Расчётные характеристики
+                        {t('panels.calcProps')}
                       </div>
                       <div className="text-xs text-neutral-300 flex items-center gap-3 font-mono">
-                        <span>Площадь: {((formW * formH) / 1_000_000).toFixed(3)} м²</span>
+                        <span>{t('panels.area', { area: ((formW * formH) / 1_000_000).toFixed(3) })}</span>
                         <span>•</span>
-                        <span>Пикселей: {(formResW * formResH).toLocaleString('ru-RU')} px</span>
+                        <span>{t('panels.pixels', { pixels: (formResW * formResH).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU') })}</span>
                         <span>•</span>
-                        <span>Соотношение: {(formW / formH).toFixed(2)}:1</span>
+                        <span>{t('panels.aspect', { ratio: (formW / formH).toFixed(2) })}</span>
                         <span>•</span>
-                        <span>Вес: {formWeight || 0} кг</span>
+                        <span>{t('panels.weightCalc', { weight: formWeight || 0 })}</span>
                       </div>
                     </div>
                     {/* Visual aspect preview */}
@@ -583,7 +585,7 @@ export default function PanelPresetsModal({
                         width: `${Math.min(60, Math.max(24, Math.round(40 * (formW / formH))))}px`,
                         height: `${Math.min(60, Math.max(24, Math.round(40 * (formH / formW))))}px`,
                       }}
-                      title={`Пропорции: ${formW}×${formH} мм`}
+                      title={`${formW}×${formH} mm`}
                     >
                       {formW}×{formH}
                     </div>
@@ -601,7 +603,7 @@ export default function PanelPresetsModal({
                       }}
                       className="px-4 py-2 rounded-xl bg-[#161822] hover:bg-[#1e202d] text-neutral-300 hover:text-white border border-white/[0.08] text-xs font-medium transition active:scale-[0.98]"
                     >
-                      Отмена
+                      {t('presets.cancel')}
                     </button>
                   ) : (
                     <>
@@ -609,30 +611,30 @@ export default function PanelPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3.5 py-2.5 rounded-xl bg-[#161822] hover:bg-[#1e202d] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 text-xs font-medium transition active:scale-[0.98] flex items-center gap-1.5"
-                        title="Создать новую панель"
+                        title={t('panels.createBtn')}
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Создать панель</span>
+                        <span>{t('panels.createBtn')}</span>
                       </button>
                       {onAddPanelToCanvas && (
                         <button
                           type="button"
                           onClick={() => {
                             onAddPanelToCanvas(selectedId);
-                            showToast(`Панель "${formName}" добавлена на схему`);
+                            showToast(language === 'en' ? `Panel "${formName}" added to schema` : `Панель "${formName}" добавлена на схему`);
                             onClose();
                           }}
                           className="px-3.5 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/30 transition active:scale-[0.98] flex items-center gap-1.5"
-                          title="Добавить панель в схему"
+                          title={t('panels.addToSchemaTitle')}
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <line x1="12" y1="5" x2="12" y2="19" />
                             <line x1="5" y1="12" x2="19" y2="12" />
                           </svg>
-                          <span>Добавить в схему</span>
+                          <span>{t('panels.addToSchema')}</span>
                         </button>
                       )}
                     </>
@@ -647,7 +649,7 @@ export default function PanelPresetsModal({
                       <polyline points="17 21 17 13 7 13 7 21" />
                       <polyline points="7 3 7 8 15 8" />
                     </svg>
-                    <span>{isCreatingNew ? 'Создать и сохранить' : 'Сохранить изменения'}</span>
+                    <span>{isCreatingNew ? t('presets.createAndSave') : t('presets.saveChanges')}</span>
                   </button>
                 </div>
 
