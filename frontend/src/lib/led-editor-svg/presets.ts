@@ -42,6 +42,30 @@ export const NOVASTAR_PORT_MAX_PIXELS_25HZ = 1_583_333;
 export const NOVASTAR_PORT_MAX_PIXELS_30HZ = 1_319_444;
 export const NOVASTAR_PORT_MAX_PIXELS_50HZ = 791_667;
 export const NOVASTAR_PORT_MAX_PIXELS_60HZ = 659_722;
+export const NOVASTAR_PORT_MAX_PIXELS_120HZ = 329_861;
+
+export const REFRESH_RATE_PRESETS = [
+  { hz: 24, label: '24 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_24HZ },
+  { hz: 25, label: '25 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_25HZ },
+  { hz: 30, label: '30 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_30HZ },
+  { hz: 50, label: '50 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_50HZ },
+  { hz: 60, label: '60 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_60HZ },
+  { hz: 120, label: '120 Hz', maxPixels: NOVASTAR_PORT_MAX_PIXELS_120HZ },
+] as const;
+
+export const DEFAULT_REFRESH_RATE = 50;
+
+/** Расчёт максимальной ёмкости гигабитного порта NovaStar (8-bit) для заданной частоты обновления */
+export function getPortMaxPixels(hz: number): number {
+  if (hz === 24) return NOVASTAR_PORT_MAX_PIXELS_24HZ;
+  if (hz === 25) return NOVASTAR_PORT_MAX_PIXELS_25HZ;
+  if (hz === 30) return NOVASTAR_PORT_MAX_PIXELS_30HZ;
+  if (hz === 50) return NOVASTAR_PORT_MAX_PIXELS_50HZ;
+  if (hz === 60) return NOVASTAR_PORT_MAX_PIXELS_60HZ;
+  if (hz === 120) return NOVASTAR_PORT_MAX_PIXELS_120HZ;
+  if (hz <= 0) return NOVASTAR_PORT_MAX_PIXELS_60HZ;
+  return Math.floor((1_000_000_000 * 0.95) / (24 * hz));
+}
 
 export type CardPreset = {
   id: string;

@@ -22,7 +22,7 @@ import type {
 import { buildSpecText } from "@/lib/led-editor-svg/utils";
 import MaskTab from "./MaskTab";
 import SidebarCardsTab, { type SidebarCardInstance } from "./SidebarCardsTab";
-import SidebarWiringTab from "./SidebarWiringTab";
+import SidebarWiringTab, { type PortStats } from "./SidebarWiringTab";
 import SidebarInfoTab from "./SidebarInfoTab";
 
 type CardInstance = SidebarCardInstance;
@@ -72,6 +72,11 @@ type SidebarProps = {
   // legacy (оставлено для совместимости, не используется для выбора инстанса)
   cardName: string;
   setCardId: (s: string) => void;
+
+  // частота обновления
+  refreshRate?: number;
+  onRefreshRateChange?: (hz: number) => void;
+  getPortStats?: (link: number) => PortStats;
 
   // автозмейки
   autoSnakeH_TL: () => void;
@@ -197,6 +202,9 @@ export default function Sidebar(props: SidebarProps) {
     clipboardCount = 0,
     activeLink,
     setActiveLink,
+    refreshRate,
+    onRefreshRateChange,
+    getPortStats,
     setSelectedPanels,
     eventName,
     eventDate,
@@ -324,6 +332,7 @@ export default function Sidebar(props: SidebarProps) {
       cardPresets: cardPresetsList,
       serverPresets: serverPresetsList,
       fiberPresets: fiberPresetsList,
+      refreshRate,
     });
   }, [
     allPanels,
@@ -342,6 +351,7 @@ export default function Sidebar(props: SidebarProps) {
     cardPresetsList,
     serverPresetsList,
     fiberPresetsList,
+    refreshRate,
   ]);
 
   return (
@@ -456,6 +466,9 @@ export default function Sidebar(props: SidebarProps) {
           setTool={setTool}
           activeLink={activeLink}
           setActiveLink={setActiveLink}
+          refreshRate={refreshRate}
+          onRefreshRateChange={onRefreshRateChange}
+          getPortStats={getPortStats}
           autoSnakeH_TL={autoSnakeH_TL}
           autoSnakeH_TR={autoSnakeH_TR}
           autoSnakeH_BL={autoSnakeH_BL}

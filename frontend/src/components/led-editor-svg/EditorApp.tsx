@@ -18,7 +18,8 @@ import {
   DEFAULT_SERVER_PRESETS,
   DEFAULT_FIBER_PRESETS,
   CARD_COLORS,
-  NOVASTAR_PORT_MAX_PIXELS_50HZ,
+  getPortMaxPixels,
+  DEFAULT_REFRESH_RATE,
   type PanelPreset,
   type CardPreset,
   type ServerPreset,
@@ -110,7 +111,7 @@ export default function EditorApp() {
 
   // ======== WIRING PAGES ========
   const [wiringPages, setWiringPages] = useState<WiringPage[]>([
-    { id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] },
+    { id: 'wiring-1', name: 'Schema 1', panels: [], cables: [], refreshRate: DEFAULT_REFRESH_RATE },
   ]);
   const [activeWiringPageId, setActiveWiringPageId] = useState<string>('wiring-1');
 
@@ -118,6 +119,8 @@ export default function EditorApp() {
     () => wiringPages.find(p => p.id === activeWiringPageId) ?? wiringPages[0],
     [wiringPages, activeWiringPageId]
   );
+
+  const activeRefreshRate = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
 
   const panels = useMemo(() => activeWiringPage?.panels ?? [], [activeWiringPage]);
   const cables = useMemo(() => activeWiringPage?.cables ?? [], [activeWiringPage]);
@@ -331,6 +334,14 @@ export default function EditorApp() {
   }, [takeSnapshot]);
 
   // ======== МЕТОДЫ УПРАВЛЕНИЯ СТРАНИЦАМИ РАСКЛЮЧЕНИЯ ========
+  const onRefreshRateChange = useCallback((hz: number) => {
+    pushHistory();
+    setWiringPages(prev => prev.map(page => {
+      if (page.id !== activeWiringPageId) return page;
+      return { ...page, refreshRate: hz };
+    }));
+  }, [activeWiringPageId, pushHistory]);
+
   const addWiringPage = useCallback(() => {
     pushHistory();
     const newIdx = wiringPages.length + 1;
@@ -339,13 +350,14 @@ export default function EditorApp() {
       name: `Schema ${newIdx}`,
       panels: [],
       cables: [],
+      refreshRate: activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE,
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
     setSelectedPanels(new Set());
     setSelectedCables(new Set());
     setDraft(null);
-  }, [wiringPages.length, pushHistory]);
+  }, [wiringPages.length, pushHistory, activeWiringPage?.refreshRate]);
 
   const removeWiringPage = useCallback((pageId: string) => {
     if (wiringPages.length <= 1) return;
@@ -385,6 +397,7 @@ export default function EditorApp() {
       name: `${target.name} (copy)`,
       panels: clonedPanels,
       cables: clonedCables,
+      refreshRate: target.refreshRate ?? DEFAULT_REFRESH_RATE,
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
@@ -583,12 +596,12 @@ export default function EditorApp() {
     return false;
   }, [cables]);
 
-  /** Пиксели прямоугольника для (cardNo, link) + extras; проверка лимита @50Hz */
+  /** Пиксели прямоугольника для (cardNo, link) + extras; проверка лимита @activeRefreshRate */
   const bboxPixelsFor = useCallback((
     cardNo: number,
     link: number,
     extras: string[] = []
-  ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number } => {
+  ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number; hz: number; panelCount: number } => {
     const nodeIds = new Set<string>();
     for (const c of cables) {
       const cc = c as CableEx;
@@ -599,14 +612,15 @@ export default function EditorApp() {
     }
     extras.forEach(id => nodeIds.add(id));
 
+    const hz = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
+    const limit = getPortMaxPixels(hz);
+
     const arr: Panel[] = Array.from(nodeIds)
       .map(id => panelsById[id])
       .filter((pp): pp is Panel => Boolean(pp));
 
-    const limit = NOVASTAR_PORT_MAX_PIXELS_50HZ;
-
     if (!arr.length) {
-      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit };
+      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit, hz, panelCount: 0 };
     }
 
     // Проверяем одинаковую плотность px/мм в группе
@@ -615,7 +629,7 @@ export default function EditorApp() {
       const kxA = a.resW / a.w, kyA = a.resH / a.h;
       const kxB = b.resW / b.w, kyB = b.resH / b.h;
       if (Math.abs(kxA - kxB) > 1e-6 || Math.abs(kyA - kyB) > 1e-6) {
-        return { ok: false, pixels: 0, widthPx: 0, heightPx: 0, limit };
+        return { ok: false, pixels: 0, widthPx: 0, heightPx: 0, limit, hz, panelCount: arr.length };
       }
     }
 
@@ -630,13 +644,21 @@ export default function EditorApp() {
     const heightPx = Math.round(heightMm * ky);
     const pixels = widthPx * heightPx;
 
-    return { ok: true, pixels, widthPx, heightPx, limit };
-  }, [cables, panelsById]);
+    return { ok: true, pixels, widthPx, heightPx, limit, hz, panelCount: arr.length };
+  }, [cables, panelsById, activeWiringPage?.refreshRate]);
 
   const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = []) => {
     const r = bboxPixelsFor(cardNo, link, extras);
     return r.ok && r.pixels <= r.limit;
   }, [bboxPixelsFor]);
+
+  const getPortStats = useCallback((link: number) => {
+    if (!selectedCard) {
+      const hz = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
+      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit: getPortMaxPixels(hz), hz, panelCount: 0 };
+    }
+    return bboxPixelsFor(selectedCard.order, link);
+  }, [selectedCard, bboxPixelsFor, activeWiringPage?.refreshRate]);
 
   /** Выбор линка (порта) с учётом уже назначений в пределах выбранной карты */
   const chooseLinkFor = useCallback((aId: string, bId: string, desired: number, cardNo: number): number | null => {
@@ -679,8 +701,15 @@ export default function EditorApp() {
     if (link === null) return;
 
     // лимит пикселей прямоугольника для этого (cardNo, link)
-    const { ok, pixels, limit } = bboxPixelsFor(cardNo, link, [aId, bId]);
-    if (!ok || pixels > limit) return;
+    const { ok, pixels, limit, hz } = bboxPixelsFor(cardNo, link, [aId, bId]);
+    if (!ok) {
+      showToast('Панели имеют разную плотность пикселей');
+      return;
+    }
+    if (pixels > limit) {
+      showToast(`Превышен лимит области порта: ${pixels.toLocaleString('ru-RU')} > ${limit.toLocaleString('ru-RU')} px (@${hz}Hz)`);
+      return;
+    }
 
     pushHistory();
     setCables(prev => [...prev, {
@@ -691,7 +720,7 @@ export default function EditorApp() {
       color: selectedCard.portColors[link] ?? LINK_COLORS_16[link] ?? '#9ca3af',
       card: cardNo,
     }]);
-  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables]);
+  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables, showToast]);
 
   // ======== PANEL MOUSE DOWN ========
   const onPanelMouseDown = useCallback((e: React.MouseEvent, id: string) => {
@@ -882,8 +911,15 @@ export default function EditorApp() {
   }) => {
     let parsedWiringPages: WiringPage[] = [];
     let parsedActiveWiringPageId = 'wiring-1';
+    const fallbackHz = typeof (data as { refreshRate?: number }).refreshRate === 'number' && (data as { refreshRate?: number }).refreshRate! > 0
+      ? (data as { refreshRate?: number }).refreshRate!
+      : DEFAULT_REFRESH_RATE;
+
     if (Array.isArray(data.wiringPages) && data.wiringPages.length > 0) {
-      parsedWiringPages = data.wiringPages;
+      parsedWiringPages = data.wiringPages.map(wp => ({
+        ...wp,
+        refreshRate: typeof wp.refreshRate === 'number' && wp.refreshRate > 0 ? wp.refreshRate : fallbackHz,
+      }));
       parsedActiveWiringPageId = data.activeWiringPageId ?? data.wiringPages[0].id;
     } else if (Array.isArray(data.panels) && Array.isArray(data.cables)) {
       parsedWiringPages = [{
@@ -891,6 +927,7 @@ export default function EditorApp() {
         name: 'Schema 1',
         panels: data.panels,
         cables: data.cables,
+        refreshRate: fallbackHz,
       }];
       parsedActiveWiringPageId = 'wiring-1';
     }
@@ -1177,6 +1214,7 @@ export default function EditorApp() {
   const saveProjectToFile = useCallback(async (targetPath: string | null) => {
     const payload = {
       meta: { version: 4, presetId, rows, cols },
+      refreshRate: activeRefreshRate,
       wiringPages,
       activeWiringPageId,
       maskPages,
@@ -1216,7 +1254,7 @@ export default function EditorApp() {
       URL.revokeObjectURL(url);
       showToast('Сохранено');
     }
-  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
+  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
 
   const saveJSON = useCallback(() => saveProjectToFile(currentFilePath), [saveProjectToFile, currentFilePath]);
   const saveJSONAs = useCallback(() => saveProjectToFile(null), [saveProjectToFile]);
@@ -1697,6 +1735,9 @@ export default function EditorApp() {
         autoSnakeV_BL={() => runAutoPreset('V_BL')}
         autoSnakeV_BR={() => runAutoPreset('V_BR')}
         activeLink={activeLink} setActiveLink={setActiveLink}
+        refreshRate={activeRefreshRate}
+        onRefreshRateChange={onRefreshRateChange}
+        getPortStats={getPortStats}
         setSelectedPanels={setSelectedPanels}
         duplicateSelectedPanels={duplicateSelectedPanels}
         copySelectedPanels={copySelectedPanels}
@@ -1853,6 +1894,7 @@ export default function EditorApp() {
           scale={scale}
           setScale={setScale}
           resetView={resetView}
+          activeRefreshRate={activeRefreshRate}
         />
         <input
           ref={fileInputRef}

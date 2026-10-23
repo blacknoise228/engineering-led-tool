@@ -35,6 +35,7 @@ interface EditorToolbarProps {
   scale: number;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   resetView: () => void;
+  activeRefreshRate?: number;
 }
 
 export default function EditorToolbar({
@@ -69,6 +70,7 @@ export default function EditorToolbar({
   scale,
   setScale,
   resetView,
+  activeRefreshRate,
 }: EditorToolbarProps) {
   return (
     <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
@@ -149,7 +151,15 @@ export default function EditorToolbar({
               <>
                 <span className="text-neutral-600 text-xs">•</span>
                 <span className="text-xs text-neutral-400">
-                  Премычек: <strong className="text-neutral-200 font-mono">{cableCount}</strong>
+                  Перемычек: <strong className="text-neutral-200 font-mono">{cableCount}</strong>
+                </span>
+              </>
+            )}
+            {activeTab !== 'mask' && typeof activeRefreshRate === 'number' && (
+              <>
+                <span className="text-neutral-600 text-xs">•</span>
+                <span className="text-xs text-neutral-400">
+                  Частота: <strong className="text-cyan-400 font-mono">{activeRefreshRate} Hz</strong>
                 </span>
               </>
             )}

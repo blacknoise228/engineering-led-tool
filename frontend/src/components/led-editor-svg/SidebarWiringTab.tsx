@@ -3,12 +3,25 @@ import React from 'react';
 import {
   PRESETS,
   LINK_COLORS_16,
+  REFRESH_RATE_PRESETS,
+  DEFAULT_REFRESH_RATE,
+  getPortMaxPixels,
   type PanelPreset,
   type CardPreset,
 } from '@/lib/led-editor-svg/presets';
 import type { Tool, WiringPage } from '@/lib/led-editor-svg/types';
 import SnakeIcon from './icons/SnakeIcon';
 import type { SidebarCardInstance } from './SidebarCardsTab';
+
+export type PortStats = {
+  ok: boolean;
+  pixels: number;
+  widthPx: number;
+  heightPx: number;
+  limit: number;
+  hz: number;
+  panelCount: number;
+};
 
 interface SidebarWiringTabProps {
   wiringPages: WiringPage[];
@@ -43,6 +56,9 @@ interface SidebarWiringTabProps {
   setTool: (t: Tool) => void;
   activeLink: number;
   setActiveLink: (i: number) => void;
+  refreshRate?: number;
+  onRefreshRateChange?: (hz: number) => void;
+  getPortStats?: (link: number) => PortStats;
   autoSnakeH_TL: () => void;
   autoSnakeH_TR: () => void;
   autoSnakeH_BL: () => void;
@@ -90,6 +106,9 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
     setTool,
     activeLink,
     setActiveLink,
+    refreshRate,
+    onRefreshRateChange,
+    getPortStats,
     autoSnakeH_TL,
     autoSnakeH_TR,
     autoSnakeH_BL,
@@ -103,11 +122,15 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
     textOutline,
   } = props;
 
+  const currentWiringPage = wiringPages.find((p) => p.id === activeWiringPageId);
+  const currentHz = refreshRate ?? currentWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
+  const currentLimit = getPortMaxPixels(currentHz);
+
   const portsCount = selectedCardModel?.outputPorts ?? 0;
   const portButtons = Array.from({ length: portsCount }, (_, i) => i);
   const portColor = (i: number) =>
     selectedCard?.portColors?.[i] ?? LINK_COLORS_16[i % LINK_COLORS_16.length];
-  const currentWiringPage = wiringPages.find((p) => p.id === activeWiringPageId);
+  const activeStats = getPortStats ? getPortStats(activeLink) : null;
 
   return (
     <>
@@ -392,6 +415,65 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
         </button>
       </div>
 
+      {/* === ЧАСТОТА ОБНОВЛЕНИЯ (ГЕРЦОВКА) === */}
+      <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+            Частота обновления
+          </div>
+          <span className="font-mono text-cyan-400 text-xs font-semibold">
+            {currentHz} Hz
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <div className="grid grid-cols-6 gap-1 flex-1">
+            {REFRESH_RATE_PRESETS.map((p) => {
+              const isCur = currentHz === p.hz;
+              return (
+                <button
+                  key={p.hz}
+                  type="button"
+                  onClick={() => onRefreshRateChange?.(p.hz)}
+                  className={[
+                    'py-1.5 rounded-lg text-xs font-semibold font-mono transition text-center border',
+                    isCur
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-400/40 shadow-sm shadow-blue-500/20'
+                      : 'bg-[#181a24] text-neutral-400 hover:text-white border-white/[0.06] hover:border-white/[0.12]',
+                  ].join(' ')}
+                  title={`${p.label} (макс. ${p.maxPixels.toLocaleString('ru-RU')} px)`}
+                >
+                  {p.hz}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-1 bg-[#181a24] border border-white/[0.08] rounded-lg px-2 py-1 shrink-0" title="Пользовательская частота (Hz)">
+            <input
+              type="number"
+              min={1}
+              max={480}
+              value={currentHz}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val > 0) {
+                  onRefreshRateChange?.(val);
+                }
+              }}
+              className="w-8 bg-transparent text-xs text-right font-mono text-white focus:outline-none"
+            />
+            <span className="text-[10px] text-neutral-400 font-mono">Hz</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] bg-[#141622] px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
+          <span className="text-neutral-400">Лимит расключаемой области:</span>
+          <span className="font-mono text-cyan-400 font-semibold">
+            {currentLimit.toLocaleString('ru-RU')} px
+          </span>
+        </div>
+      </div>
+
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
           <span>Порты вывода</span>
@@ -407,40 +489,160 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             Выберите карту выше для расключения портов.
           </div>
         ) : (
-          <div
-            className="grid gap-1.5 pt-1"
-            style={{
-              gridTemplateColumns: `repeat(${Math.min(8, Math.max(1, portsCount))}, minmax(0, 1fr))`,
-            }}
-          >
-            {portButtons.map((i) => {
-              const isActive = i === activeLink;
-              const color = portColor(i);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveLink(i)}
-                  className={[
-                    'h-9 rounded-lg flex items-center justify-center transition relative',
-                    'border border-white/[0.1] shadow-sm',
-                    isActive
-                      ? 'ring-2 ring-white ring-offset-2 ring-offset-[#10121a] scale-105 z-10'
-                      : 'opacity-85 hover:opacity-100 hover:scale-105',
-                  ].join(' ')}
-                  style={{ backgroundColor: color }}
-                  title={`Порт P${i + 1}`}
-                >
-                  <span
-                    className="font-mono text-[18px] font-bold leading-none select-none"
-                    style={{ color: '#fff', ...textOutline('#000') }}
+          <>
+            <div
+              className="grid gap-1.5 pt-1"
+              style={{
+                gridTemplateColumns: `repeat(${Math.min(8, Math.max(1, portsCount))}, minmax(0, 1fr))`,
+              }}
+            >
+              {portButtons.map((i) => {
+                const isActive = i === activeLink;
+                const color = portColor(i);
+                const stats = getPortStats ? getPortStats(i) : null;
+                const isOver = stats ? stats.panelCount > 0 && stats.pixels > stats.limit : false;
+                const hasPanels = Boolean(stats && stats.panelCount > 0);
+
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setActiveLink(i)}
+                    className={[
+                      'h-9 rounded-lg flex items-center justify-center transition relative',
+                      'border border-white/[0.1] shadow-sm',
+                      isOver ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-[#10121a]' : '',
+                      isActive
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-[#10121a] scale-105 z-10'
+                        : 'opacity-85 hover:opacity-100 hover:scale-105',
+                    ].filter(Boolean).join(' ')}
+                    style={{ backgroundColor: color }}
+                    title={`Порт P${i + 1}${stats && stats.panelCount > 0 ? ` (${stats.panelCount} пан., ${stats.pixels.toLocaleString('ru-RU')} / ${stats.limit.toLocaleString('ru-RU')} px)` : ''}`}
                   >
-                    {i + 1}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span
+                      className="font-mono text-[18px] font-bold leading-none select-none"
+                      style={{ color: '#fff', ...textOutline('#000') }}
+                    >
+                      {i + 1}
+                    </span>
+                    {isOver && (
+                      <span
+                        className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 border border-[#10121a] rounded-full text-[9px] font-extrabold text-white flex items-center justify-center leading-none shadow"
+                        title="Превышен лимит области порта!"
+                      >
+                        !
+                      </span>
+                    )}
+                    {!isOver && hasPanels && (
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-white/80 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeStats && (
+              <div
+                className={[
+                  'mt-2.5 p-3 rounded-xl border text-xs space-y-2 transition',
+                  activeStats.panelCount > 0 && activeStats.pixels > activeStats.limit
+                    ? 'bg-red-500/10 border-red-500/30 text-red-200'
+                    : 'bg-[#141622] border-white/[0.06] text-neutral-300',
+                ].join(' ')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                      style={{ backgroundColor: portColor(activeLink) }}
+                    />
+                    <span className="font-semibold text-white">
+                      Порт P{activeLink + 1}
+                    </span>
+                    <span className="text-neutral-400 font-mono text-[11px]">
+                      ({activeStats.panelCount} {activeStats.panelCount === 1 ? 'панель' : activeStats.panelCount < 5 ? 'панели' : 'панелей'})
+                    </span>
+                  </div>
+                  {activeStats.panelCount > 0 && (
+                    <div className="font-mono text-[11px]">
+                      <span
+                        className={
+                          activeStats.pixels > activeStats.limit
+                            ? 'text-red-400 font-bold'
+                            : 'text-cyan-400 font-semibold'
+                        }
+                      >
+                        {Math.round((activeStats.pixels / activeStats.limit) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {activeStats.panelCount > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                      <span>Область (W×H):</span>
+                      <span className="font-mono text-neutral-200 font-medium">
+                        {activeStats.widthPx} × {activeStats.heightPx} px
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                      <span>Загрузка пикселей:</span>
+                      <span className="font-mono text-neutral-200">
+                        <strong
+                          className={
+                            activeStats.pixels > activeStats.limit
+                              ? 'text-red-400 font-bold'
+                              : 'text-white font-semibold'
+                          }
+                        >
+                          {activeStats.pixels.toLocaleString('ru-RU')}
+                        </strong>{' '}
+                        / {activeStats.limit.toLocaleString('ru-RU')} px
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#0d0e14] h-2 rounded-full overflow-hidden border border-white/[0.06]">
+                      <div
+                        className={[
+                          'h-full transition-all duration-300 rounded-full',
+                          activeStats.pixels > activeStats.limit
+                            ? 'bg-red-500'
+                            : (activeStats.pixels / activeStats.limit) > 0.85
+                            ? 'bg-amber-400'
+                            : 'bg-gradient-to-r from-cyan-500 to-blue-500',
+                        ].join(' ')}
+                        style={{
+                          width: `${Math.min(100, Math.round((activeStats.pixels / activeStats.limit) * 100))}%`,
+                        }}
+                      />
+                    </div>
+
+                    {activeStats.pixels > activeStats.limit ? (
+                      <div className="text-[11px] text-red-300 font-medium bg-red-500/15 p-2 rounded-lg border border-red-500/30 flex items-start gap-1.5">
+                        <span>⚠️</span>
+                        <span>
+                          Превышен лимит области порта на{' '}
+                          <strong>{(activeStats.pixels - activeStats.limit).toLocaleString('ru-RU')} px</strong> (@{activeStats.hz}Hz)!
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-neutral-400 flex items-center justify-between">
+                        <span>Свободно:</span>
+                        <span className="font-mono text-emerald-400">
+                          {(activeStats.limit - activeStats.pixels).toLocaleString('ru-RU')} px
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-[11px] text-neutral-400 py-0.5">
+                    К порту P{activeLink + 1} пока не подключены кабинеты.
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">

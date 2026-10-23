@@ -66,6 +66,7 @@ export type WiringPage = {
   name: string;
   panels: Panel[];
   cables: CableEx[];
+  refreshRate?: number;
 };
 
 export type MaskPage = {

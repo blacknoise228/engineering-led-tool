@@ -1,5 +1,5 @@
 import type { Panel, Vec, CableEx, CardInstance, ScreenGroup } from './types';
-import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS, type CardPreset, type ServerPreset, type FiberConverterPreset } from './presets';
+import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS, getPortMaxPixels, type CardPreset, type ServerPreset, type FiberConverterPreset } from './presets';
 import { savePngBlob, savePngFile, showToast } from '../desktop';
 
 export const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 9)}`;
@@ -75,6 +75,7 @@ export type ExportLegend = {
   totalAreaM2?: number;
   fibers?: { id: string; name: string; count: number }[];
   power: number;
+  refreshRate?: number;
 };
 
 export interface BuildLegendParams {
@@ -91,6 +92,7 @@ export interface BuildLegendParams {
   cardPresets?: CardPreset[];
   serverPresets?: ServerPreset[];
   fiberPresets?: FiberConverterPreset[];
+  refreshRate?: number;
 }
 
 export function buildExportLegend(params: BuildLegendParams): ExportLegend {
@@ -197,6 +199,7 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     totalAreaM2,
     fibers,
     power,
+    refreshRate: params.refreshRate,
   };
 }
 
@@ -228,6 +231,10 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   }
   lines.push(`Перемычки: ${legend.cablesCount} шт.`);
   lines.push(`Занято портов: ${legend.linksUsedCount}`);
+  if (typeof legend.refreshRate === 'number' && legend.refreshRate > 0) {
+    const limit = getPortMaxPixels(legend.refreshRate);
+    lines.push(`Частота обновления: ${legend.refreshRate} Hz (лимит порта: ${limit.toLocaleString('ru-RU')} px)`);
+  }
   lines.push('');
 
   if (screenGroups.length > 0) {
