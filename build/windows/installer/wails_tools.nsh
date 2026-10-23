@@ -5,13 +5,13 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "ss-engineering"
+    !define INFO_PROJECTNAME "engineering-led-tool"
 !endif
 !ifndef INFO_COMPANYNAME
     !define INFO_COMPANYNAME "blacknoise"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "SHOW SCREEN ENGINEERING"
+    !define INFO_PRODUCTNAME "Engineering LED Tool"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "0.1.0"
@@ -239,7 +239,7 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macro wails.associateFiles
     ; Create file associations
     
-      !insertmacro APP_ASSOCIATE "ss" "SHOW SCREEN Engineering Project" "SHOW SCREEN Engineering Project File" "$INSTDIR\icon.ico" "Open with ${INFO_PRODUCTNAME}" "$INSTDIR\${PRODUCT_EXECUTABLE} $\"%1$\""
+      !insertmacro APP_ASSOCIATE "ss" "Engineering LED Tool Project" "Engineering LED Tool Project File" "$INSTDIR\icon.ico" "Open with ${INFO_PRODUCTNAME}" "$INSTDIR\${PRODUCT_EXECUTABLE} $\"%1$\""
 
       File "..\icon.ico"
     
@@ -248,7 +248,7 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !macro wails.unassociateFiles
     ; Delete app associations
     
-      !insertmacro APP_UNASSOCIATE "ss" "SHOW SCREEN Engineering Project"
+      !insertmacro APP_UNASSOCIATE "ss" "Engineering LED Tool Project"
 
       Delete "$INSTDIR\icon.ico"
     

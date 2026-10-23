@@ -1,17 +1,20 @@
-// src/lib/led-editor-svg/mask-export.ts
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { savePngFile, saveDesktopZIP, blobToBase64, isDesktopApp, showToast } from '../desktop';
-import { Panel, ScreenGroup } from './types';
+import { Panel, ScreenGroup, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
 import { getTextureById } from './textures';
-import { computePixelPanels, computeContour, GroupContourResult, PixelPanel, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds } from './mask-contour';
-import type { BuildLegendParams } from './utils';
-
-/* Нормированный восьмиугольник 30-70-100 % */
-const OCT_PATH = [
-  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
-  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
-] as const;
+import {
+  computePixelPanels,
+  computeContour,
+  GroupContourResult,
+  PixelPanel,
+  formatMeters,
+  getMaskPanelResolution,
+  computeBadgeSize,
+  getBadgeBounds,
+  computeBadgeLogoRect,
+  OCT_POINTS,
+} from './mask-contour';
 
 export interface ScreenRenderData {
   group: ScreenGroup;
@@ -53,7 +56,7 @@ function drawOctagon(
   lineWidth = 1
 ) {
   ctx.beginPath();
-  OCT_PATH.forEach(([px, py], i) => {
+  OCT_POINTS.forEach(([px, py], i) => {
     const vx = ox + px * side;
     const vy = oy + py * side;
     if (i === 0) ctx.moveTo(vx, vy);
@@ -248,7 +251,8 @@ export async function renderScreenOnCanvas(
   screen: ScreenRenderData,
   originX: number,
   originY: number,
-  logoImg: HTMLImageElement | null
+  logoImg: HTMLImageElement | null,
+  logoConfig?: Partial<MaskLogoConfig> | null
 ) {
   const { contour, group, wPx, hPx, wM, hM, meterPxW, meterPxH } = screen;
   const texture = getTextureById(group.textureId);
@@ -320,45 +324,79 @@ export async function renderScreenOnCanvas(
   const oy = badgeCy - octSide / 2;
 
   drawOctagon(ctx, ox, oy, octSide, 'fill', 'rgba(8, 9, 11, 0.88)');
-  drawOctagon(ctx, ox, oy, octSide, 'stroke', '#ffffff', Math.max(2, guideW));
 
-  // 5. Текст и логотип на плашке
-  let textY = oy + octSide * 0.12;
+  // 5. Текст и логотип на плашке (обрезаем по восьмиугольнику)
+  ctx.save();
+  ctx.beginPath();
+  OCT_POINTS.forEach(([px, py], i) => {
+    const vx = ox + px * octSide;
+    const vy = oy + py * octSide;
+    if (i === 0) ctx.moveTo(vx, vy);
+    else ctx.lineTo(vx, vy);
+  });
+  ctx.closePath();
+  ctx.clip();
 
-  if (logoImg && logoImg.width > 0) {
-    const maxLogoW = octSide * 0.55;
-    const ratio = maxLogoW / logoImg.width;
-    const logoW = Math.round(maxLogoW);
-    const logoH = Math.round(logoImg.height * ratio);
-    const lx = badgeCx - logoW / 2;
-    ctx.drawImage(logoImg, lx, textY, logoW, logoH);
-    textY += logoH + baseFs * 0.4;
+  const logoRect = computeBadgeLogoRect(octSide, badgeCx, oy, logoConfig);
+
+  if (logoImg && logoImg.width > 0 && logoImg.height > 0) {
+    const imgRatio = logoImg.width / logoImg.height;
+    const boxRatio = logoRect.width / logoRect.height;
+    let drawW = logoRect.width;
+    let drawH = logoRect.height;
+    if (imgRatio > boxRatio) {
+      drawW = logoRect.width;
+      drawH = logoRect.width / imgRatio;
+    } else {
+      drawH = logoRect.height;
+      drawW = logoRect.height * imgRatio;
+    }
+    const drawX = logoRect.x + (logoRect.width - drawW) / 2;
+    const drawY = logoRect.y + (logoRect.height - drawH) / 2;
+    ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
   }
 
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#ffffff';
 
   ctx.font = `bold ${Math.round(baseFs * 1.15)}px sans-serif`;
-  ctx.fillText(`${wPx}×${hPx} px`, badgeCx, textY);
-  textY += baseFs * 1.25;
+  ctx.fillText(`${wPx}×${hPx} px`, badgeCx, badgeCy);
 
-  ctx.font = `${Math.round(baseFs * 0.85)}px sans-serif`;
+  ctx.font = `${Math.round(baseFs * 0.9)}px sans-serif`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-  ctx.fillText(`${formatMeters(wM)}×${formatMeters(hM)} м`, badgeCx, textY);
-  textY += baseFs * 1.05;
+  ctx.fillText(`${formatMeters(wM)}×${formatMeters(hM)} м`, badgeCx, oy + octSide * 0.62);
 
-  ctx.font = `bold ${Math.round(baseFs * 0.95)}px sans-serif`;
+  ctx.font = `bold ${Math.round(baseFs * 0.85)}px sans-serif`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(group.name, badgeCx, textY);
+  ctx.fillText(group.name, badgeCx, oy + octSide * 0.77);
+
+  ctx.restore();
+
+  drawOctagon(ctx, ox, oy, octSide, 'stroke', '#ffffff', Math.max(2, guideW));
 
   ctx.restore();
 }
 
+function getEffectiveLogoConfig(logoConfig?: Partial<MaskLogoConfig> | null): MaskLogoConfig {
+  if (logoConfig) {
+    return { ...DEFAULT_MASK_LOGO_CONFIG, ...logoConfig };
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('ss_mask_logo_config');
+      if (saved) {
+        return { ...DEFAULT_MASK_LOGO_CONFIG, ...JSON.parse(saved) };
+      }
+    } catch {}
+  }
+  return DEFAULT_MASK_LOGO_CONFIG;
+}
 
 export async function renderFullMaskCanvas(
   panels: Panel[],
-  groups: ScreenGroup[]
+  groups: ScreenGroup[],
+  logoConfig?: Partial<MaskLogoConfig> | null
 ): Promise<{ canvas: HTMLCanvasElement; totalW: number; totalH: number; screens: ScreenRenderData[] }> {
   const { screens, totalW, totalH } = prepareScreensData(panels, groups);
   const canvas = document.createElement('canvas');
@@ -369,10 +407,18 @@ export async function renderFullMaskCanvas(
   ctx.fillStyle = '#08090b';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const logoImg = await loadImage('/logo3.png');
+  const effectiveLogoCfg = getEffectiveLogoConfig(logoConfig);
+  const logoSrc = effectiveLogoCfg.customLogoDataUrl && effectiveLogoCfg.customLogoDataUrl.trim()
+    ? effectiveLogoCfg.customLogoDataUrl.trim()
+    : DEFAULT_MASK_LOGO_URL;
+
+  let logoImg = await loadImage(logoSrc);
+  if ((!logoImg || logoImg.width === 0) && logoSrc !== DEFAULT_MASK_LOGO_URL) {
+    logoImg = await loadImage(DEFAULT_MASK_LOGO_URL);
+  }
 
   for (const s of screens) {
-    await renderScreenOnCanvas(ctx, s, s.offsetX, s.offsetY, logoImg);
+    await renderScreenOnCanvas(ctx, s, s.offsetX, s.offsetY, logoImg, effectiveLogoCfg);
   }
 
   return { canvas, totalW, totalH, screens };
@@ -382,9 +428,10 @@ export async function exportMaskPNG(
   panels: Panel[],
   groups: ScreenGroup[],
   eventName = 'Mask',
-  pageName?: string
+  pageName?: string,
+  logoConfig?: Partial<MaskLogoConfig> | null
 ): Promise<void> {
-  const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups);
+  const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups, logoConfig);
   if (totalW === 0 || totalH === 0) return;
 
   const dataUrl = canvas.toDataURL('image/png');
@@ -401,11 +448,10 @@ export async function exportMaskZIP(
   panels: Panel[],
   groups: ScreenGroup[],
   eventName = 'Mask',
-  _legendParams?: Partial<BuildLegendParams>,
-  pageName?: string
+  pageName?: string,
+  logoConfig?: Partial<MaskLogoConfig> | null
 ): Promise<void> {
-  void _legendParams;
-  const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups);
+  const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups, logoConfig);
   if (totalW === 0 || totalH === 0) return;
 
   const zip = new JSZip();

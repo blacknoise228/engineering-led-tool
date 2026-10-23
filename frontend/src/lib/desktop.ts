@@ -29,6 +29,32 @@ interface WailsApp {
   SaveZIP: (defaultFilename: string, base64Data: string) => Promise<string>;
   GetInitialProject: () => Promise<{ filePath?: string; content?: string } | null>;
   ReadProjectFile: (filePath: string) => Promise<{ filePath?: string; content?: string }>;
+  LoadPanelPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SavePanelPresets: (content: string) => Promise<string>;
+  GetPanelsConfigPath: () => Promise<string>;
+  OpenPanelsFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SavePanelsFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadCardPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveCardPresets: (content: string) => Promise<string>;
+  GetCardsConfigPath: () => Promise<string>;
+  OpenCardsFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveCardsFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadServerPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveServerPresets: (content: string) => Promise<string>;
+  GetServersConfigPath: () => Promise<string>;
+  OpenServersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveServersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadFiberPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveFiberPresets: (content: string) => Promise<string>;
+  GetFibersConfigPath: () => Promise<string>;
+  OpenFibersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveFibersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
+  LoadMaskLogoConfig?: () => Promise<{ filePath?: string; content?: string }>;
+  SaveMaskLogoConfig?: (content: string) => Promise<string>;
 }
 
 interface WailsRuntime {
@@ -222,4 +248,264 @@ export function setupDesktopFileDrop(onFilePaths: (paths: string[]) => void): ()
   }
   return () => {};
 }
+
+export interface DesktopConfigResult {
+  filePath: string;
+  content: string;
+}
+
+interface PresetAdapterConfig {
+  defaultFileName: string;
+  storageKey: string;
+  loadFromApp: (app: WailsApp) => Promise<{ filePath?: string; content?: string } | null> | undefined;
+  saveToApp: (app: WailsApp, content: string) => Promise<string> | undefined;
+  getPathFromApp: (app: WailsApp) => Promise<string> | undefined;
+  openDialogFromApp: (app: WailsApp) => Promise<{ filePath?: string; content?: string } | null> | undefined;
+  saveDialogFromApp: (app: WailsApp, defaultFilename: string, content: string) => Promise<string> | undefined;
+}
+
+function downloadJsonFallback(defaultFilename: string, content: string): string {
+  const blob = new Blob([content], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = defaultFilename.endsWith('.json') ? defaultFilename : `${defaultFilename}.json`;
+  a.href = url;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return defaultFilename;
+}
+
+function createPresetAdapter(cfg: PresetAdapterConfig) {
+  return {
+    async load(): Promise<{ filePath: string; content: string } | null> {
+      const app = getWailsApp();
+      const promise = app ? cfg.loadFromApp(app) : undefined;
+      if (promise) {
+        try {
+          const res = await promise;
+          if (res && typeof res.content === 'string') {
+            return {
+              filePath: res.filePath || cfg.defaultFileName,
+              content: res.content,
+            };
+          }
+        } catch (e) {
+          console.error(`Failed to load ${cfg.defaultFileName} from desktop:`, e);
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem(cfg.storageKey);
+          if (saved) {
+            return { filePath: `localStorage:${cfg.defaultFileName}`, content: saved };
+          }
+        } catch (e) {
+          console.error(`Failed to load ${cfg.defaultFileName} from localStorage:`, e);
+        }
+      }
+      return null;
+    },
+
+    async save(content: string): Promise<string | null> {
+      const app = getWailsApp();
+      const promise = app ? cfg.saveToApp(app, content) : undefined;
+      if (promise) {
+        try {
+          const path = await promise;
+          return path || cfg.defaultFileName;
+        } catch (e) {
+          console.error(`Failed to save ${cfg.defaultFileName} to desktop:`, e);
+          throw e;
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(cfg.storageKey, content);
+          return `localStorage:${cfg.defaultFileName}`;
+        } catch (e) {
+          console.error(`Failed to save ${cfg.defaultFileName} to localStorage:`, e);
+          throw e;
+        }
+      }
+      return null;
+    },
+
+    async getConfigPath(): Promise<string> {
+      const app = getWailsApp();
+      const promise = app ? cfg.getPathFromApp(app) : undefined;
+      if (promise) {
+        try {
+          return await promise;
+        } catch (e) {
+          console.error(`Failed to get ${cfg.defaultFileName} config path:`, e);
+        }
+      }
+      return cfg.defaultFileName;
+    },
+
+    async openFileDialog(): Promise<{ filePath: string; content: string } | null> {
+      const app = getWailsApp();
+      const promise = app ? cfg.openDialogFromApp(app) : undefined;
+      if (promise) {
+        try {
+          const res = await promise;
+          if (res && res.filePath && typeof res.content === 'string') {
+            return { filePath: res.filePath, content: res.content };
+          }
+        } catch (e) {
+          console.error(`Failed to open ${cfg.defaultFileName} file dialog:`, e);
+        }
+      }
+      return null;
+    },
+
+    async saveFileDialog(defaultFilename: string, content: string): Promise<string | null> {
+      const app = getWailsApp();
+      const promise = app ? cfg.saveDialogFromApp(app, defaultFilename, content) : undefined;
+      if (promise) {
+        try {
+          const path = await promise;
+          return path || null;
+        } catch (e) {
+          console.error(`Failed to save ${cfg.defaultFileName} file dialog:`, e);
+          throw e;
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          return downloadJsonFallback(defaultFilename, content);
+        } catch (e) {
+          console.error(`Failed to download ${cfg.defaultFileName}:`, e);
+          throw e;
+        }
+      }
+      return null;
+    },
+  };
+}
+
+const panelsPresetAdapter = createPresetAdapter({
+  defaultFileName: 'panels.json',
+  storageKey: 'ss_panels_presets',
+  loadFromApp: app => app.LoadPanelPresets?.(),
+  saveToApp: (app, content) => app.SavePanelPresets?.(content),
+  getPathFromApp: app => app.GetPanelsConfigPath?.(),
+  openDialogFromApp: app => app.OpenPanelsFileDialog?.(),
+  saveDialogFromApp: (app, name, content) => app.SavePanelsFileDialog?.(name, content),
+});
+
+export const loadDesktopPanelPresets = panelsPresetAdapter.load;
+export const saveDesktopPanelPresets = panelsPresetAdapter.save;
+export const getDesktopPanelsConfigPath = panelsPresetAdapter.getConfigPath;
+export const openDesktopPanelsFileDialog = panelsPresetAdapter.openFileDialog;
+export const saveDesktopPanelsFileDialog = panelsPresetAdapter.saveFileDialog;
+
+const cardsPresetAdapter = createPresetAdapter({
+  defaultFileName: 'cards.json',
+  storageKey: 'ss_cards_presets',
+  loadFromApp: app => app.LoadCardPresets?.(),
+  saveToApp: (app, content) => app.SaveCardPresets?.(content),
+  getPathFromApp: app => app.GetCardsConfigPath?.(),
+  openDialogFromApp: app => app.OpenCardsFileDialog?.(),
+  saveDialogFromApp: (app, name, content) => app.SaveCardsFileDialog?.(name, content),
+});
+
+export const loadDesktopCardPresets = cardsPresetAdapter.load;
+export const saveDesktopCardPresets = cardsPresetAdapter.save;
+export const getDesktopCardsConfigPath = cardsPresetAdapter.getConfigPath;
+export const openDesktopCardsFileDialog = cardsPresetAdapter.openFileDialog;
+export const saveDesktopCardsFileDialog = cardsPresetAdapter.saveFileDialog;
+
+const serversPresetAdapter = createPresetAdapter({
+  defaultFileName: 'servers.json',
+  storageKey: 'ss_servers_presets',
+  loadFromApp: app => app.LoadServerPresets?.(),
+  saveToApp: (app, content) => app.SaveServerPresets?.(content),
+  getPathFromApp: app => app.GetServersConfigPath?.(),
+  openDialogFromApp: app => app.OpenServersFileDialog?.(),
+  saveDialogFromApp: (app, name, content) => app.SaveServersFileDialog?.(name, content),
+});
+
+export const loadDesktopServerPresets = serversPresetAdapter.load;
+export const saveDesktopServerPresets = serversPresetAdapter.save;
+export const getDesktopServersConfigPath = serversPresetAdapter.getConfigPath;
+export const openDesktopServersFileDialog = serversPresetAdapter.openFileDialog;
+export const saveDesktopServersFileDialog = serversPresetAdapter.saveFileDialog;
+
+const fibersPresetAdapter = createPresetAdapter({
+  defaultFileName: 'fibers.json',
+  storageKey: 'ss_fibers_presets',
+  loadFromApp: app => app.LoadFiberPresets?.(),
+  saveToApp: (app, content) => app.SaveFiberPresets?.(content),
+  getPathFromApp: app => app.GetFibersConfigPath?.(),
+  openDialogFromApp: app => app.OpenFibersFileDialog?.(),
+  saveDialogFromApp: (app, name, content) => app.SaveFibersFileDialog?.(name, content),
+});
+
+export const loadDesktopFiberPresets = fibersPresetAdapter.load;
+export const saveDesktopFiberPresets = fibersPresetAdapter.save;
+export const getDesktopFibersConfigPath = fibersPresetAdapter.getConfigPath;
+export const openDesktopFibersFileDialog = fibersPresetAdapter.openFileDialog;
+export const saveDesktopFibersFileDialog = fibersPresetAdapter.saveFileDialog;
+
+const MASK_LOGO_STORAGE_KEY = 'ss_mask_logo_config';
+
+export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
+  const app = getWailsApp();
+  if (app?.LoadMaskLogoConfig) {
+    try {
+      const res = await app.LoadMaskLogoConfig();
+      if (res && typeof res.content === 'string' && res.content.trim()) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(MASK_LOGO_STORAGE_KEY, res.content);
+          } catch {}
+        }
+        return res.content;
+      }
+    } catch (e) {
+      console.error('Failed to load mask logo config from desktop:', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(MASK_LOGO_STORAGE_KEY);
+      if (saved && saved.trim()) {
+        return saved;
+      }
+    } catch (e) {
+      console.error('Failed to load mask logo config from localStorage:', e);
+    }
+  }
+
+  return null;
+}
+
+export async function saveDesktopMaskLogoConfig(content: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(MASK_LOGO_STORAGE_KEY, content);
+    } catch (e) {
+      console.error('Failed to save mask logo config to localStorage:', e);
+    }
+  }
+
+  const app = getWailsApp();
+  if (app?.SaveMaskLogoConfig) {
+    try {
+      await app.SaveMaskLogoConfig(content);
+    } catch (e) {
+      console.error('Failed to save mask logo config to desktop:', e);
+    }
+  }
+}
+
+
+
 

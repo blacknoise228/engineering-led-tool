@@ -1,5 +1,5 @@
 // src/lib/led-editor-svg/mask-contour.ts
-import { Panel, ScreenGroup } from './types';
+import { Panel, ScreenGroup, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
 import { TEXTURES } from './textures';
 
 export interface PixelPanel {
@@ -44,14 +44,9 @@ export function formatMeters(m: number): string {
  * Проверяет, является ли панель моделью Galaxy 3.9 - 7.8, для которой при создании/рисовании маски
  * требуется удвоение разрешения по вертикали (чтобы пиксели контента были квадратными).
  */
-export function isGalaxySpecialMaskPanel(p?: { id?: string; presetId?: string } | null): boolean {
+export function isGalaxySpecialMaskPanel(p?: { id?: string; special: boolean } | null): boolean {
   if (!p) return false;
-  return (
-    p.presetId === 'galaxy-1m-3p9-7p8' ||
-    p.presetId === 'galaxy-0p5m-3p9-7p8' ||
-    p.id === 'galaxy-1m-3p9-7p8' ||
-    p.id === 'galaxy-0p5m-3p9-7p8'
-  );
+  return p.special;
 }
 
 /**
@@ -455,5 +450,66 @@ export function getBadgeBounds(
 
   return { minX, maxX, minY, maxY };
 }
+
+export const OCT_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
+  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
+];
+
+export function getOctagonPointsStr(ox: number, oy: number, side: number): string {
+  return OCT_POINTS.map(([px, py]) => `${ox + px * side},${oy + py * side}`).join(' ');
+}
+
+export function computeBadgeLogoRect(
+  octSide: number,
+  badgeCx: number,
+  oy: number,
+  logoConfig?: Partial<MaskLogoConfig> | null
+): {
+  href: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  cx: number;
+  cy: number;
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+} {
+  const cfg = { ...DEFAULT_MASK_LOGO_CONFIG, ...(logoConfig || {}) };
+  const scale = Math.max(0.2, Math.min(3.0, Number.isFinite(cfg.scale) ? cfg.scale : 1));
+  const offsetX = Math.max(-45, Math.min(45, Number.isFinite(cfg.offsetX) ? cfg.offsetX : 0));
+  const offsetY = Math.max(-20, Math.min(60, Number.isFinite(cfg.offsetY) ? cfg.offsetY : 0));
+
+  const width = octSide * 0.6 * scale;
+  const height = octSide * 0.26 * scale;
+
+  // При scale=1, offsetX=0, offsetY=0:
+  // cx = badgeCx, cy = oy + octSide * 0.23 => x = badgeCx - octSide * 0.3, y = oy + octSide * 0.1
+  const cx = badgeCx + (offsetX / 100) * octSide;
+  const cy = oy + octSide * (0.23 + offsetY / 100);
+
+  const x = cx - width / 2;
+  const y = cy - height / 2;
+
+  const href = cfg.customLogoDataUrl && cfg.customLogoDataUrl.trim()
+    ? cfg.customLogoDataUrl.trim()
+    : DEFAULT_MASK_LOGO_URL;
+
+  return {
+    href,
+    x,
+    y,
+    width,
+    height,
+    cx,
+    cy,
+    scale,
+    offsetX,
+    offsetY,
+  };
+}
+
 
 

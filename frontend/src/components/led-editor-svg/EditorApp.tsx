@@ -10,11 +10,20 @@ import Sidebar from './Sidebar';
 
 import {
   PRESETS,
+  DEFAULT_PANEL_PRESETS,
   LINK_COLORS_16,
   CARDS,
+  DEFAULT_CARD_PRESETS,
   SERVERS,
+  DEFAULT_SERVER_PRESETS,
+  DEFAULT_FIBER_PRESETS,
   CARD_COLORS,
-  NOVASTAR_PORT_MAX_PIXELS_50HZ,
+  getPortMaxPixels,
+  DEFAULT_REFRESH_RATE,
+  type PanelPreset,
+  type CardPreset,
+  type ServerPreset,
+  type FiberConverterPreset,
 } from '@/lib/led-editor-svg/presets';
 import {
   autoSnakeH_TL, autoSnakeH_TR, autoSnakeH_BL, autoSnakeH_BR,
@@ -23,9 +32,10 @@ import {
 } from '@/lib/led-editor-svg/autoconnect';
 import {
   boundsOfPanels, clientToStage,
-  rectsIntersect, uid, ensureDataUrl
+  rectsIntersect, uid
 } from '@/lib/led-editor-svg/utils';
-import type { CableEx, CardInstance, Panel, Tool, Vec, ScreenGroup, WiringPage, MaskPage, PanelClipboardData } from '@/lib/led-editor-svg/types';
+import type { CableEx, CardInstance, Panel, Tool, Vec, ScreenGroup, WiringPage, MaskPage, PanelClipboardData, MaskLogoConfig } from '@/lib/led-editor-svg/types';
+import { DEFAULT_MASK_LOGO_CONFIG } from '@/lib/led-editor-svg/types';
 import { exportPNGFunc } from '@/lib/led-editor/export-png';
 import { snapFunc } from '@/lib/led-editor/snapping';
 import { computeLabels } from '@/lib/led-editor/labels';
@@ -35,8 +45,13 @@ import { autoGroupPanels } from '@/lib/led-editor-svg/mask-contour';
 import { exportMaskPNG, exportMaskZIP, prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import MaskLayer from './MaskLayer';
 import MaskPreviewModal from './MaskPreviewModal';
+import MaskLogoModal from './MaskLogoModal';
 import ConfirmModal from './ConfirmModal';
-import PageBar from './PageBar';
+import PanelPresetsModal from './PanelPresetsModal';
+import CardPresetsModal from './CardPresetsModal';
+import ServerPresetsModal from './ServerPresetsModal';
+import FiberPresetsModal from './FiberPresetsModal';
+import EditorToolbar from './EditorToolbar';
 import {
   isDesktopApp,
   openDesktopProject,
@@ -46,6 +61,20 @@ import {
   readDesktopProjectFile,
   onDesktopProjectOpen,
   setupDesktopFileDrop,
+  loadDesktopPanelPresets,
+  saveDesktopPanelPresets,
+  getDesktopPanelsConfigPath,
+  loadDesktopCardPresets,
+  saveDesktopCardPresets,
+  getDesktopCardsConfigPath,
+  loadDesktopServerPresets,
+  saveDesktopServerPresets,
+  getDesktopServersConfigPath,
+  loadDesktopFiberPresets,
+  saveDesktopFiberPresets,
+  getDesktopFibersConfigPath,
+  loadDesktopMaskLogoConfig,
+  saveDesktopMaskLogoConfig,
 } from '@/lib/desktop';
 
 export type { CableEx, CardInstance };
@@ -57,13 +86,32 @@ export default function EditorApp() {
   const [scale, setScale] = useState(1);
 
   // ======== DATA ========
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
+  const [panelPresets, setPanelPresets] = useState<PanelPreset[]>(DEFAULT_PANEL_PRESETS);
+  const [panelsConfigPath, setPanelsConfigPath] = useState<string>('');
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
+  const [presetId, setPresetId] = useState(DEFAULT_PANEL_PRESETS[0]?.id || PRESETS[0].id);
+
+  const [cardPresets, setCardPresets] = useState<CardPreset[]>(DEFAULT_CARD_PRESETS);
+  const [cardsConfigPath, setCardsConfigPath] = useState<string>('');
+  const [isCardPresetsModalOpen, setIsCardPresetsModalOpen] = useState(false);
+
+  const [serverPresets, setServerPresets] = useState<ServerPreset[]>(DEFAULT_SERVER_PRESETS);
+  const [serversConfigPath, setServersConfigPath] = useState<string>('');
+  const [isServerPresetsModalOpen, setIsServerPresetsModalOpen] = useState(false);
+
+  const [fiberPresets, setFiberPresets] = useState<FiberConverterPreset[]>(DEFAULT_FIBER_PRESETS);
+  const [fibersConfigPath, setFibersConfigPath] = useState<string>('');
+  const [isFiberPresetsModalOpen, setIsFiberPresetsModalOpen] = useState(false);
+
+  const [maskLogoConfig, setMaskLogoConfig] = useState<MaskLogoConfig>(DEFAULT_MASK_LOGO_CONFIG);
+  const [isMaskLogoModalOpen, setIsMaskLogoModalOpen] = useState(false);
+
   const [rows, setRows] = useState(0);
   const [cols, setCols] = useState(0);
 
   // ======== WIRING PAGES ========
   const [wiringPages, setWiringPages] = useState<WiringPage[]>([
-    { id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] },
+    { id: 'wiring-1', name: 'Schema 1', panels: [], cables: [], refreshRate: DEFAULT_REFRESH_RATE },
   ]);
   const [activeWiringPageId, setActiveWiringPageId] = useState<string>('wiring-1');
 
@@ -71,6 +119,8 @@ export default function EditorApp() {
     () => wiringPages.find(p => p.id === activeWiringPageId) ?? wiringPages[0],
     [wiringPages, activeWiringPageId]
   );
+
+  const activeRefreshRate = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
 
   const panels = useMemo(() => activeWiringPage?.panels ?? [], [activeWiringPage]);
   const cables = useMemo(() => activeWiringPage?.cables ?? [], [activeWiringPage]);
@@ -98,7 +148,6 @@ export default function EditorApp() {
     { id: 'srv-1', modelId: SERVERS[0]?.id ?? 'hp-z2' }
   ]);
   const [cardId, setCardId] = useState<string>(''); // селектор модели в Info
-  const [logoDataUrl, setLogoDataUrl] = useState('');
   // РУЧНОЙ УЧЁТ ОПТИКИ/ЦВТ: { converterId: count }
   const [fiberCounts, setFiberCounts] = useState<Record<string, number>>({});
 
@@ -285,6 +334,14 @@ export default function EditorApp() {
   }, [takeSnapshot]);
 
   // ======== МЕТОДЫ УПРАВЛЕНИЯ СТРАНИЦАМИ РАСКЛЮЧЕНИЯ ========
+  const onRefreshRateChange = useCallback((hz: number) => {
+    pushHistory();
+    setWiringPages(prev => prev.map(page => {
+      if (page.id !== activeWiringPageId) return page;
+      return { ...page, refreshRate: hz };
+    }));
+  }, [activeWiringPageId, pushHistory]);
+
   const addWiringPage = useCallback(() => {
     pushHistory();
     const newIdx = wiringPages.length + 1;
@@ -293,13 +350,14 @@ export default function EditorApp() {
       name: `Schema ${newIdx}`,
       panels: [],
       cables: [],
+      refreshRate: activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE,
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
     setSelectedPanels(new Set());
     setSelectedCables(new Set());
     setDraft(null);
-  }, [wiringPages.length, pushHistory]);
+  }, [wiringPages.length, pushHistory, activeWiringPage?.refreshRate]);
 
   const removeWiringPage = useCallback((pageId: string) => {
     if (wiringPages.length <= 1) return;
@@ -339,6 +397,7 @@ export default function EditorApp() {
       name: `${target.name} (copy)`,
       panels: clonedPanels,
       cables: clonedCables,
+      refreshRate: target.refreshRate ?? DEFAULT_REFRESH_RATE,
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
@@ -454,7 +513,7 @@ export default function EditorApp() {
 
   // ======== МАТРИЦА ПАНЕЛЕЙ ========
   const createMatrix = useCallback(() => {
-    const pr = PRESETS.find(p => p.id === presetId)!;
+    const pr = panelPresets.find(p => p.id === presetId) || panelPresets[0] || PRESETS[0];
     const gap = 0;
     const margin = 40;
 
@@ -475,6 +534,7 @@ export default function EditorApp() {
           w: pr.w / 5, h: pr.h / 5, r: 0,
           resH: pr.resH, resW: pr.resW, pitch_mm: pr.pitch_mm,
           label: '', presetId: pr.id, presetName: pr.name,
+          special: pr.special,
         });
       }
     }
@@ -484,8 +544,8 @@ export default function EditorApp() {
     setSelectedPanels(new Set());
     setSelectedCables(new Set());
     setDraft(null);
-  }, [cols, rows, presetId, panels, pushHistory, setPanels]);
-
+  }, [cols, rows, presetId, panelPresets, panels, pushHistory, setPanels]);
+  
   const clearAll = useCallback(() => {
     pushHistory();
     setWiringPages([{ id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] }]);
@@ -536,12 +596,12 @@ export default function EditorApp() {
     return false;
   }, [cables]);
 
-  /** Пиксели прямоугольника для (cardNo, link) + extras; проверка лимита @50Hz */
+  /** Пиксели прямоугольника для (cardNo, link) + extras; проверка лимита @activeRefreshRate */
   const bboxPixelsFor = useCallback((
     cardNo: number,
     link: number,
     extras: string[] = []
-  ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number } => {
+  ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number; hz: number; panelCount: number } => {
     const nodeIds = new Set<string>();
     for (const c of cables) {
       const cc = c as CableEx;
@@ -552,14 +612,15 @@ export default function EditorApp() {
     }
     extras.forEach(id => nodeIds.add(id));
 
+    const hz = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
+    const limit = getPortMaxPixels(hz);
+
     const arr: Panel[] = Array.from(nodeIds)
       .map(id => panelsById[id])
       .filter((pp): pp is Panel => Boolean(pp));
 
-    const limit = NOVASTAR_PORT_MAX_PIXELS_50HZ;
-
     if (!arr.length) {
-      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit };
+      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit, hz, panelCount: 0 };
     }
 
     // Проверяем одинаковую плотность px/мм в группе
@@ -568,7 +629,7 @@ export default function EditorApp() {
       const kxA = a.resW / a.w, kyA = a.resH / a.h;
       const kxB = b.resW / b.w, kyB = b.resH / b.h;
       if (Math.abs(kxA - kxB) > 1e-6 || Math.abs(kyA - kyB) > 1e-6) {
-        return { ok: false, pixels: 0, widthPx: 0, heightPx: 0, limit };
+        return { ok: false, pixels: 0, widthPx: 0, heightPx: 0, limit, hz, panelCount: arr.length };
       }
     }
 
@@ -583,13 +644,21 @@ export default function EditorApp() {
     const heightPx = Math.round(heightMm * ky);
     const pixels = widthPx * heightPx;
 
-    return { ok: true, pixels, widthPx, heightPx, limit };
-  }, [cables, panelsById]);
+    return { ok: true, pixels, widthPx, heightPx, limit, hz, panelCount: arr.length };
+  }, [cables, panelsById, activeWiringPage?.refreshRate]);
 
   const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = []) => {
     const r = bboxPixelsFor(cardNo, link, extras);
     return r.ok && r.pixels <= r.limit;
   }, [bboxPixelsFor]);
+
+  const getPortStats = useCallback((link: number) => {
+    if (!selectedCard) {
+      const hz = activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE;
+      return { ok: true, pixels: 0, widthPx: 0, heightPx: 0, limit: getPortMaxPixels(hz), hz, panelCount: 0 };
+    }
+    return bboxPixelsFor(selectedCard.order, link);
+  }, [selectedCard, bboxPixelsFor, activeWiringPage?.refreshRate]);
 
   /** Выбор линка (порта) с учётом уже назначений в пределах выбранной карты */
   const chooseLinkFor = useCallback((aId: string, bId: string, desired: number, cardNo: number): number | null => {
@@ -632,8 +701,15 @@ export default function EditorApp() {
     if (link === null) return;
 
     // лимит пикселей прямоугольника для этого (cardNo, link)
-    const { ok, pixels, limit } = bboxPixelsFor(cardNo, link, [aId, bId]);
-    if (!ok || pixels > limit) return;
+    const { ok, pixels, limit, hz } = bboxPixelsFor(cardNo, link, [aId, bId]);
+    if (!ok) {
+      showToast('Панели имеют разную плотность пикселей');
+      return;
+    }
+    if (pixels > limit) {
+      showToast(`Превышен лимит области порта: ${pixels.toLocaleString('ru-RU')} > ${limit.toLocaleString('ru-RU')} px (@${hz}Hz)`);
+      return;
+    }
 
     pushHistory();
     setCables(prev => [...prev, {
@@ -644,7 +720,7 @@ export default function EditorApp() {
       color: selectedCard.portColors[link] ?? LINK_COLORS_16[link] ?? '#9ca3af',
       card: cardNo,
     }]);
-  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables]);
+  }, [selectedCard, chooseLinkFor, degreeOf, hasPair, bboxPixelsFor, pushHistory, cables, setCables, showToast]);
 
   // ======== PANEL MOUSE DOWN ========
   const onPanelMouseDown = useCallback((e: React.MouseEvent, id: string) => {
@@ -809,15 +885,10 @@ export default function EditorApp() {
     }
   }, [activeTab, selectedGroupIds, selectedPanels, selectedCables, screenGroups, pushHistory, setPanels, setCables, setScreenGroups]);
 
-  // ======== PNG EXPORT (карточка: только кол-во портов, площадь, сервер внизу) ========
+  // ======== PNG EXPORT ========
   const exportPNG = useCallback(() => {
-    exportPNGFunc(
-      svgRef, panels, pan, scale, cables,
-      servers, cardId, cards, eventName,
-      eventDate, logoDataUrl, fiberCounts, activeWiringPage.name);
-  }, [svgRef, panels, cables, pan, scale,
-    eventName, eventDate, servers, cardId,
-    logoDataUrl, cards, fiberCounts, activeWiringPage.name]);
+    exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
+  }, [svgRef, panels, pan, scale, eventName, activeWiringPage.name]);
 
   // ======== APPLY LOADED PROJECT DATA ========
   const applyProjectData = useCallback((data: {
@@ -840,8 +911,15 @@ export default function EditorApp() {
   }) => {
     let parsedWiringPages: WiringPage[] = [];
     let parsedActiveWiringPageId = 'wiring-1';
+    const fallbackHz = typeof (data as { refreshRate?: number }).refreshRate === 'number' && (data as { refreshRate?: number }).refreshRate! > 0
+      ? (data as { refreshRate?: number }).refreshRate!
+      : DEFAULT_REFRESH_RATE;
+
     if (Array.isArray(data.wiringPages) && data.wiringPages.length > 0) {
-      parsedWiringPages = data.wiringPages;
+      parsedWiringPages = data.wiringPages.map(wp => ({
+        ...wp,
+        refreshRate: typeof wp.refreshRate === 'number' && wp.refreshRate > 0 ? wp.refreshRate : fallbackHz,
+      }));
       parsedActiveWiringPageId = data.activeWiringPageId ?? data.wiringPages[0].id;
     } else if (Array.isArray(data.panels) && Array.isArray(data.cables)) {
       parsedWiringPages = [{
@@ -849,6 +927,7 @@ export default function EditorApp() {
         name: 'Schema 1',
         panels: data.panels,
         cables: data.cables,
+        refreshRate: fallbackHz,
       }];
       parsedActiveWiringPageId = 'wiring-1';
     }
@@ -904,6 +983,146 @@ export default function EditorApp() {
       undoRef.current = []; redoRef.current = [];
     }
   }, [setSelectedGroupId]);
+
+  // ======== LOAD PRESETS FROM CONFIG FILES ========
+  useEffect(() => {
+    const initPresetConfig = async <T,>(
+      getPath: () => Promise<string>,
+      load: () => Promise<{ filePath: string; content: string } | null>,
+      save: (json: string) => Promise<string | null>,
+      defaults: T[],
+      setPresets: React.Dispatch<React.SetStateAction<T[]>>,
+      setPath: React.Dispatch<React.SetStateAction<string>>,
+      onLoaded?: (list: T[]) => void
+    ) => {
+      const p = await getPath();
+      if (p) setPath(p);
+      const res = await load();
+      if (res) {
+        if (res.filePath) setPath(res.filePath);
+        if (res.content && res.content.trim()) {
+          try {
+            const parsed = JSON.parse(res.content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPresets(parsed);
+              onLoaded?.(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to parse preset config:', e);
+          }
+        }
+      }
+      save(JSON.stringify(defaults, null, 2))
+        .then(savedPath => {
+          if (savedPath) setPath(savedPath);
+        })
+        .catch(e => console.error('Failed to initialize preset config:', e));
+    };
+
+    initPresetConfig(
+      getDesktopPanelsConfigPath,
+      loadDesktopPanelPresets,
+      saveDesktopPanelPresets,
+      DEFAULT_PANEL_PRESETS,
+      setPanelPresets,
+      setPanelsConfigPath,
+      parsed => setPresetId(prev => (parsed.some(p => p.id === prev) ? prev : parsed[0].id))
+    );
+    initPresetConfig(
+      getDesktopCardsConfigPath,
+      loadDesktopCardPresets,
+      saveDesktopCardPresets,
+      DEFAULT_CARD_PRESETS,
+      setCardPresets,
+      setCardsConfigPath
+    );
+    initPresetConfig(
+      getDesktopServersConfigPath,
+      loadDesktopServerPresets,
+      saveDesktopServerPresets,
+      DEFAULT_SERVER_PRESETS,
+      setServerPresets,
+      setServersConfigPath
+    );
+    initPresetConfig(
+      getDesktopFibersConfigPath,
+      loadDesktopFiberPresets,
+      saveDesktopFiberPresets,
+      DEFAULT_FIBER_PRESETS,
+      setFiberPresets,
+      setFibersConfigPath
+    );
+
+    loadDesktopMaskLogoConfig().then(raw => {
+      if (raw && raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setMaskLogoConfig({
+              ...DEFAULT_MASK_LOGO_CONFIG,
+              ...parsed,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to parse mask logo config:', e);
+        }
+      }
+    });
+  }, []);
+
+  const handleSaveMaskLogoConfig = useCallback((newConfig: MaskLogoConfig) => {
+    setMaskLogoConfig(newConfig);
+    saveDesktopMaskLogoConfig(JSON.stringify(newConfig, null, 2)).catch(e =>
+      console.error('Failed to save mask logo config:', e)
+    );
+  }, []);
+
+  const handleSavePresets = useCallback(async (newPresets: PanelPreset[]) => {
+    setPanelPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopPanelPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setPanelsConfigPath(savedPath);
+      setPresetId(prev => (newPresets.some(p => p.id === prev) ? prev : newPresets[0]?.id || ''));
+    } catch (e) {
+      console.error('Failed to save panel presets:', e);
+      showToast('Ошибка при сохранении panels.json');
+    }
+  }, [showToast]);
+
+  const handleSaveCardPresets = useCallback(async (newPresets: CardPreset[]) => {
+    setCardPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopCardPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setCardsConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save cards presets:', e);
+      showToast('Ошибка при сохранении cards.json');
+    }
+  }, [showToast]);
+
+  const handleSaveServerPresets = useCallback(async (newPresets: ServerPreset[]) => {
+    setServerPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopServerPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setServersConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save server presets:', e);
+      showToast('Ошибка при сохранении servers.json');
+    }
+  }, [showToast]);
+
+  const handleSaveFiberPresets = useCallback(async (newPresets: FiberConverterPreset[]) => {
+    setFiberPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopFiberPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setFibersConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save fiber presets:', e);
+      showToast('Ошибка при сохранении fibers.json');
+    }
+  }, [showToast]);
+
 
   // ======== AUTO LOAD / CLI / SECOND INSTANCE / DRAG & DROP ========
   useEffect(() => {
@@ -992,9 +1211,10 @@ export default function EditorApp() {
   }, [applyProjectData, showToast]);
 
   // ======== SAVE JSON ========
-  const saveJSON = useCallback(async () => {
+  const saveProjectToFile = useCallback(async (targetPath: string | null) => {
     const payload = {
       meta: { version: 4, presetId, rows, cols },
+      refreshRate: activeRefreshRate,
       wiringPages,
       activeWiringPageId,
       maskPages,
@@ -1016,7 +1236,7 @@ export default function EditorApp() {
     if (isDesktopApp()) {
       try {
         const defaultName = `${eventName || 'project'}.ss`;
-        const savedPath = await saveDesktopProject(currentFilePath, defaultName, jsonContent);
+        const savedPath = await saveDesktopProject(targetPath, defaultName, jsonContent);
         if (savedPath) {
           setCurrentFilePath(savedPath);
           showToast('Сохранено');
@@ -1034,51 +1254,10 @@ export default function EditorApp() {
       URL.revokeObjectURL(url);
       showToast('Сохранено');
     }
-  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, currentFilePath, showToast]);
+  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
 
-  const saveJSONAs = useCallback(async () => {
-    const payload = {
-      meta: { version: 4, presetId, rows, cols },
-      wiringPages,
-      activeWiringPageId,
-      maskPages,
-      activeMaskPageId,
-      panels: activeWiringPage.panels,
-      cables: activeWiringPage.cables,
-      cards,
-      selectedCardId,
-      activeLink,
-      fiberCounts,
-      eventName,
-      eventDate,
-      serverId: servers[0]?.modelId ?? '',
-      servers,
-      screenGroups: activeMaskPage.screenGroups,
-    };
-    const jsonContent = JSON.stringify(payload, null, 2);
-
-    if (isDesktopApp()) {
-      try {
-        const defaultName = `${eventName || 'project'}.ss`;
-        const savedPath = await saveDesktopProject(null, defaultName, jsonContent);
-        if (savedPath) {
-          setCurrentFilePath(savedPath);
-          showToast('Сохранено');
-        }
-      } catch (err) {
-        console.error('Failed to save project:', err);
-      }
-    } else {
-      const blob = new Blob([jsonContent], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${eventName || 'project'}.ss`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Сохранено');
-    }
-  }, [presetId, rows, cols, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast]);
+  const saveJSON = useCallback(() => saveProjectToFile(currentFilePath), [saveProjectToFile, currentFilePath]);
+  const saveJSONAs = useCallback(() => saveProjectToFile(null), [saveProjectToFile]);
 
   // ======== MASK HANDLERS ========
   const onAddGroup = useCallback(() => {
@@ -1150,20 +1329,12 @@ export default function EditorApp() {
   }, [screenGroups]);
 
   const onExportMaskPNG = useCallback(() => {
-    exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name);
-  }, [allPanels, screenGroups, eventName, activeMaskPage.name]);
+    exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onExportMaskZIP = useCallback(() => {
-    exportMaskZIP(allPanels, screenGroups, eventName, {
-      cables: allCables,
-      servers,
-      cardId,
-      cards,
-      eventDate,
-      logoDataUrl,
-      fiberCounts,
-    }, activeMaskPage.name);
-  }, [allPanels, screenGroups, eventName, allCables, servers, cardId, cards, eventDate, logoDataUrl, fiberCounts, activeMaskPage.name]);
+    exportMaskZIP(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onPreviewMask = useCallback(() => {
     setPreviewModalOpen(true);
@@ -1197,7 +1368,7 @@ export default function EditorApp() {
     setCards([]);
     setSelectedCardId(null);
     setActiveLink(0);
-    setPresetId(PRESETS[0].id);
+    setPresetId(panelPresets[0]?.id || PRESETS[0].id);
     setRows(0);
     setCols(0);
     setEventName('Event');
@@ -1218,7 +1389,7 @@ export default function EditorApp() {
     setPan({ x: 0, y: 0 });
     setScale(1);
     showToast('Новый проект создан');
-  }, [setSelectedGroupId, showToast]);
+  }, [panelPresets, setSelectedGroupId, showToast]);
 
   const newProject = useCallback(() => {
     const hasContent = allPanels.length > 0 || cards.length > 0 || currentFilePath !== null;
@@ -1228,20 +1399,6 @@ export default function EditorApp() {
     }
     resetProjectState();
   }, [allPanels.length, cards.length, currentFilePath, resetProjectState]);
-
-  // ======== LOGO PRELOAD ========
-  useEffect(() => {
-    (async () => {
-      try {
-        if (logoDataUrl === '') {
-          const data = await ensureDataUrl('/logo.png');
-          setLogoDataUrl(data);
-        }
-      } catch (e) {
-        console.warn('Logo preload failed', e);
-      }
-    })();
-  }, [logoDataUrl]);
 
   // ======== DUPLICATE SELECTED PANELS ========
   const duplicateSelectedPanels = useCallback(() => {
@@ -1502,7 +1659,7 @@ export default function EditorApp() {
 
   // ======== КАРТЫ: add/select/remove ========
   const onCardAdd = useCallback((modelId: string) => {
-    const model = CARDS.find(m => m.id === modelId) ?? CARDS[0];
+    const model = cardPresets.find(m => m.id === modelId) ?? CARDS.find(m => m.id === modelId) ?? cardPresets[0];
     if (!model) return;
     const order = cards.length + 1;
     const id = uid('card');
@@ -1517,7 +1674,7 @@ export default function EditorApp() {
     setCards(prev => [...prev, inst]);
     setSelectedCardId(id);
     setActiveLink(0);
-  }, [cards, colorForOrder, pushHistory]);
+  }, [cards, colorForOrder, pushHistory, cardPresets]);
 
   const onCardSelect = useCallback((cardId: string) => {
     setSelectedCardId(cardId);
@@ -1559,6 +1716,8 @@ export default function EditorApp() {
       <Sidebar
         tool={tool} setTool={setTool}
         presetId={presetId} setPresetId={setPresetId}
+        presets={panelPresets}
+        onOpenPresetsModal={() => setIsPresetsModalOpen(true)}
         setRows={setRows} setCols={setCols}
         createMatrix={createMatrix} clearAll={clearAll}
         exportPNG={exportPNG} saveJSON={saveJSON} openLoadJSONDialog={openLoadJSONDialog}
@@ -1576,6 +1735,9 @@ export default function EditorApp() {
         autoSnakeV_BL={() => runAutoPreset('V_BL')}
         autoSnakeV_BR={() => runAutoPreset('V_BR')}
         activeLink={activeLink} setActiveLink={setActiveLink}
+        refreshRate={activeRefreshRate}
+        onRefreshRateChange={onRefreshRateChange}
+        getPortStats={getPortStats}
         setSelectedPanels={setSelectedPanels}
         duplicateSelectedPanels={duplicateSelectedPanels}
         copySelectedPanels={copySelectedPanels}
@@ -1588,18 +1750,24 @@ export default function EditorApp() {
         eventDate={eventDate} setEventDate={setEventDate}
         serverName={servers[0]?.modelId ?? ''} setServerId={(id) => onServerChange(servers[0]?.id ?? 'srv-1', id)}
         servers={servers}
+        serverPresets={serverPresets}
+        onOpenServerPresetsModal={() => setIsServerPresetsModalOpen(true)}
         onServerAdd={onServerAdd}
         onServerRemove={onServerRemove}
         onServerChange={onServerChange}
         cardName={cardId} setCardId={setCardId}
         // Карты
         cards={cards}
+        cardPresets={cardPresets}
+        onOpenCardPresetsModal={() => setIsCardPresetsModalOpen(true)}
         selectedCardId={selectedCardId}
         onCardAdd={onCardAdd}
         onCardSelect={onCardSelect}
         onCardRemove={onCardRemove}
         fiberCounts={fiberCounts}
         setFiberCounts={setFiberCounts}
+        fiberPresets={fiberPresets}
+        onOpenFiberPresetsModal={() => setIsFiberPresetsModalOpen(true)}
         // Маска
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -1637,6 +1805,8 @@ export default function EditorApp() {
         allCables={allCables}
         allScreenGroups={allScreenGroups}
         onAddScreensFromWiringPage={addScreensFromWiringPage}
+        maskLogoConfig={maskLogoConfig}
+        onOpenMaskLogoModal={() => setIsMaskLogoModalOpen(true)}
       />
 
       <div className="flex-1 relative" onContextMenu={(e) => e.preventDefault()}>
@@ -1661,6 +1831,7 @@ export default function EditorApp() {
                 scale={scale}
                 showGuides={true}
                 showBadges={true}
+                maskLogoConfig={maskLogoConfig}
               />
             ) : (
               <PanelsLayer
@@ -1691,184 +1862,40 @@ export default function EditorApp() {
         />
 
         {/* Верхняя инженерная панель студии */}
-        <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-          <div className="pointer-events-auto flex items-center gap-2 bg-[#0c0d14]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-2xl">
-            {activeTab === 'mask' && selectedGroupIds.size > 0 ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                </span>
-                <span className="text-xs text-neutral-300">
-                  Выбрано экранов: <strong className="text-white font-mono">{selectedGroupIds.size}</strong>
-                </span>
-                <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                <button
-                  onClick={deleteSelected}
-                  className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-                  title="Удалить выбранные экраны (Delete)"
-                >
-                  ✕
-                </button>
-              </>
-            ) : selectedPanels.size > 0 ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                </span>
-                <span className="text-xs text-neutral-300">
-                  Выбрано: <strong className="text-white font-mono">{selectedPanels.size}</strong>
-                </span>
-                <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                <button
-                  onClick={copySelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Копировать выделенные панели (Ctrl+C)"
-                >
-                  Копировать
-                </button>
-                <button
-                  onClick={cutSelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Вырезать выделенные панели (Ctrl+X)"
-                >
-                  Вырезать
-                </button>
-                {clipboard && clipboard.panels.length > 0 && (
-                  <button
-                    onClick={pastePanels}
-                    className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-600/30 hover:bg-blue-600/45 text-blue-200 border border-blue-500/40 transition"
-                    title="Вставить панели из буфера (Ctrl+V)"
-                  >
-                    Вставить ({clipboard.panels.length})
-                  </button>
-                )}
-                <button
-                  onClick={duplicateSelectedPanels}
-                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-                  title="Дублировать (Ctrl+D)"
-                >
-                  Дублировать
-                </button>
-                <button
-                  onClick={deleteSelected}
-                  className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-                  title="Удалить выбранное (Delete)"
-                >
-                  ✕
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
-                <span className="text-xs text-neutral-400">
-                  Панелей: <strong className="text-neutral-200 font-mono">{panels.length}</strong>
-                </span>
-                {cables.length > 0 && (
-                  <>
-                    <span className="text-neutral-600 text-xs">•</span>
-                    <span className="text-xs text-neutral-400">
-                      Премычек: <strong className="text-neutral-200 font-mono">{cables.length}</strong>
-                    </span>
-                  </>
-                )}
-                {clipboard && clipboard.panels.length > 0 && (
-                  <>
-                    <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-                    <button
-                      onClick={pastePanels}
-                      className="px-2.5 py-0.5 rounded text-[11px] font-medium bg-blue-600/25 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 transition flex items-center gap-1.5"
-                      title="Вставить панели из буфера в эту схему (Ctrl+V)"
-                    >
-                      <span>Вставить ({clipboard.panels.length})</span>
-                      <span className="text-[9px] text-blue-400/80 font-mono">Ctrl+V</span>
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="pointer-events-auto flex items-center p-1 rounded-xl bg-[#0c0d14]/90 backdrop-blur-md border border-white/[0.08] shadow-2xl">
-              <button
-                onClick={() => setActiveTab('wiring')}
-                className={[
-                  'px-4 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2',
-                  activeTab !== 'mask'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
-                ].join(' ')}
-              >
-                <span>Расключение</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('mask')}
-                className={[
-                  'px-4 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2',
-                  activeTab === 'mask'
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
-                ].join(' ')}
-              >
-                <span>Маска</span>
-              </button>
-            </div>
-
-            {/* Панель страниц (Wiring или Mask в зависимости от activeTab) */}
-            <div className="pointer-events-auto">
-              {activeTab === 'mask' ? (
-                <PageBar
-                  pages={maskPages.map(mp => ({
-                    id: mp.id,
-                    name: mp.name,
-                    count: mp.screenGroups.length,
-                    countLabel: 'экр.',
-                  }))}
-                  activePageId={activeMaskPageId}
-                  onSelectPage={switchMaskPage}
-                  onAddPage={addMaskPage}
-                  onRemovePage={removeMaskPage}
-                  onRenamePage={renameMaskPage}
-                  onDuplicatePage={duplicateMaskPage}
-                  addTitle="Add page"
-                  addBtnText="Page"
-                  badgeSuffix="scr."
-                />
-              ) : (
-                <PageBar
-                  pages={wiringPages.map(wp => ({
-                    id: wp.id,
-                    name: wp.name,
-                    count: wp.panels.length,
-                    countLabel: 'cab.',
-                  }))}
-                  activePageId={activeWiringPageId}
-                  onSelectPage={switchWiringPage}
-                  onAddPage={addWiringPage}
-                  onRemovePage={removeWiringPage}
-                  onRenamePage={renameWiringPage}
-                  onDuplicatePage={duplicateWiringPage}
-                  addTitle="Add schema"
-                  addBtnText="Schema"
-                  badgeSuffix="cab."
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="pointer-events-auto flex items-center gap-1.5 bg-[#0c0d14]/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/[0.08] shadow-2xl">
-            <button onClick={undo} title="Отменить (Ctrl+Z)" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs">↶</button>
-            <button onClick={redo} title="Повторить (Ctrl+Y)" className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs">↷</button>
-            <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-            <button onClick={() => setScale(s => Math.max(0.1, s / 1.15))} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition" title="Уменьшить">−</button>
-            <span className="text-xs font-mono text-neutral-300 min-w-[38px] text-center">{(scale * 100).toFixed(0)}%</span>
-            <button onClick={() => setScale(s => Math.min(4, s * 1.15))} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition" title="Увеличить">+</button>
-            <button className="px-2 py-1 text-[11px] rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 transition" onClick={resetView} title="Сбросить масштаб к 100%">100%</button>
-          </div>
-        </div>
-
+        <EditorToolbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedGroupCount={selectedGroupIds.size}
+          selectedPanelCount={selectedPanels.size}
+          panelCount={panels.length}
+          cableCount={cables.length}
+          clipboard={clipboard}
+          deleteSelected={deleteSelected}
+          copySelectedPanels={copySelectedPanels}
+          cutSelectedPanels={cutSelectedPanels}
+          pastePanels={pastePanels}
+          duplicateSelectedPanels={duplicateSelectedPanels}
+          maskPages={maskPages}
+          activeMaskPageId={activeMaskPageId}
+          switchMaskPage={switchMaskPage}
+          addMaskPage={addMaskPage}
+          removeMaskPage={removeMaskPage}
+          renameMaskPage={renameMaskPage}
+          duplicateMaskPage={duplicateMaskPage}
+          wiringPages={wiringPages}
+          activeWiringPageId={activeWiringPageId}
+          switchWiringPage={switchWiringPage}
+          addWiringPage={addWiringPage}
+          removeWiringPage={removeWiringPage}
+          renameWiringPage={renameWiringPage}
+          duplicateWiringPage={duplicateWiringPage}
+          undo={undo}
+          redo={redo}
+          scale={scale}
+          setScale={setScale}
+          resetView={resetView}
+          activeRefreshRate={activeRefreshRate}
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -1897,15 +1924,54 @@ export default function EditorApp() {
           groups={screenGroups}
           eventName={eventName}
           pageName={activeMaskPage.name}
-          legendParams={{
-            cables: allCables,
-            servers,
-            cardId,
-            cards,
-            eventDate,
-            logoDataUrl,
-            fiberCounts,
-          }}
+          maskLogoConfig={maskLogoConfig}
+        />
+
+        {/* Модальное окно настройки логотипа бейджей на масках */}
+        <MaskLogoModal
+          open={isMaskLogoModalOpen}
+          onClose={() => setIsMaskLogoModalOpen(false)}
+          config={maskLogoConfig}
+          onSaveConfig={handleSaveMaskLogoConfig}
+        />
+
+        {/* Модальное окно управления прессетами панелей */}
+        <PanelPresetsModal
+          open={isPresetsModalOpen}
+          onClose={() => setIsPresetsModalOpen(false)}
+          presets={panelPresets}
+          onSavePresets={handleSavePresets}
+          activePresetId={presetId}
+          onSelectPreset={(id) => setPresetId(id)}
+          filePath={panelsConfigPath}
+        />
+
+        {/* Модальное окно управления прессетами карт */}
+        <CardPresetsModal
+          open={isCardPresetsModalOpen}
+          onClose={() => setIsCardPresetsModalOpen(false)}
+          presets={cardPresets}
+          onSavePresets={handleSaveCardPresets}
+          filePath={cardsConfigPath}
+        />
+
+        {/* Модальное окно управления прессетами серверов */}
+        <ServerPresetsModal
+          open={isServerPresetsModalOpen}
+          onClose={() => setIsServerPresetsModalOpen(false)}
+          presets={serverPresets}
+          onSavePresets={handleSaveServerPresets}
+          filePath={serversConfigPath}
+        />
+
+        {/* Модальное окно управления пресетами оптических конвертеров */}
+        <FiberPresetsModal
+          open={isFiberPresetsModalOpen}
+          onClose={() => setIsFiberPresetsModalOpen(false)}
+          presets={fiberPresets}
+          onSavePresets={handleSaveFiberPresets}
+          filePath={fibersConfigPath}
+          availableCards={cardPresets}
         />
 
         {/* Модальное окно подтверждения нового проекта */}

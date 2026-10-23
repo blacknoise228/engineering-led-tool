@@ -1,9 +1,8 @@
-// src/components/led-editor-svg/MaskLayer.tsx
 'use client';
 import React, { useMemo, useState, useRef } from 'react';
-import { Panel, ScreenGroup } from '@/lib/led-editor-svg/types';
+import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { getTextureById } from '@/lib/led-editor-svg/textures';
-import { computeContour, computePixelPanels, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds } from '@/lib/led-editor-svg/mask-contour';
+import { computeContour, computePixelPanels, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds, computeBadgeLogoRect, OCT_POINTS } from '@/lib/led-editor-svg/mask-contour';
 import { computeAutoPositions } from '@/lib/led-editor-svg/mask-export';
 
 interface MaskLayerProps {
@@ -18,12 +17,8 @@ interface MaskLayerProps {
   scale?: number;
   showGuides?: boolean;
   showBadges?: boolean;
+  maskLogoConfig?: MaskLogoConfig;
 }
-
-const OCT_POINTS = [
-  [0.30, 0], [0.70, 0], [1, 0.30], [1, 0.70],
-  [0.70, 1], [0.30, 1], [0, 0.70], [0, 0.30],
-];
 
 export default function MaskLayer({
   panels,
@@ -37,6 +32,7 @@ export default function MaskLayer({
   scale = 1,
   showGuides = true,
   showBadges = true,
+  maskLogoConfig,
 }: MaskLayerProps) {
   const panelsById = useMemo(() => new Map(panels.map(p => [p.id, p])), [panels]);
 
@@ -455,6 +451,7 @@ export default function MaskLayer({
         const octPointsStr = OCT_POINTS
           .map(([px, py]) => `${ox + px * octSide},${oy + py * octSide}`)
           .join(' ');
+        const logoRect = computeBadgeLogoRect(octSide, badgeCx, oy, maskLogoConfig);
 
         // Положение экрана на маске строго в пикселях:
         const isMoving = Boolean(dragState && dragState.groupIds.has(group.id));
@@ -533,6 +530,11 @@ export default function MaskLayer({
                     />
                   </>
                 )}
+                <defs>
+                  <clipPath id={`badge-clip-${group.id}`}>
+                    <polygon points={octPointsStr} />
+                  </clipPath>
+                </defs>
                 <polygon
                   points={octPointsStr}
                   fill="rgba(8, 9, 11, 0.90)"
@@ -540,50 +542,48 @@ export default function MaskLayer({
                   strokeWidth={isSelected ? 2.5 : 1.5}
                   filter={isSelected ? 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))' : undefined}
                 />
-                <image
-                  href="/logo3.png"
-                  x={badgeCx - octSide * 0.28}
-                  y={oy + octSide * 0.1}
-                  width={octSide * 0.58}
-                  height={octSide * 0.24}
-                  preserveAspectRatio="xMidYMid meet"
-                  pointerEvents="none"
-                />
-                <text
-                  x={badgeCx}
-                  y={badgeCy}
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize={baseFs * 1.15}
-                  fontWeight="bold"
-                  fontFamily="sans-serif"
-                  pointerEvents="none"
-                >
-                  {wPx}×{hPx} px
-                </text>
-                <text
-                  x={badgeCx}
-                  y={oy + octSide * 0.62}
-                  textAnchor="middle"
-                  fill="rgba(255, 255, 255, 0.85)"
-                  fontSize={baseFs * 0.9}
-                  fontFamily="sans-serif"
-                  pointerEvents="none"
-                >
-                  {formatMeters(wM)}×{formatMeters(hM)} м
-                </text>
-                <text
-                  x={badgeCx}
-                  y={oy + octSide * 0.77}
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize={baseFs * 0.85}
-                  fontWeight="bold"
-                  fontFamily="sans-serif"
-                  pointerEvents="none"
-                >
-                  {group.name}
-                </text>
+                <g clipPath={`url(#badge-clip-${group.id})`} pointerEvents="none">
+                  <image
+                    href={logoRect.href}
+                    x={logoRect.x}
+                    y={logoRect.y}
+                    width={logoRect.width}
+                    height={logoRect.height}
+                    preserveAspectRatio="xMidYMid meet"
+                  />
+                  <text
+                    x={badgeCx}
+                    y={badgeCy}
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize={baseFs * 1.15}
+                    fontWeight="bold"
+                    fontFamily="sans-serif"
+                  >
+                    {wPx}×{hPx} px
+                  </text>
+                  <text
+                    x={badgeCx}
+                    y={oy + octSide * 0.62}
+                    textAnchor="middle"
+                    fill="rgba(255, 255, 255, 0.85)"
+                    fontSize={baseFs * 0.9}
+                    fontFamily="sans-serif"
+                  >
+                    {formatMeters(wM)}×{formatMeters(hM)} м
+                  </text>
+                  <text
+                    x={badgeCx}
+                    y={oy + octSide * 0.77}
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize={baseFs * 0.85}
+                    fontWeight="bold"
+                    fontFamily="sans-serif"
+                  >
+                    {group.name}
+                  </text>
+                </g>
               </g>
             )}
           </g>

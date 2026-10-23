@@ -18,12 +18,10 @@ var assets embed.FS
 var icon []byte
 
 func main() {
-	// Create an instance of the app structure
 	app := NewApp()
 
-	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "SHOW SCREEN ENGINEERING",
+		Title:             "Engineering LED Tool",
 		Width:             1920,
 		Height:            1080,
 		MinWidth:          1024,
@@ -35,8 +33,6 @@ func main() {
 		HideWindowOnClose: false,
 		BackgroundColour:  &options.RGBA{R: 0, G: 0, B: 0, A: 255},
 		Assets:            assets,
-		Menu:              nil,
-		Logger:            nil,
 		LogLevel:          logger.DEBUG,
 		OnStartup:         app.startup,
 		OnDomReady:        app.domReady,
@@ -54,16 +50,12 @@ func main() {
 			EnableFileDrop:     true,
 			DisableWebViewDrop: false,
 		},
-		// Windows platform specific options
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			DisableWindowIcon:    false,
 			DisablePinchZoom:     true,
-			// DisableFramelessWindowDecorations: false,
-			WebviewUserDataPath: "",
 		},
-		// Mac platform specific options
 		Mac: &mac.Options{
 			TitleBar: &mac.TitleBar{
 				TitlebarAppearsTransparent: true,
@@ -78,7 +70,7 @@ func main() {
 			WindowIsTranslucent:  true,
 			OnFileOpen:           app.onFileOpen,
 			About: &mac.AboutInfo{
-				Title:   "SHOW SCREEN ENGINEERING",
+				Title:   "Engineering LED Tool",
 				Message: "",
 				Icon:    icon,
 			},
@@ -89,3 +81,4 @@ func main() {
 		log.Fatal(err)
 	}
 }
+

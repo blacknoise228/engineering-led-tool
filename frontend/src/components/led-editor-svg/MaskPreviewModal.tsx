@@ -1,10 +1,8 @@
-// src/components/led-editor-svg/MaskPreviewModal.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Panel, ScreenGroup } from '@/lib/led-editor-svg/types';
+import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { renderFullMaskCanvas, exportMaskPNG, exportMaskZIP, ScreenRenderData } from '@/lib/led-editor-svg/mask-export';
 import { formatMeters } from '@/lib/led-editor-svg/mask-contour';
-import { BuildLegendParams } from '@/lib/led-editor-svg/utils';
 
 interface MaskPreviewModalProps {
   open: boolean;
@@ -13,7 +11,7 @@ interface MaskPreviewModalProps {
   groups: ScreenGroup[];
   eventName: string;
   pageName?: string;
-  legendParams?: Partial<BuildLegendParams>;
+  maskLogoConfig?: MaskLogoConfig;
 }
 
 export default function MaskPreviewModal({
@@ -23,7 +21,7 @@ export default function MaskPreviewModal({
   groups,
   eventName,
   pageName,
-  legendParams,
+  maskLogoConfig,
 }: MaskPreviewModalProps) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [totalW, setTotalW] = useState(0);
@@ -40,7 +38,7 @@ export default function MaskPreviewModal({
     let isMounted = true;
     setLoading(true);
 
-    renderFullMaskCanvas(panels, groups).then(res => {
+    renderFullMaskCanvas(panels, groups, maskLogoConfig).then(res => {
       if (!isMounted) return;
       setImgUrl(res.canvas.toDataURL('image/png'));
       setTotalW(res.totalW);
@@ -53,7 +51,7 @@ export default function MaskPreviewModal({
     });
 
     return () => { isMounted = false; };
-  }, [open, panels, groups]);
+  }, [open, panels, groups, maskLogoConfig]);
 
   if (!open) return null;
 
@@ -107,13 +105,13 @@ export default function MaskPreviewModal({
 
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => exportMaskPNG(panels, groups, eventName, pageName)}
+              onClick={() => exportMaskPNG(panels, groups, eventName, pageName, maskLogoConfig)}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 transition flex items-center gap-2"
             >
               Скачать PNG
             </button>
             <button
-              onClick={() => exportMaskZIP(panels, groups, eventName, legendParams, pageName)}
+              onClick={() => exportMaskZIP(panels, groups, eventName, pageName, maskLogoConfig)}
               className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d28] text-white border border-white/[0.08] shadow-sm transition flex items-center gap-2"
             >
               Скачать ZIP
