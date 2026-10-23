@@ -81,3 +81,43 @@ func TestAppConfigLoadSave(t *testing.T) {
 		t.Errorf("expected futureSetting = true, got %v", parsed["futureSetting"])
 	}
 }
+
+func TestMaskLogoConfigPersistence(t *testing.T) {
+	app := NewApp()
+
+	logoData := map[string]interface{}{
+		"customLogoDataUrl":  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==",
+		"customLogoFileName": "company-badge.png",
+		"scale":              1.25,
+		"offsetX":            5,
+		"offsetY":            -2,
+	}
+
+	bytes, err := json.MarshalIndent(logoData, "", "  ")
+	if err != nil {
+		t.Fatalf("failed to marshal logo: %v", err)
+	}
+
+	savedPath, err := app.SaveMaskLogoConfig(string(bytes))
+	if err != nil {
+		t.Fatalf("SaveMaskLogoConfig failed: %v", err)
+	}
+	defer os.Remove(savedPath)
+
+	loaded, err := app.LoadMaskLogoConfig()
+	if err != nil {
+		t.Fatalf("LoadMaskLogoConfig failed: %v", err)
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(loaded.Content), &parsed); err != nil {
+		t.Fatalf("failed to unmarshal loaded logo: %v", err)
+	}
+
+	if parsed["customLogoFileName"] != "company-badge.png" {
+		t.Errorf("expected customLogoFileName = 'company-badge.png', got %v", parsed["customLogoFileName"])
+	}
+	if parsed["customLogoDataUrl"] != "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==" {
+		t.Errorf("expected customLogoDataUrl to match, got %v", parsed["customLogoDataUrl"])
+	}
+}

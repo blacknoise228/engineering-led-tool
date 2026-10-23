@@ -10,6 +10,7 @@ import (
 	sysRuntime "runtime"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -351,6 +352,70 @@ func (a *App) saveBase64Dialog(title, defaultFilename, fallbackName, ext, filter
 	return chosen, nil
 }
 
+func getUserConfigDir() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	appDir := filepath.Join(baseDir, "engineering-led-tool")
+	if err := os.MkdirAll(appDir, 0755); err != nil {
+		return "", err
+	}
+	return appDir, nil
+}
+
+func isDirWritable(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	testFile := filepath.Join(dir, fmt.Sprintf(".perm_test_%d", time.Now().UnixNano()))
+	if err := os.WriteFile(testFile, []byte("ok"), 0644); err != nil {
+		return false
+	}
+	_ = os.Remove(testFile)
+	return true
+}
+
+func isSystemProtectedDir(dir string) bool {
+	dirLower := strings.ToLower(filepath.Clean(dir))
+	sysVars := []string{"ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "SystemRoot", "SystemDrive"}
+	for _, v := range sysVars {
+		val := os.Getenv(v)
+		if val != "" && strings.HasPrefix(dirLower, strings.ToLower(filepath.Clean(val))) {
+			return true
+		}
+	}
+	if strings.Contains(dirLower, "program files") {
+		return true
+	}
+	return false
+}
+
+func getConfigWritableDir() string {
+	exe, err := os.Executable()
+	if err == nil {
+		if realExe, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = realExe
+		}
+		exeDir := filepath.Dir(exe)
+		if !isSystemProtectedDir(exeDir) && isDirWritable(exeDir) {
+			return exeDir
+		}
+	}
+	if uDir, err := getUserConfigDir(); err == nil && uDir != "" {
+		return uDir
+	}
+	if exe != "" {
+		return filepath.Dir(exe)
+	}
+	return "."
+}
+
+func getConfigWritablePath(filename string) (string, error) {
+	dir := getConfigWritableDir()
+	return filepath.Join(dir, filename), nil
+}
+
 func getExeRelativePath(filename string) (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -363,36 +428,52 @@ func getExeRelativePath(filename string) (string, error) {
 }
 
 func loadConfigFileWithDefault(filename string, defaultContent string) (*PanelsConfigResult, error) {
-	targetPath, err := getExeRelativePath(filename)
-	if err != nil {
-		targetPath = filename
+	// 1. Check user config directory first (%APPDATA%\engineering-led-tool)
+	if uDir, err := getUserConfigDir(); err == nil && uDir != "" {
+		uPath := filepath.Join(uDir, filename)
+		if data, err := os.ReadFile(uPath); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{FilePath: uPath, Content: string(data)}, nil
+		}
 	}
 
-	if data, err := os.ReadFile(targetPath); err == nil && len(data) > 0 {
-		return &PanelsConfigResult{FilePath: targetPath, Content: string(data)}, nil
+	// 2. Check directory next to the executable
+	if exePath, err := getExeRelativePath(filename); err == nil && exePath != "" {
+		if data, err := os.ReadFile(exePath); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{FilePath: exePath, Content: string(data)}, nil
+		}
 	}
 
-	if absCwd, err := filepath.Abs(filename); err == nil && absCwd != targetPath {
+	// 3. Check current working directory
+	if absCwd, err := filepath.Abs(filename); err == nil {
 		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
 			return &PanelsConfigResult{FilePath: absCwd, Content: string(data)}, nil
 		}
 	}
 
-	if defaultContent != "" {
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err == nil {
-			_ = os.WriteFile(targetPath, []byte(defaultContent), 0644)
-		}
+	// 4. Default content initialization if needed
+	writablePath, _ := getConfigWritablePath(filename)
+	if defaultContent != "" && writablePath != "" {
+		_ = os.MkdirAll(filepath.Dir(writablePath), 0755)
+		_ = os.WriteFile(writablePath, []byte(defaultContent), 0644)
 	}
 
-	return &PanelsConfigResult{FilePath: targetPath, Content: defaultContent}, nil
+	return &PanelsConfigResult{FilePath: writablePath, Content: defaultContent}, nil
 }
 
 func saveConfigFile(filename string, content string) (string, error) {
-	targetPath, err := getExeRelativePath(filename)
-	if err != nil {
+	targetPath, _ := getConfigWritablePath(filename)
+	if targetPath == "" {
 		targetPath = filename
 	}
+
 	if err := writeTextFile(targetPath, content); err != nil {
+		// Fallback to user config dir if write failed (e.g. permission error)
+		if uDir, uErr := getUserConfigDir(); uErr == nil {
+			fallbackPath := filepath.Join(uDir, filename)
+			if err2 := writeTextFile(fallbackPath, content); err2 == nil {
+				return fallbackPath, nil
+			}
+		}
 		return "", err
 	}
 	return targetPath, nil
@@ -445,7 +526,7 @@ func (a *App) saveJSONConfigDialog(title string, defaultFilename string, fallbac
 }
 
 func (a *App) GetPanelsConfigPath() (string, error) {
-	return getExeRelativePath("panels.json")
+	return getConfigWritablePath("panels.json")
 }
 
 const defaultInitialPanelsJSON = `[
@@ -585,7 +666,7 @@ const defaultInitialCardsJSON = `[
 ]`
 
 func (a *App) GetCardsConfigPath() (string, error) {
-	return getExeRelativePath("cards.json")
+	return getConfigWritablePath("cards.json")
 }
 
 func (a *App) LoadCardPresets() (*PanelsConfigResult, error) {
@@ -657,7 +738,7 @@ const defaultInitialServersJSON = `[
 ]`
 
 func (a *App) GetServersConfigPath() (string, error) {
-	return getExeRelativePath("servers.json")
+	return getConfigWritablePath("servers.json")
 }
 
 func (a *App) LoadServerPresets() (*PanelsConfigResult, error) {
@@ -713,7 +794,7 @@ const defaultInitialFibersJSON = `[
 ]`
 
 func (a *App) GetFibersConfigPath() (string, error) {
-	return getExeRelativePath("fibers.json")
+	return getConfigWritablePath("fibers.json")
 }
 
 func (a *App) LoadFiberPresets() (*PanelsConfigResult, error) {
@@ -745,35 +826,41 @@ func (a *App) SaveFibersFileDialog(defaultFilename string, content string) (stri
 // ============================================================================
 
 func (a *App) GetAppConfigPath() (string, error) {
-	return getExeRelativePath(AppConfigFileName)
+	return getConfigWritablePath(AppConfigFileName)
 }
 
 func (a *App) LoadAppConfig() (*PanelsConfigResult, error) {
-	targetPath, err := getExeRelativePath(AppConfigFileName)
-	if err != nil {
-		targetPath = AppConfigFileName
-	}
-
-	var data []byte
-	var readPath string
-	if d, err := os.ReadFile(targetPath); err == nil && len(d) > 0 {
-		data = d
-		readPath = targetPath
-	} else if absCwd, err := filepath.Abs(AppConfigFileName); err == nil && absCwd != targetPath {
-		if d, err := os.ReadFile(absCwd); err == nil && len(d) > 0 {
-			data = d
-			readPath = absCwd
-		}
-	}
-
-	if len(data) > 0 {
+	res, err := loadConfigFileWithDefault(AppConfigFileName, "")
+	if err == nil && res != nil && len(res.Content) > 0 {
 		var parsed map[string]interface{}
-		if err := json.Unmarshal(data, &parsed); err == nil {
+		if err := json.Unmarshal([]byte(res.Content), &parsed); err == nil {
 			if lang, ok := parsed["language"].(string); ok && lang != "" {
 				a.SetLanguage(lang)
 			}
+			// Check if logo is present and non-empty
+			var hasLogoData bool
+			if logoMap, ok := parsed["logo"].(map[string]interface{}); ok {
+				if dUrl, ok := logoMap["customLogoDataUrl"].(string); ok && strings.TrimSpace(dUrl) != "" {
+					hasLogoData = true
+				}
+			}
+			// If config.json doesn't have custom logo, check if mask_logo.json has one to migrate
+			if !hasLogoData {
+				if logoRes, err := loadConfigFileWithDefault("mask_logo.json", ""); err == nil && logoRes != nil && strings.TrimSpace(logoRes.Content) != "" {
+					var logoVal map[string]interface{}
+					if err := json.Unmarshal([]byte(logoRes.Content), &logoVal); err == nil {
+						if dUrl, ok := logoVal["customLogoDataUrl"].(string); ok && strings.TrimSpace(dUrl) != "" {
+							parsed["logo"] = logoVal
+							if updatedBytes, err := json.MarshalIndent(parsed, "", "  "); err == nil {
+								res.Content = string(updatedBytes)
+								_, _ = saveConfigFile(AppConfigFileName, res.Content)
+							}
+						}
+					}
+				}
+			}
+			return res, nil
 		}
-		return &PanelsConfigResult{FilePath: readPath, Content: string(data)}, nil
 	}
 
 	// config.json does not exist yet. Initialize default values.
@@ -802,11 +889,9 @@ func (a *App) LoadAppConfig() (*PanelsConfigResult, error) {
 
 	contentBytes, _ := json.MarshalIndent(initialMap, "", "  ")
 	defaultContent := string(contentBytes)
+	savedPath, _ := saveConfigFile(AppConfigFileName, defaultContent)
 
-	_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
-	_ = os.WriteFile(targetPath, []byte(defaultContent), 0644)
-
-	return &PanelsConfigResult{FilePath: targetPath, Content: defaultContent}, nil
+	return &PanelsConfigResult{FilePath: savedPath, Content: defaultContent}, nil
 }
 
 func (a *App) SaveAppConfig(content string) (string, error) {
@@ -825,12 +910,37 @@ func (a *App) SaveAppConfig(content string) (string, error) {
 }
 
 func (a *App) GetMaskLogoConfigPath() (string, error) {
-	return getExeRelativePath(AppConfigFileName)
+	return getConfigWritablePath("mask_logo.json")
 }
 
 func (a *App) LoadMaskLogoConfig() (*PanelsConfigResult, error) {
 	cfgRes, err := a.LoadAppConfig()
 	if err == nil && cfgRes != nil && cfgRes.Content != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(cfgRes.Content), &parsed); err == nil {
+			if logo, ok := parsed["logo"]; ok {
+				if logoMap, ok := logo.(map[string]interface{}); ok {
+					if dataUrl, has := logoMap["customLogoDataUrl"].(string); has && strings.TrimSpace(dataUrl) != "" {
+						if logoBytes, err := json.MarshalIndent(logo, "", "  "); err == nil {
+							return &PanelsConfigResult{FilePath: cfgRes.FilePath, Content: string(logoBytes)}, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	// Check mask_logo.json directly
+	logoRes, err := loadConfigFileWithDefault("mask_logo.json", "")
+	if err == nil && logoRes != nil && strings.TrimSpace(logoRes.Content) != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(logoRes.Content), &parsed); err == nil {
+			if dataUrl, has := parsed["customLogoDataUrl"].(string); has && strings.TrimSpace(dataUrl) != "" {
+				return logoRes, nil
+			}
+		}
+	}
+	// Fallback to logo in cfgRes or default
+	if cfgRes != nil && cfgRes.Content != "" {
 		var parsed map[string]interface{}
 		if err := json.Unmarshal([]byte(cfgRes.Content), &parsed); err == nil {
 			if logo, ok := parsed["logo"]; ok {
