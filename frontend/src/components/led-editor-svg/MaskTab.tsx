@@ -4,6 +4,7 @@ import { Panel, ScreenGroup, MaskPage, WiringPage, MaskLogoConfig, DEFAULT_MASK_
 import { type PanelPreset } from '@/lib/led-editor-svg/presets';
 import { prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import ScreenCard from './ScreenCard';
+import { useI18n } from '@/lib/i18n';
 
 interface MaskTabProps {
   panels: Panel[];
@@ -73,6 +74,7 @@ export default function MaskTab({
   maskLogoConfig,
   onOpenMaskLogoModal,
 }: MaskTabProps) {
+  const { t } = useI18n();
   const panelsById = new Map(panels.map(p => [p.id, p]));
   const currentMaskPage = maskPages.find(p => p.id === activeMaskPageId);
 
@@ -134,7 +136,7 @@ export default function MaskTab({
         <div className="p-3 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-              Страницы
+              {t('mask.pages')}
             </span>
             {onAddMaskPage && (
               <button
@@ -172,7 +174,7 @@ export default function MaskTab({
                         onDuplicateMaskPage(mp.id);
                       }}
                       className="opacity-0 group-hover:opacity-100 hover:text-white text-neutral-400 text-[11px]"
-                      title="Дублировать страницу (copy)"
+                      title={t('pagebar.duplicatePage')}
                     >
                       ⧉
                     </button>
@@ -185,7 +187,7 @@ export default function MaskTab({
                         onRemoveMaskPage(mp.id);
                       }}
                       className="opacity-40 group-hover:opacity-100 hover:text-red-400 text-neutral-400 ml-0.5"
-                      title="Удалить страницу"
+                      title={t('pagebar.deletePage')}
                     >
                       ✕
                     </button>
@@ -201,7 +203,7 @@ export default function MaskTab({
       <div className="p-3 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Логотип в бейдже
+            {t('mask.badgeLogo')}
           </span>
           <span className="text-[10px] text-neutral-400 font-mono">
             {Math.round((maskLogoConfig?.scale ?? 1) * 100)}%
@@ -225,11 +227,11 @@ export default function MaskTab({
             <div className="min-w-0">
               <div className="text-xs font-medium text-neutral-200 truncate">
                 {maskLogoConfig?.customLogoDataUrl && maskLogoConfig.customLogoDataUrl.trim()
-                  ? (maskLogoConfig.customLogoFileName || 'Свой логотип')
-                  : 'Логотип приложения'}
+                  ? (maskLogoConfig.customLogoFileName || t('mask.customLogo'))
+                  : t('mask.appLogo')}
               </div>
               <div className="text-[10px] text-neutral-400 truncate">
-                Стандарт под все бейджики
+                {t('mask.defaultForAll')}
               </div>
             </div>
           </div>
@@ -239,7 +241,7 @@ export default function MaskTab({
             onClick={onOpenMaskLogoModal}
             className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#181a24] hover:bg-[#222534] text-cyan-300 border border-cyan-500/30 transition shrink-0"
           >
-            Настроить
+            {t('mask.configure')}
           </button>
         </div>
       </div>
@@ -247,14 +249,14 @@ export default function MaskTab({
       {/* Шапка вкладки */}
       <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold">
-          Экраны {currentMaskPage ? `(${currentMaskPage.name})` : ''}
+          {t('mask.screens', { name: currentMaskPage ? `(${currentMaskPage.name})` : '' })}
         </span>
         <button
           onClick={onAutoGroup}
           className="text-xs text-cyan-400 hover:text-cyan-300 transition hover:underline"
-          title="Автоматически определить экраны по физическому касанию панелей"
+          title={t('mask.autoGroupTitle')}
         >
-          Авто-группировка
+          {t('mask.autoGroup')}
         </button>
       </div>
 
@@ -263,14 +265,14 @@ export default function MaskTab({
         disabled={!hasPanelSelection}
         className="w-full py-2 px-3 text-xs font-medium rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5"
       >
-        <span>+</span> Объединить выделенные панели в экран
+        <span>+</span> {t('mask.mergePanels')}
       </button>
 
       {/* Быстрое добавление экранов из схем расключения */}
       {wiringPages.length > 0 && onAddScreensFromWiringPage && (
         <div className="p-2.5 rounded-xl bg-[#10121a]/60 border border-white/[0.04] space-y-1.5">
           <div className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">
-            Импорт экранов из схемы:
+            {t('mask.importFromSchema')}
           </div>
           <div className="flex flex-wrap gap-1">
             {wiringPages.map(wp => (
@@ -280,7 +282,7 @@ export default function MaskTab({
                 disabled={wp.panels.length === 0}
                 onClick={() => onAddScreensFromWiringPage(wp.id)}
                 className="px-2 py-1 rounded bg-[#181a24] hover:bg-[#222533] disabled:opacity-30 disabled:pointer-events-none text-neutral-300 hover:text-white text-xs border border-white/[0.06] transition flex items-center gap-1"
-                title={`Создать экраны из панелей схемы "${wp.name}" (${wp.panels.length} шт.)`}
+                title={t('mask.importSchemaTitle', { name: wp.name, count: wp.panels.length })}
               >
                 <span>+</span>
                 <span>{wp.name}</span>
@@ -295,32 +297,32 @@ export default function MaskTab({
       {screenGroups.length > 0 && (
         <div className="p-3 rounded-xl border border-white/[0.06] bg-[#10121a] flex items-center justify-between gap-2">
           <div className="text-xs text-neutral-300">
-            Холст: <span className="font-mono text-cyan-400 font-bold">{totalW}×{totalH} px</span>
+            {t('mask.canvas')} <span className="font-mono text-cyan-400 font-bold">{totalW}×{totalH} px</span>
           </div>
           <div className="flex items-center gap-1 text-xs">
             <button
               type="button"
               onClick={arrangeInRow}
               className="px-2 py-1 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-300 border border-white/[0.08] transition text-[11px]"
-              title="Расположить экраны в ряд горизонтально"
+              title={t('mask.inRowTitle')}
             >
-              В ряд
+              {t('mask.inRow')}
             </button>
             <button
               type="button"
               onClick={arrangeInCol}
               className="px-2 py-1 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-300 border border-white/[0.08] transition text-[11px]"
-              title="Расположить экраны столбцом вертикально"
+              title={t('mask.inColumnTitle')}
             >
-              Столбцом
+              {t('mask.inColumn')}
             </button>
             <button
               type="button"
               onClick={resetPositions}
               className="px-2 py-1 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-400 hover:text-neutral-200 border border-white/[0.08] transition text-[11px]"
-              title="Сбросить к авто-позиционированию"
+              title={t('mask.autoTitle')}
             >
-              Авто
+              {t('mask.auto')}
             </button>
           </div>
         </div>
@@ -329,7 +331,7 @@ export default function MaskTab({
       {selectedGroupIds && selectedGroupIds.size > 1 && (
         <div className="p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/30 flex items-center justify-between text-xs">
           <span className="text-cyan-300 font-medium">
-            Выделено экранов: <strong className="text-white font-mono">{selectedGroupIds.size}</strong>
+            {t('mask.selectedScreens', { count: selectedGroupIds.size })}
           </span>
           <button
             type="button"
@@ -341,9 +343,9 @@ export default function MaskTab({
               }
             }}
             className="px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition text-[11px] font-medium"
-            title="Удалить выбранные экраны (Delete)"
+            title={t('mask.deleteSelectedTitle')}
           >
-            Удалить ({selectedGroupIds.size})
+            {t('mask.deleteSelected', { count: selectedGroupIds.size })}
           </button>
         </div>
       )}
@@ -384,20 +386,20 @@ export default function MaskTab({
           onClick={onExportMaskPNG}
           className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2 active:scale-[0.99]"
         >
-          Скачать PNG {currentMaskPage ? `(${currentMaskPage.name})` : 'маски'}
+          {t('mask.downloadPng', { name: currentMaskPage ? `(${currentMaskPage.name})` : '' })}
         </button>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={onExportMaskZIP}
             className="py-2 px-3 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d2b] text-neutral-200 border border-white/[0.08] transition flex items-center justify-center gap-1.5"
           >
-            Скачать ZIP
+            {t('mask.downloadZip')}
           </button>
           <button
             onClick={onPreviewMask}
             className="py-2 px-3 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d2b] text-neutral-200 border border-white/[0.08] transition flex items-center justify-center gap-1.5"
           >
-            Предпросмотр
+            {t('mask.preview')}
           </button>
         </div>
       </div>

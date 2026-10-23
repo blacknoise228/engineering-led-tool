@@ -2,6 +2,7 @@
 import React from 'react';
 import type { MaskPage, WiringPage, PanelClipboardData } from '@/lib/led-editor-svg/types';
 import PageBar from './PageBar';
+import { useI18n } from '@/lib/i18n';
 
 interface EditorToolbarProps {
   activeTab: 'cards' | 'wiring' | 'mask' | 'info';
@@ -72,6 +73,8 @@ export default function EditorToolbar({
   resetView,
   activeRefreshRate,
 }: EditorToolbarProps) {
+  const { t } = useI18n();
+
   return (
     <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
       <div className="pointer-events-auto flex items-center gap-2 bg-[#0c0d14]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-2xl">
@@ -82,13 +85,13 @@ export default function EditorToolbar({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
             </span>
             <span className="text-xs text-neutral-300">
-              Выбрано экранов: <strong className="text-white font-mono">{selectedGroupCount}</strong>
+              {t('toolbar.selectedScreens', { count: selectedGroupCount })}
             </span>
             <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
             <button
               onClick={deleteSelected}
               className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-              title="Удалить выбранные экраны (Delete)"
+              title={t('toolbar.deleteScreens')}
             >
               ✕
             </button>
@@ -100,43 +103,43 @@ export default function EditorToolbar({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
             </span>
             <span className="text-xs text-neutral-300">
-              Выбрано: <strong className="text-white font-mono">{selectedPanelCount}</strong>
+              {t('toolbar.selectedPanels', { count: selectedPanelCount })}
             </span>
             <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
             <button
               onClick={copySelectedPanels}
               className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-              title="Копировать выделенные панели (Ctrl+C)"
+              title={t('toolbar.copyTitle')}
             >
-              Копировать
+              {t('toolbar.copy')}
             </button>
             <button
               onClick={cutSelectedPanels}
               className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-              title="Вырезать выделенные панели (Ctrl+X)"
+              title={t('toolbar.cutTitle')}
             >
-              Вырезать
+              {t('toolbar.cut')}
             </button>
             {clipboard && clipboard.panels.length > 0 && (
               <button
                 onClick={pastePanels}
                 className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-600/30 hover:bg-blue-600/45 text-blue-200 border border-blue-500/40 transition"
-                title="Вставить панели из буфера (Ctrl+V)"
+                title={t('toolbar.pasteTitle')}
               >
-                Вставить ({clipboard.panels.length})
+                {t('toolbar.paste', { count: clipboard.panels.length })}
               </button>
             )}
             <button
               onClick={duplicateSelectedPanels}
               className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
-              title="Дублировать (Ctrl+D)"
+              title={t('toolbar.duplicateTitle')}
             >
-              Дублировать
+              {t('toolbar.duplicate')}
             </button>
             <button
               onClick={deleteSelected}
               className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-              title="Удалить выбранное (Delete)"
+              title={t('toolbar.delete')}
             >
               ✕
             </button>
@@ -145,13 +148,13 @@ export default function EditorToolbar({
           <>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
             <span className="text-xs text-neutral-400">
-              Панелей: <strong className="text-neutral-200 font-mono">{panelCount}</strong>
+              {t('toolbar.panelsCount', { count: panelCount })}
             </span>
             {cableCount > 0 && (
               <>
                 <span className="text-neutral-600 text-xs">•</span>
                 <span className="text-xs text-neutral-400">
-                  Перемычек: <strong className="text-neutral-200 font-mono">{cableCount}</strong>
+                  {t('toolbar.cablesCount', { count: cableCount })}
                 </span>
               </>
             )}
@@ -159,7 +162,7 @@ export default function EditorToolbar({
               <>
                 <span className="text-neutral-600 text-xs">•</span>
                 <span className="text-xs text-neutral-400">
-                  Частота: <strong className="text-cyan-400 font-mono">{activeRefreshRate} Hz</strong>
+                  {t('toolbar.rate', { rate: activeRefreshRate })}
                 </span>
               </>
             )}
@@ -169,9 +172,9 @@ export default function EditorToolbar({
                 <button
                   onClick={pastePanels}
                   className="px-2.5 py-0.5 rounded text-[11px] font-medium bg-blue-600/25 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 transition flex items-center gap-1.5"
-                  title="Вставить панели из буфера в эту схему (Ctrl+V)"
+                  title={t('toolbar.pasteTitle')}
                 >
-                  <span>Вставить ({clipboard.panels.length})</span>
+                  <span>{t('toolbar.paste', { count: clipboard.panels.length })}</span>
                   <span className="text-[9px] text-blue-400/80 font-mono">Ctrl+V</span>
                 </button>
               </>
@@ -190,7 +193,7 @@ export default function EditorToolbar({
                 : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
             ].join(' ')}
           >
-            <span>Расключение</span>
+            <span>{t('toolbar.wiring')}</span>
           </button>
           <button
             onClick={() => setActiveTab('mask')}
@@ -201,7 +204,7 @@ export default function EditorToolbar({
                 : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]',
             ].join(' ')}
           >
-            <span>Маска</span>
+            <span>{t('toolbar.mask')}</span>
           </button>
         </div>
 
@@ -212,7 +215,7 @@ export default function EditorToolbar({
                 id: mp.id,
                 name: mp.name,
                 count: mp.screenGroups.length,
-                countLabel: 'экр.',
+                countLabel: t('pagebar.scrUnit'),
               }))}
               activePageId={activeMaskPageId}
               onSelectPage={switchMaskPage}
@@ -220,9 +223,9 @@ export default function EditorToolbar({
               onRemovePage={removeMaskPage}
               onRenamePage={renameMaskPage}
               onDuplicatePage={duplicateMaskPage}
-              addTitle="Add page"
-              addBtnText="Page"
-              badgeSuffix="scr."
+              addTitle={t('pagebar.addPage')}
+              addBtnText={t('pagebar.page')}
+              badgeSuffix={t('pagebar.scrUnit')}
             />
           ) : (
             <PageBar
@@ -230,7 +233,7 @@ export default function EditorToolbar({
                 id: wp.id,
                 name: wp.name,
                 count: wp.panels.length,
-                countLabel: 'cab.',
+                countLabel: t('pagebar.cabUnit'),
               }))}
               activePageId={activeWiringPageId}
               onSelectPage={switchWiringPage}
@@ -238,9 +241,9 @@ export default function EditorToolbar({
               onRemovePage={removeWiringPage}
               onRenamePage={renameWiringPage}
               onDuplicatePage={duplicateWiringPage}
-              addTitle="Add schema"
-              addBtnText="Schema"
-              badgeSuffix="cab."
+              addTitle={t('pagebar.addSchema')}
+              addBtnText={t('pagebar.schema')}
+              badgeSuffix={t('pagebar.cabUnit')}
             />
           )}
         </div>
@@ -249,14 +252,14 @@ export default function EditorToolbar({
       <div className="pointer-events-auto flex items-center gap-1.5 bg-[#0c0d14]/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/[0.08] shadow-2xl">
         <button
           onClick={undo}
-          title="Отменить (Ctrl+Z)"
+          title={t('toolbar.undo')}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs"
         >
           ↶
         </button>
         <button
           onClick={redo}
-          title="Повторить (Ctrl+Y)"
+          title={t('toolbar.redo')}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-xs"
         >
           ↷
@@ -265,7 +268,7 @@ export default function EditorToolbar({
         <button
           onClick={() => setScale((s) => Math.max(0.1, s / 1.15))}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition"
-          title="Уменьшить"
+          title={t('toolbar.zoomOut')}
         >
           −
         </button>
@@ -275,14 +278,14 @@ export default function EditorToolbar({
         <button
           onClick={() => setScale((s) => Math.min(4, s * 1.15))}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.08] font-mono text-sm transition"
-          title="Увеличить"
+          title={t('toolbar.zoomIn')}
         >
           +
         </button>
         <button
           className="px-2 py-1 text-[11px] rounded-lg border border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 transition"
           onClick={resetView}
-          title="Сбросить масштаб к 100%"
+          title={t('toolbar.resetZoom')}
         >
           100%
         </button>

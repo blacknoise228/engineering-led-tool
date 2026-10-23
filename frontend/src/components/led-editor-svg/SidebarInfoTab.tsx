@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { type ServerPreset } from '@/lib/led-editor-svg/presets';
 import { useUpdater } from '@/lib/useUpdater';
+import { useI18n } from '@/lib/i18n';
 
 interface SidebarInfoTabProps {
   eventName: string;
@@ -45,6 +46,7 @@ export default function SidebarInfoTab({
   );
   const [copiedSpec, setCopiedSpec] = useState(false);
   const { currentVersion, updateInfo, checking, setIsModalOpen, checkForUpdatesManual } = useUpdater();
+  const { t } = useI18n();
 
   const serverValue = useMemo(() => {
     const byId = serverPresetsList.find((s) => s.id === serverName)?.id;
@@ -82,24 +84,24 @@ export default function SidebarInfoTab({
     <>
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3.5">
         <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-          Данные проекта
+          {t('info.projectData')}
         </div>
 
         <div>
           <label className="block text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1">
-            Название события
+            {t('info.eventName')}
           </label>
           <input
             className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
             value={eventName}
             onChange={(e) => setEventName(e.target.value)}
-            placeholder="Концерт / Шоу"
+            placeholder={t('info.eventPlaceholder')}
           />
         </div>
 
         <div>
           <label className="block text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1">
-            Дата события
+            {t('info.eventDate')}
           </label>
           <input
             type="date"
@@ -111,14 +113,14 @@ export default function SidebarInfoTab({
         <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
           <div className="flex items-center justify-between">
             <label className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 block">
-              Медиасерверы
+              {t('info.servers')}
             </label>
             {onOpenServerPresetsModal && (
               <button
                 type="button"
                 onClick={onOpenServerPresetsModal}
                 className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-emerald-400 transition"
-                title="Управление моделями медиасерверов"
+                title={t('info.manageServers')}
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3" />
@@ -154,7 +156,7 @@ export default function SidebarInfoTab({
                           type="button"
                           onClick={() => onServerRemove?.(srv.id)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition"
-                          title="Удалить сервер"
+                          title={t('info.deleteServer')}
                         >
                           ✕
                         </button>
@@ -210,7 +212,7 @@ export default function SidebarInfoTab({
               onClick={() => onServerAdd?.(newServerModelId)}
               className="px-3 py-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-medium transition whitespace-nowrap"
             >
-              + Добавить
+              {t('info.addServer')}
             </button>
           </div>
         </div>
@@ -218,7 +220,7 @@ export default function SidebarInfoTab({
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Спецификация
+            {t('info.spec')}
           </div>
           <button
             type="button"
@@ -229,14 +231,14 @@ export default function SidebarInfoTab({
                 ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
                 : 'border-white/[0.1] bg-white/[0.05] hover:bg-white/[0.1] text-neutral-200',
             ].join(' ')}
-            title="Скопировать спецификацию в буфер обмена"
+            title={t('info.copySpec')}
           >
             {copiedSpec ? (
               <>
                 <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span className="font-semibold text-emerald-300">Скопировано!</span>
+                <span className="font-semibold text-emerald-300">{t('info.copied')}</span>
               </>
             ) : (
               <>
@@ -244,7 +246,7 @@ export default function SidebarInfoTab({
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
-                <span>Скопировать</span>
+                <span>{t('info.copySpec')}</span>
               </>
             )}
           </button>
@@ -255,7 +257,7 @@ export default function SidebarInfoTab({
           value={specText}
           rows={9}
           className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2.5 text-[11px] leading-relaxed text-neutral-300 font-mono resize-none focus:outline-none focus:border-cyan-500/50 select-all"
-          title="Текст спецификации (можно выделить или нажать Скопировать)"
+          title={t('info.specTitle')}
         />
       </div>
 
@@ -264,12 +266,12 @@ export default function SidebarInfoTab({
           <button
             className="w-full py-2.5 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] hover:border-emerald-500/30 text-neutral-200 hover:text-white border border-white/[0.08] text-xs font-medium transition active:scale-[0.99] flex items-center justify-center gap-1.5"
             onClick={newProject}
-            title="Начать новый проект (Ctrl+N)"
+            title={t('info.newProjectTitle')}
           >
             <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            <span>Новый проект</span>
+            <span>{t('info.newProject')}</span>
             <span className="text-[10px] text-neutral-400 font-mono">Ctrl+N</span>
           </button>
         )}
@@ -277,16 +279,16 @@ export default function SidebarInfoTab({
           <button
             className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-lg shadow-blue-500/20 transition active:scale-[0.99] flex items-center justify-center gap-1.5"
             onClick={saveJSON}
-            title="Сохранить проект в .ss (Ctrl+S)"
+            title={t('info.saveProjectTitle')}
           >
-            <span>Сохранить проект</span>
+            <span>{t('info.saveProject')}</span>
             <span className="text-[10px] text-white/70 font-mono">Ctrl+S</span>
           </button>
           <button
             className="py-2.5 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] text-neutral-200 border border-white/[0.08] text-xs font-medium transition flex items-center justify-center gap-1.5"
             onClick={openLoadJSONDialog}
           >
-            Загрузить проект
+            {t('info.loadProject')}
           </button>
         </div>
       </div>
@@ -294,7 +296,7 @@ export default function SidebarInfoTab({
       {/* Версия и обновление */}
       <div className="pt-2 border-t border-white/[0.06] space-y-2">
         <div className="flex items-center justify-between text-xs text-neutral-400">
-          <span>Версия программы:</span>
+          <span>{t('info.appVersion')}</span>
           <span className="font-mono text-neutral-200 font-semibold">v{currentVersion}</span>
         </div>
 
@@ -302,14 +304,14 @@ export default function SidebarInfoTab({
           <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-cyan-300">
-                Доступна версия {updateInfo.latestVersion}!
+                {t('info.versionAvailable', { version: updateInfo.latestVersion })}
               </span>
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
               className="w-full py-1.5 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition flex items-center justify-center gap-1.5 shadow-sm shadow-cyan-900/30"
             >
-              <span>Посмотреть и обновить</span>
+              <span>{t('info.viewUpdate')}</span>
             </button>
           </div>
         ) : (
@@ -324,7 +326,7 @@ export default function SidebarInfoTab({
             <svg className={`w-3.5 h-3.5 text-cyan-400 ${checking ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span>{checking ? 'Проверка...' : 'Проверить обновления'}</span>
+            <span>{checking ? t('info.checking') : t('info.checkUpdates')}</span>
           </button>
         )}
       </div>

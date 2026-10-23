@@ -4,6 +4,7 @@ import { DEFAULT_FIBER_PRESETS, type FiberConverterPreset, type CardPreset } fro
 import { slugify } from '@/lib/led-editor-svg/utils';
 import { showToast, openDesktopFibersFileDialog, saveDesktopFibersFileDialog } from '@/lib/desktop';
 import PresetsModalLayout from './PresetsModalLayout';
+import { useI18n } from '@/lib/i18n';
 
 interface FiberPresetsModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export default function FiberPresetsModal({
   filePath,
   availableCards = [],
 }: FiberPresetsModalProps) {
+  const { language, t } = useI18n();
   const [list, setList] = useState<FiberConverterPreset[]>(presets);
   const [selectedId, setSelectedId] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -100,11 +102,11 @@ export default function FiberPresetsModal({
         setIsCreatingNew(false);
         await onSavePresets(DEFAULT_FIBER_PRESETS);
         if (onSelectPreset) onSelectPreset(initialId);
-        showToast(`Создан новый файл пресетов: ${fileName}`);
+        showToast(language === 'en' ? `Created new presets file: ${fileName}` : `Создан новый файл пресетов: ${fileName}`);
       }
     } catch (e) {
       console.error('Failed to create new fibers file:', e);
-      showToast('Ошибка при создании файла пресетов');
+      showToast(language === 'en' ? 'Error creating presets file' : 'Ошибка при создании файла пресетов');
     }
   };
 
@@ -128,14 +130,14 @@ export default function FiberPresetsModal({
     const cloned: FiberConverterPreset = {
       ...preset,
       id: nextId,
-      name: `${preset.name} (Копия)`,
+      name: `${preset.name} (${t('panels.copy')})`,
     };
     const nextList = [...list, cloned];
     setList(nextList);
     setSelectedId(nextId);
     setIsCreatingNew(false);
     onSavePresets(nextList);
-    showToast(`Конвертер "${cloned.name}" скопирован`);
+    showToast(language === 'en' ? `Converter "${cloned.name}" copied` : `Конвертер "${cloned.name}" скопирован`);
   };
 
   const togglePairedCard = (cardId: string) => {
@@ -154,24 +156,24 @@ export default function FiberPresetsModal({
 
     const name = formName.trim();
     if (!name) {
-      setErrorMessage('Укажите название модели конвертера');
+      setErrorMessage(language === 'en' ? 'Specify converter model name' : 'Укажите название модели конвертера');
       return;
     }
 
     const id = formId.trim() || slugify(name);
     if (!id) {
-      setErrorMessage('Укажите идентификатор ID');
+      setErrorMessage(language === 'en' ? 'Specify ID identifier' : 'Укажите идентификатор ID');
       return;
     }
 
     if (isCreatingNew) {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase())) {
-        setErrorMessage(`Конвертер с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Converter with ID "${id}" already exists` : `Конвертер с ID "${id}" уже существует`);
         return;
       }
     } else {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase() && p.id !== selectedId)) {
-        setErrorMessage(`Конвертер с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Converter with ID "${id}" already exists` : `Конвертер с ID "${id}" уже существует`);
         return;
       }
     }
@@ -199,13 +201,13 @@ export default function FiberPresetsModal({
     setSelectedId(id);
     setIsCreatingNew(false);
     await onSavePresets(nextList);
-    showToast(`Конвертер "${name}" успешно сохранен`);
+    showToast(language === 'en' ? `Converter "${name}" successfully saved` : `Конвертер "${name}" успешно сохранен`);
   };
 
   const handleDeleteConfirmed = async () => {
     if (!confirmDeleteId) return;
     if (list.length <= 1) {
-      showToast('Нельзя удалить последнюю модель');
+      showToast(language === 'en' ? 'Cannot delete the last model' : 'Нельзя удалить последнюю модель');
       setConfirmDeleteId(null);
       return;
     }
@@ -223,7 +225,7 @@ export default function FiberPresetsModal({
 
     setConfirmDeleteId(null);
     await onSavePresets(nextList);
-    showToast(`Конвертер "${target?.name || confirmDeleteId}" удален`);
+    showToast(language === 'en' ? `Converter "${target?.name || confirmDeleteId}" deleted` : `Конвертер "${target?.name || confirmDeleteId}" удален`);
   };
 
   if (!open) return null;
@@ -232,8 +234,8 @@ export default function FiberPresetsModal({
     <PresetsModalLayout<FiberConverterPreset>
       open={open}
       onClose={onClose}
-      title="Управление оптическими конвертерами"
-      subtitle="База оптических трансиверов NovaStar CVT и конвертеров"
+      title={t('fibers.modalTitle')}
+      subtitle={t('fibers.modalSubtitle')}
       accentColor="purple"
       headerIcon={
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -250,13 +252,13 @@ export default function FiberPresetsModal({
       isCreatingNew={isCreatingNew}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Поиск конвертера..."
-      createNewButtonLabel="+ Создать конвертер"
-      emptyListText="Конвертеры не найдены"
+      searchPlaceholder={t('fibers.searchPlaceholder')}
+      createNewButtonLabel={t('fibers.createBtn')}
+      emptyListText={t('fibers.emptyList')}
       errorMessage={errorMessage}
       confirmDeleteId={confirmDeleteId}
-      confirmDeleteTitle="Удаление конвертера"
-      confirmDeleteDescription={`Вы уверены, что хотите удалить конвертер "${list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId}"?`}
+      confirmDeleteTitle={t('fibers.deleteTitle')}
+      confirmDeleteDescription={t('fibers.deleteDesc', { name: list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId || '' })}
       onSetConfirmDeleteId={setConfirmDeleteId}
       onConfirmDelete={handleDeleteConfirmed}
       onSelectItem={id => {
@@ -293,9 +295,12 @@ export default function FiberPresetsModal({
       renderListItemBadge={p => {
         const count = Array.isArray(p.pairedWith) ? p.pairedWith.length : 0;
         if (count === 0) return null;
+        const pairLabel = language === 'en'
+          ? (count === 1 ? 'pair' : 'pairs')
+          : (count === 1 ? 'пара' : count < 5 ? 'пары' : 'пар');
         return (
           <span className="text-[9px] px-1.5 py-0.2 rounded uppercase font-semibold shrink-0 bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            {count} {count === 1 ? 'пара' : count < 5 ? 'пары' : 'пар'}
+            {count} {pairLabel}
           </span>
         );
       }}
@@ -304,12 +309,12 @@ export default function FiberPresetsModal({
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
           <div>
             <h3 className="text-base font-semibold text-white">
-              {isCreatingNew ? 'Создание нового конвертера' : 'Редактирование конвертера'}
+              {isCreatingNew ? t('fibers.createNewHeader') : t('fibers.editHeader')}
             </h3>
             <p className="text-xs text-neutral-400 mt-0.5">
               {isCreatingNew
-                ? 'Заполните параметры и нажмите "Создать и сохранить"'
-                : `Изменение параметров для ${formName || selectedId}`}
+                ? t('panels.createSubtitle')
+                : t('panels.editSubtitle', { name: formName || selectedId })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -318,13 +323,13 @@ export default function FiberPresetsModal({
                 type="button"
                 onClick={handleStartNew}
                 className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
-                title="Создать новый конвертер"
+                title={t('fibers.createBtn')}
               >
                 <svg className="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span>+ Создать конвертер</span>
+                <span>{t('fibers.createBtn')}</span>
               </button>
             )}
           </div>
@@ -335,7 +340,7 @@ export default function FiberPresetsModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                Название конвертера <span className="text-red-400">*</span>
+                {t('fibers.nameLabel')} <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -348,20 +353,20 @@ export default function FiberPresetsModal({
                     setFormId(slugify(val));
                   }
                 }}
-                placeholder="Например: NovaStar CVT10"
+                placeholder={t('fibers.namePh')}
                 className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-purple-500 focus:outline-none"
               />
             </div>
             <div>
               <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                ID (Идентификатор) <span className="text-red-400">*</span>
+                {t('fibers.idLabel')} <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formId}
                 onChange={e => setFormId(e.target.value.toLowerCase().trim())}
-                placeholder="Например: cvt10"
+                placeholder={t('fibers.idPh')}
                 className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-purple-300 focus:border-purple-500 focus:outline-none"
               />
             </div>
@@ -369,18 +374,18 @@ export default function FiberPresetsModal({
 
           <div>
             <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-              Совместимые карты / видеопроцессоры (ID через запятую)
+              {t('fibers.pairedWith')}
             </label>
             <input
               type="text"
               value={formPairedWith}
               onChange={e => setFormPairedWith(e.target.value)}
-              placeholder="Например: vx1000, h5_e, h9_e"
+              placeholder={t('fibers.pairedPh')}
               className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-purple-500 focus:outline-none"
             />
             {availableCards.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] text-neutral-500 mr-1">Быстрый выбор:</span>
+                <span className="text-[10px] text-neutral-500 mr-1">{t('fibers.quickSelect')}</span>
                 {availableCards.map(c => {
                   const tokens = formPairedWith
                     .split(',')
@@ -409,13 +414,13 @@ export default function FiberPresetsModal({
 
           <div>
             <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-              Примечания / описание
+              {t('fibers.notesLabel')}
             </label>
             <input
               type="text"
               value={formNotes}
               onChange={e => setFormNotes(e.target.value)}
-              placeholder="Например: Пара к VX1000 (10 Ethernet-выходов)."
+              placeholder={t('fibers.notesPh')}
               className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-purple-500 focus:outline-none"
             />
           </div>
@@ -433,7 +438,7 @@ export default function FiberPresetsModal({
               }}
               className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-white/[0.06] transition"
             >
-              Отмена
+              {t('presets.cancel')}
             </button>
           )}
           <button
@@ -445,7 +450,7 @@ export default function FiberPresetsModal({
               <polyline points="17 21 17 13 7 13 7 21" />
               <polyline points="7 3 7 8 15 8" />
             </svg>
-            <span>{isCreatingNew ? 'Создать и сохранить' : 'Сохранить изменения'}</span>
+            <span>{isCreatingNew ? t('presets.createAndSave') : t('presets.saveChanges')}</span>
           </button>
         </div>
       </form>

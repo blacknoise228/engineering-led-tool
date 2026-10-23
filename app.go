@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	sysRuntime "runtime"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -16,6 +20,7 @@ type App struct {
 	ctx             context.Context
 	initialFilePath string
 	updateMgr       UpdateManager
+	currentLanguage string
 }
 
 type OpenProjectResult struct {
@@ -28,9 +33,68 @@ type PanelsConfigResult struct {
 	Content  string `json:"content"`
 }
 
-var jsonFileFilters = []runtime.FileFilter{
-	{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
-	{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+const AppConfigFileName = "config.json"
+
+func detectSystemLanguage() string {
+	if sysRuntime.GOOS == "windows" {
+		k32 := syscall.NewLazyDLL("kernel32.dll")
+		proc := k32.NewProc("GetUserDefaultLocaleName")
+		if proc.Find() == nil {
+			b := make([]uint16, 128)
+			r, _, _ := proc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)))
+			if r != 0 {
+				loc := strings.ToLower(syscall.UTF16ToString(b))
+				if strings.HasPrefix(loc, "ru") {
+					return "ru"
+				}
+				return "en"
+			}
+		}
+	}
+
+	for _, env := range []string{"LC_ALL", "LC_MESSAGES", "LANG"} {
+		if val := strings.ToLower(os.Getenv(env)); val != "" {
+			if strings.HasPrefix(val, "ru") {
+				return "ru"
+			}
+			return "en"
+		}
+	}
+	return "en"
+}
+
+func (a *App) GetSystemLanguage() string {
+	return detectSystemLanguage()
+}
+
+func (a *App) SetLanguage(lang string) {
+	lang = strings.ToLower(strings.TrimSpace(lang))
+	if lang == "ru" || lang == "en" {
+		a.currentLanguage = lang
+	}
+}
+
+func (a *App) isEnglish() bool {
+	if a.currentLanguage == "en" {
+		return true
+	}
+	if a.currentLanguage == "ru" {
+		return false
+	}
+	return detectSystemLanguage() == "en"
+}
+
+func (a *App) getJsonFilters() []runtime.FileFilter {
+	if a.isEnglish() {
+		return []runtime.FileFilter{
+			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		}
+	}
+	return []runtime.FileFilter{
+		{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+		{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+	}
 }
 
 func findProjectArg(args []string) string {
@@ -151,12 +215,21 @@ func (a *App) GetInitialProject() (*OpenProjectResult, error) {
 }
 
 func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
+	title := "Загрузить проект"
+	filters := []runtime.FileFilter{
+		{DisplayName: "Файлы проекта (*.ss, *.json)", Pattern: "*.ss;*.json"},
+		{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+	}
+	if a.isEnglish() {
+		title = "Open Project"
+		filters = []runtime.FileFilter{
+			{DisplayName: "Project files (*.ss, *.json)", Pattern: "*.ss;*.json"},
+			{DisplayName: "All files (*.*)", Pattern: "*.*"},
+		}
+	}
 	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Загрузить проект",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Файлы проекта (*.ss, *.json)", Pattern: "*.ss;*.json"},
-			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
-		},
+		Title:   title,
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
@@ -176,14 +249,25 @@ func (a *App) SaveProject(targetPath string, defaultName string, content string)
 			defaultName += ".ss"
 		}
 
+		title := "Сохранить проект"
+		filters := []runtime.FileFilter{
+			{DisplayName: "Файлы проекта (*.ss)", Pattern: "*.ss"},
+			{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+		}
+		if a.isEnglish() {
+			title = "Save Project"
+			filters = []runtime.FileFilter{
+				{DisplayName: "Project files (*.ss)", Pattern: "*.ss"},
+				{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+				{DisplayName: "All files (*.*)", Pattern: "*.*"},
+			}
+		}
+
 		chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-			Title:           "Сохранить проект",
+			Title:           title,
 			DefaultFilename: defaultName,
-			Filters: []runtime.FileFilter{
-				{DisplayName: "Файлы проекта (*.ss)", Pattern: "*.ss"},
-				{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
-				{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
-			},
+			Filters:         filters,
 		})
 		if err != nil || chosen == "" {
 			return "", err
@@ -198,11 +282,23 @@ func (a *App) SaveProject(targetPath string, defaultName string, content string)
 }
 
 func (a *App) SavePNG(defaultFilename string, base64Data string) (string, error) {
-	return a.saveBase64Dialog("Сохранить PNG", defaultFilename, "export.png", ".png", "Изображение PNG (*.png)", "*.png", base64Data)
+	title := "Сохранить PNG"
+	filterName := "Изображение PNG (*.png)"
+	if a.isEnglish() {
+		title = "Save PNG"
+		filterName = "PNG Image (*.png)"
+	}
+	return a.saveBase64Dialog(title, defaultFilename, "export.png", ".png", filterName, "*.png", base64Data)
 }
 
 func (a *App) SaveZIP(defaultFilename string, base64Data string) (string, error) {
-	return a.saveBase64Dialog("Сохранить ZIP архив", defaultFilename, "export.zip", ".zip", "ZIP архив (*.zip)", "*.zip", base64Data)
+	title := "Сохранить ZIP архив"
+	filterName := "ZIP архив (*.zip)"
+	if a.isEnglish() {
+		title = "Save ZIP Archive"
+		filterName = "ZIP Archive (*.zip)"
+	}
+	return a.saveBase64Dialog(title, defaultFilename, "export.zip", ".zip", filterName, "*.zip", base64Data)
 }
 
 func writeTextFile(targetPath string, content string) error {
@@ -305,7 +401,7 @@ func saveConfigFile(filename string, content string) (string, error) {
 func (a *App) openJSONConfigDialog(title string) (*PanelsConfigResult, error) {
 	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:   title,
-		Filters: jsonFileFilters,
+		Filters: a.getJsonFilters(),
 	})
 	if err != nil || filePath == "" {
 		return nil, err
@@ -336,7 +432,7 @@ func (a *App) saveJSONConfigDialog(title string, defaultFilename string, fallbac
 	chosen, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           title,
 		DefaultFilename: defaultFilename,
-		Filters:         jsonFileFilters,
+		Filters:         a.getJsonFilters(),
 	})
 	if err != nil || chosen == "" {
 		return "", err
@@ -388,11 +484,19 @@ func (a *App) SavePanelPresets(content string) (string, error) {
 }
 
 func (a *App) OpenPanelsFileDialog() (*PanelsConfigResult, error) {
-	return a.openJSONConfigDialog("Выбрать файл пресетов панелей")
+	title := "Выбрать файл пресетов панелей"
+	if a.isEnglish() {
+		title = "Select Panel Presets File"
+	}
+	return a.openJSONConfigDialog(title)
 }
 
 func (a *App) SavePanelsFileDialog(defaultFilename string, content string) (string, error) {
-	return a.saveJSONConfigDialog("Экспорт пресетов панелей", defaultFilename, "panels.json", content)
+	title := "Экспорт пресетов панелей"
+	if a.isEnglish() {
+		title = "Export Panel Presets"
+	}
+	return a.saveJSONConfigDialog(title, defaultFilename, "panels.json", content)
 }
 
 
@@ -493,11 +597,19 @@ func (a *App) SaveCardPresets(content string) (string, error) {
 }
 
 func (a *App) OpenCardsFileDialog() (*PanelsConfigResult, error) {
-	return a.openJSONConfigDialog("Выбрать файл пресетов карт")
+	title := "Выбрать файл пресетов карт"
+	if a.isEnglish() {
+		title = "Select Card Presets File"
+	}
+	return a.openJSONConfigDialog(title)
 }
 
 func (a *App) SaveCardsFileDialog(defaultFilename string, content string) (string, error) {
-	return a.saveJSONConfigDialog("Экспорт пресетов карт", defaultFilename, "cards.json", content)
+	title := "Экспорт пресетов карт"
+	if a.isEnglish() {
+		title = "Export Card Presets"
+	}
+	return a.saveJSONConfigDialog(title, defaultFilename, "cards.json", content)
 }
 
 
@@ -557,11 +669,19 @@ func (a *App) SaveServerPresets(content string) (string, error) {
 }
 
 func (a *App) OpenServersFileDialog() (*PanelsConfigResult, error) {
-	return a.openJSONConfigDialog("Выбрать файл пресетов серверов")
+	title := "Выбрать файл пресетов серверов"
+	if a.isEnglish() {
+		title = "Select Server Presets File"
+	}
+	return a.openJSONConfigDialog(title)
 }
 
 func (a *App) SaveServersFileDialog(defaultFilename string, content string) (string, error) {
-	return a.saveJSONConfigDialog("Экспорт пресетов серверов", defaultFilename, "servers.json", content)
+	title := "Экспорт пресетов серверов"
+	if a.isEnglish() {
+		title = "Export Server Presets"
+	}
+	return a.saveJSONConfigDialog(title, defaultFilename, "servers.json", content)
 }
 
 // ============================================================================
@@ -605,22 +725,146 @@ func (a *App) SaveFiberPresets(content string) (string, error) {
 }
 
 func (a *App) OpenFibersFileDialog() (*PanelsConfigResult, error) {
-	return a.openJSONConfigDialog("Выбрать файл пресетов оптических конвертеров")
+	title := "Выбрать файл пресетов оптических конвертеров"
+	if a.isEnglish() {
+		title = "Select Fiber Presets File"
+	}
+	return a.openJSONConfigDialog(title)
 }
 
 func (a *App) SaveFibersFileDialog(defaultFilename string, content string) (string, error) {
-	return a.saveJSONConfigDialog("Экспорт пресетов оптических конвертеров", defaultFilename, "fibers.json", content)
+	title := "Экспорт пресетов оптических конвертеров"
+	if a.isEnglish() {
+		title = "Export Fiber Presets"
+	}
+	return a.saveJSONConfigDialog(title, defaultFilename, "fibers.json", content)
+}
+
+// ============================================================================
+// APPLICATION UNIFIED CONFIG (config.json) & MASK LOGO
+// ============================================================================
+
+func (a *App) GetAppConfigPath() (string, error) {
+	return getExeRelativePath(AppConfigFileName)
+}
+
+func (a *App) LoadAppConfig() (*PanelsConfigResult, error) {
+	targetPath, err := getExeRelativePath(AppConfigFileName)
+	if err != nil {
+		targetPath = AppConfigFileName
+	}
+
+	var data []byte
+	var readPath string
+	if d, err := os.ReadFile(targetPath); err == nil && len(d) > 0 {
+		data = d
+		readPath = targetPath
+	} else if absCwd, err := filepath.Abs(AppConfigFileName); err == nil && absCwd != targetPath {
+		if d, err := os.ReadFile(absCwd); err == nil && len(d) > 0 {
+			data = d
+			readPath = absCwd
+		}
+	}
+
+	if len(data) > 0 {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal(data, &parsed); err == nil {
+			if lang, ok := parsed["language"].(string); ok && lang != "" {
+				a.SetLanguage(lang)
+			}
+		}
+		return &PanelsConfigResult{FilePath: readPath, Content: string(data)}, nil
+	}
+
+	// config.json does not exist yet. Initialize default values.
+	defaultLang := a.GetSystemLanguage()
+	a.SetLanguage(defaultLang)
+
+	initialMap := map[string]interface{}{
+		"language": defaultLang,
+	}
+
+	// Check if legacy mask_logo.json exists to migrate logo
+	if logoRes, err := loadConfigFileWithDefault("mask_logo.json", ""); err == nil && logoRes != nil && strings.TrimSpace(logoRes.Content) != "" {
+		var logoVal interface{}
+		if err := json.Unmarshal([]byte(logoRes.Content), &logoVal); err == nil {
+			initialMap["logo"] = logoVal
+		}
+	} else {
+		initialMap["logo"] = map[string]interface{}{
+			"customLogoDataUrl":  "",
+			"customLogoFileName": "",
+			"scale":              1,
+			"offsetX":            0,
+			"offsetY":            0,
+		}
+	}
+
+	contentBytes, _ := json.MarshalIndent(initialMap, "", "  ")
+	defaultContent := string(contentBytes)
+
+	_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+	_ = os.WriteFile(targetPath, []byte(defaultContent), 0644)
+
+	return &PanelsConfigResult{FilePath: targetPath, Content: defaultContent}, nil
+}
+
+func (a *App) SaveAppConfig(content string) (string, error) {
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err == nil {
+		if lang, ok := parsed["language"].(string); ok && lang != "" {
+			a.SetLanguage(lang)
+		}
+		if logo, ok := parsed["logo"]; ok {
+			if logoBytes, err := json.MarshalIndent(logo, "", "  "); err == nil {
+				_, _ = saveConfigFile("mask_logo.json", string(logoBytes))
+			}
+		}
+	}
+	return saveConfigFile(AppConfigFileName, content)
 }
 
 func (a *App) GetMaskLogoConfigPath() (string, error) {
-	return getExeRelativePath("mask_logo.json")
+	return getExeRelativePath(AppConfigFileName)
 }
 
 func (a *App) LoadMaskLogoConfig() (*PanelsConfigResult, error) {
+	cfgRes, err := a.LoadAppConfig()
+	if err == nil && cfgRes != nil && cfgRes.Content != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(cfgRes.Content), &parsed); err == nil {
+			if logo, ok := parsed["logo"]; ok {
+				if logoBytes, err := json.MarshalIndent(logo, "", "  "); err == nil {
+					return &PanelsConfigResult{FilePath: cfgRes.FilePath, Content: string(logoBytes)}, nil
+				}
+			}
+		}
+	}
 	return loadConfigFileWithDefault("mask_logo.json", "")
 }
 
 func (a *App) SaveMaskLogoConfig(content string) (string, error) {
+	cfgRes, err := a.LoadAppConfig()
+	var fullCfg map[string]interface{}
+	if err == nil && cfgRes != nil && cfgRes.Content != "" {
+		_ = json.Unmarshal([]byte(cfgRes.Content), &fullCfg)
+	}
+	if fullCfg == nil {
+		fullCfg = make(map[string]interface{})
+	}
+	if fullCfg["language"] == nil || fullCfg["language"] == "" {
+		fullCfg["language"] = a.GetSystemLanguage()
+	}
+	var logoParsed interface{}
+	if err := json.Unmarshal([]byte(content), &logoParsed); err == nil {
+		fullCfg["logo"] = logoParsed
+	} else {
+		fullCfg["logo"] = content
+	}
+
+	if cfgBytes, err := json.MarshalIndent(fullCfg, "", "  "); err == nil {
+		_, _ = saveConfigFile(AppConfigFileName, string(cfgBytes))
+	}
 	return saveConfigFile("mask_logo.json", content)
 }
 

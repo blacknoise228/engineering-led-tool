@@ -8,10 +8,12 @@ import {
   Quit,
 } from "../../wailsjs/wailsjs/runtime";
 import { useUpdater } from "@/lib/useUpdater";
+import { useI18n } from "@/lib/i18n";
 
 export default function NavBar() {
   const [isMaximised, setIsMaximised] = useState(false);
   const { currentVersion, updateInfo, checking, setIsModalOpen, checkForUpdatesManual } = useUpdater();
+  const { language, setLanguage, t } = useI18n();
 
   async function checkMaximised() {
     const maximised = await WindowIsMaximised();
@@ -87,15 +89,42 @@ export default function NavBar() {
           data-no-drag
           style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
         >
+          {/* LANGUAGE SWITCHER */}
+          <div
+            className="flex items-center bg-[#20232c] border border-white/[0.08] rounded-md p-0.5 text-[10px] font-medium"
+            title={t('nav.switchLanguage')}
+          >
+            <button
+              onClick={() => setLanguage('ru')}
+              className={`px-1.5 py-0.5 rounded transition ${
+                language === 'ru'
+                  ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              RU
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-1.5 py-0.5 rounded transition ${
+                language === 'en'
+                  ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
           {/* UPDATE BUTTON / BADGE */}
           {updateInfo?.hasUpdate ? (
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition shadow-sm animate-pulse cursor-pointer"
-              title={`Доступно обновление ${updateInfo.latestVersion}! Нажмите для загрузки`}
+              title={t('nav.updateAvailable', { version: updateInfo.latestVersion })}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-              <span>Обновление {updateInfo.latestVersion}</span>
+              <span>{t('nav.updateBadge', { version: updateInfo.latestVersion })}</span>
             </button>
           ) : (
             <button
@@ -104,7 +133,7 @@ export default function NavBar() {
                 if (!updateInfo) checkForUpdatesManual();
               }}
               className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-[#7a828e] hover:text-[#e6edf3] hover:bg-white/10 transition cursor-pointer"
-              title="Проверить обновления"
+              title={t('nav.checkForUpdates')}
             >
               <svg
                 className={`w-3.5 h-3.5 ${checking ? "animate-spin text-cyan-400" : ""}`}
@@ -130,8 +159,8 @@ export default function NavBar() {
             <button
               className="inline-flex items-center justify-center w-[46px] h-full bg-transparent text-[#8b949e] transition-colors duration-[120ms] outline-none hover:bg-white/10 hover:text-[#e6edf3] active:bg-white/[0.14]"
               onClick={handleMinimize}
-              title="Minimize"
-              aria-label="Minimize"
+              title={t('nav.minimize')}
+              aria-label={t('nav.minimize')}
             >
               <svg width="10" height="2" viewBox="0 0 10 2">
                 <line
@@ -148,8 +177,8 @@ export default function NavBar() {
             <button
               className="inline-flex items-center justify-center w-[46px] h-full bg-transparent text-[#8b949e] transition-colors duration-[120ms] outline-none hover:bg-white/10 hover:text-[#e6edf3] active:bg-white/[0.14]"
               onClick={handleToggleMaximize}
-              title={isMaximised ? "Restore" : "Maximize"}
-              aria-label={isMaximised ? "Restore" : "Maximize"}
+              title={isMaximised ? t('nav.restore') : t('nav.maximize')}
+              aria-label={isMaximised ? t('nav.restore') : t('nav.maximize')}
             >
               {isMaximised ? (
                 /* Restore icon */
@@ -189,8 +218,8 @@ export default function NavBar() {
             <button
               className="inline-flex items-center justify-center w-[46px] h-full bg-transparent text-[#8b949e] transition-colors duration-[120ms] outline-none hover:bg-[#e81123] hover:text-white active:bg-[#bf0f1d] active:text-white"
               onClick={handleClose}
-              title="Close"
-              aria-label="Close"
+              title={t('nav.close')}
+              aria-label={t('nav.close')}
             >
               <svg width="10" height="10" viewBox="0 0 10 10">
                 <line

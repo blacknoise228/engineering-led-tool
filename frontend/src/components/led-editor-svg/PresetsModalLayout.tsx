@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { showToast, isDesktopApp, type DesktopConfigResult } from '@/lib/desktop';
+import { useI18n } from '@/lib/i18n';
 
 export interface BasePresetItem {
   id: string;
@@ -108,6 +109,7 @@ export default function PresetsModalLayout<T extends BasePresetItem>({
 }: PresetsModalLayoutProps<T>) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const accent = ACCENT_STYLES[accentColor];
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!open) return;
@@ -230,31 +232,31 @@ export default function PresetsModalLayout<T extends BasePresetItem>({
                 type="button"
                 onClick={handleOpenFile}
                 className="px-2.5 py-1.5 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-300 hover:text-white border border-white/[0.08] text-xs font-medium transition flex items-center gap-1.5"
-                title="Загрузить пресеты из другого JSON файла"
+                title={t('presets.openJsonTitle')}
               >
-                <span>Открыть JSON...</span>
+                <span>{t('presets.openJson')}</span>
               </button>
               <button
                 type="button"
                 onClick={handleSaveAsFile}
                 className="px-2.5 py-1.5 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-300 hover:text-white border border-white/[0.08] text-xs font-medium transition flex items-center gap-1.5"
-                title="Сохранить список в отдельный JSON файл"
+                title={t('presets.exportJsonTitle')}
               >
-                <span>Экспорт JSON...</span>
+                <span>{t('presets.exportJson')}</span>
               </button>
               <button
                 type="button"
                 onClick={onResetDefaults}
                 className="px-2.5 py-1.5 rounded-lg bg-[#181a24] hover:bg-[#202330] text-neutral-400 hover:text-amber-300 border border-white/[0.08] text-xs font-medium transition"
-                title="Восстановить стандартные заводские пресеты"
+                title={t('presets.resetTitle')}
               >
-                Сбросить
+                {t('presets.reset')}
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/[0.08] transition text-sm"
-                title="Закрыть (Esc)"
+                title={t('presets.close')}
               >
                 ✕
               </button>
@@ -265,7 +267,7 @@ export default function PresetsModalLayout<T extends BasePresetItem>({
               <div className="p-3 border-b border-white/[0.06] space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-                    Доступные модели ({items.length})
+                    {t('presets.availableModels', { count: items.length })}
                   </span>
                   <button
                     type="button"

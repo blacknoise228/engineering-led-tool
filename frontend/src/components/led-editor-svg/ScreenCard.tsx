@@ -11,6 +11,7 @@ import {
   getBadgeBounds,
 } from '@/lib/led-editor-svg/mask-contour';
 import NumberStepInput from './NumberStepInput';
+import { useI18n } from '@/lib/i18n';
 
 export interface ScreenCardProps {
   group: ScreenGroup;
@@ -40,6 +41,7 @@ export default function ScreenCard({
   onRemove,
   onSelectPanels,
 }: ScreenCardProps) {
+  const { t } = useI18n();
   let wPx = 0, hPx = 0, wM = 0, hM = 0;
   let screenCx = 0, screenCy = 0;
   let octSide = 100, maxScale = 2.0;
@@ -99,15 +101,15 @@ export default function ScreenCard({
             type="button"
             onClick={(e) => { e.stopPropagation(); onSelectPanels(); }}
             className="text-[11px] text-neutral-400 hover:text-white px-2 py-0.5 rounded bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] transition"
-            title="Выделить панели этого экрана"
+            title={t('screen.selectTitle')}
           >
-            Выбрать
+            {t('screen.select')}
           </button>
           {canRemove && (
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
               className="text-xs text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition"
-              title="Удалить экран"
+              title={t('screen.deleteTitle')}
             >
               ✕
             </button>
@@ -116,15 +118,15 @@ export default function ScreenCard({
       </div>
 
       <div className="flex items-center justify-between text-xs text-neutral-400 mb-2.5">
-        <div>Разрешение: <span className="font-mono text-cyan-400 font-semibold">{wPx}×{hPx} px</span></div>
+        <div>{t('screen.res', { w: wPx, h: hPx })}</div>
         <div className="font-mono text-[11px] text-neutral-400">
-          {formatMeters(wM)}×{formatMeters(hM)} м
+          {t('screen.posM', { w: formatMeters(wM), h: formatMeters(hM) })}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs mb-2.5">
         <div>
-          <label className="text-[10px] text-neutral-400 block mb-0.5 uppercase tracking-wider font-medium">Позиция X (px):</label>
+          <label className="text-[10px] text-neutral-400 block mb-0.5 uppercase tracking-wider font-medium">{t('screen.posX')}</label>
           <NumberStepInput
             value={group.posX ?? defaultPosX}
             min={0}
@@ -133,7 +135,7 @@ export default function ScreenCard({
           />
         </div>
         <div>
-          <label className="text-[10px] text-neutral-400 block mb-0.5 uppercase tracking-wider font-medium">Позиция Y (px):</label>
+          <label className="text-[10px] text-neutral-400 block mb-0.5 uppercase tracking-wider font-medium">{t('screen.posY')}</label>
           <NumberStepInput
             value={group.posY ?? defaultPosY}
             min={0}
@@ -145,7 +147,7 @@ export default function ScreenCard({
 
       <div className="p-2.5 rounded-lg bg-[#141724]/70 border border-white/[0.05] space-y-2 mb-2.5">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-neutral-400">
-          <span>Бейдж (инфо-плашка)</span>
+          <span>{t('screen.badge')}</span>
           {((group.badgeOffsetX !== undefined && group.badgeOffsetX !== 0) ||
             (group.badgeOffsetY !== undefined && group.badgeOffsetY !== 0) ||
             (group.badgeScale !== undefined && group.badgeScale !== 1)) && (
@@ -161,16 +163,16 @@ export default function ScreenCard({
                 onUpdate(next);
               }}
               className="text-[10px] text-cyan-400 hover:text-cyan-300 font-medium transition cursor-pointer"
-              title="Сбросить смещение и размер в центр по умолчанию"
+              title={t('screen.resetBadgeTitle')}
             >
-              Сброс
+              {t('screen.resetBadge')}
             </button>
           )}
         </div>
 
         <div>
           <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-            <span>Смещение от центра (+ / −):</span>
+            <span>{t('screen.centerOffset')}</span>
             <span className="text-[9px] text-neutral-500 font-mono">
               X: [{minX}..{maxX}] Y: [{minY}..{maxY}]
             </span>
@@ -200,7 +202,7 @@ export default function ScreenCard({
         </div>
         <div>
           <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-            <span>Размер (макс. {Math.round(maxScale * 100)}%):</span>
+            <span>{t('screen.badgeSize', { max: Math.round(maxScale * 100) })}</span>
             <button
               type="button"
               onClick={(e) => {
@@ -211,7 +213,7 @@ export default function ScreenCard({
                 }
               }}
               className="font-mono text-cyan-400 font-medium hover:underline cursor-pointer"
-              title="Нажмите, чтобы сбросить на 100%"
+              title={t('screen.reset100')}
             >
               {Math.round((group.badgeScale ?? 1) * 100)}%
             </button>
@@ -227,7 +229,7 @@ export default function ScreenCard({
                 onUpdate({ ...group, badgeScale: next });
               }}
               className="w-6 h-6 rounded bg-[#181a24] hover:bg-[#202332] text-neutral-300 border border-white/[0.08] text-xs flex items-center justify-center transition active:scale-95"
-              title="Уменьшить на 10%"
+              title={t('screen.scaleDown')}
             >
               −
             </button>
@@ -256,7 +258,7 @@ export default function ScreenCard({
                 onUpdate({ ...group, badgeScale: next });
               }}
               className="w-6 h-6 rounded bg-[#181a24] hover:bg-[#202332] disabled:opacity-30 disabled:pointer-events-none text-neutral-300 border border-white/[0.08] text-xs flex items-center justify-center transition active:scale-95"
-              title="Увеличить на 10%"
+              title={t('screen.scaleUp')}
             >
               +
             </button>
@@ -264,7 +266,7 @@ export default function ScreenCard({
         </div>
       </div>
 
-      <div className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1.5">Текстура заливки:</div>
+      <div className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 mb-1.5">{t('screen.fillTexture')}</div>
       <div className="grid grid-cols-6 gap-1.5 mb-1">
         {TEXTURES.map((tex) => (
           <button

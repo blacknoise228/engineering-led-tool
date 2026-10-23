@@ -10,6 +10,10 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function GetAppConfigPath() {
+  return window['go']['main']['App']['GetAppConfigPath']();
+}
+
 export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
@@ -42,8 +46,16 @@ export function GetServersConfigPath() {
   return window['go']['main']['App']['GetServersConfigPath']();
 }
 
+export function GetSystemLanguage() {
+  return window['go']['main']['App']['GetSystemLanguage']();
+}
+
 export function InstallUpdate(arg1) {
   return window['go']['main']['App']['InstallUpdate'](arg1);
+}
+
+export function LoadAppConfig() {
+  return window['go']['main']['App']['LoadAppConfig']();
 }
 
 export function LoadCardPresets() {
@@ -94,6 +106,10 @@ export function ReadProjectFile(arg1) {
   return window['go']['main']['App']['ReadProjectFile'](arg1);
 }
 
+export function SaveAppConfig(arg1) {
+  return window['go']['main']['App']['SaveAppConfig'](arg1);
+}
+
 export function SaveCardPresets(arg1) {
   return window['go']['main']['App']['SaveCardPresets'](arg1);
 }
@@ -140,6 +156,10 @@ export function SaveServersFileDialog(arg1, arg2) {
 
 export function SaveZIP(arg1, arg2) {
   return window['go']['main']['App']['SaveZIP'](arg1, arg2);
+}
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
 }
 
 export function ShowFileInFolder(arg1) {

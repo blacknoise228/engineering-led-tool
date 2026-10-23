@@ -80,6 +80,12 @@ interface WailsApp {
   LoadMaskLogoConfig?: () => Promise<{ filePath?: string; content?: string }>;
   SaveMaskLogoConfig?: (content: string) => Promise<string>;
 
+  LoadAppConfig?: () => Promise<{ filePath?: string; content?: string }>;
+  SaveAppConfig?: (content: string) => Promise<string>;
+  GetAppConfigPath?: () => Promise<string>;
+  GetSystemLanguage?: () => Promise<string>;
+  SetLanguage?: (lang: string) => Promise<void>;
+
   GetAppVersion?: () => Promise<string>;
   CheckForUpdates?: () => Promise<UpdateInfo>;
   StartUpdateDownload?: (downloadURL: string, fileName: string) => Promise<void>;
@@ -494,19 +500,154 @@ export const getDesktopFibersConfigPath = fibersPresetAdapter.getConfigPath;
 export const openDesktopFibersFileDialog = fibersPresetAdapter.openFileDialog;
 export const saveDesktopFibersFileDialog = fibersPresetAdapter.saveFileDialog;
 
+export interface AppConfig {
+  language?: 'ru' | 'en';
+  logo?: {
+    customLogoDataUrl?: string;
+    customLogoFileName?: string;
+    scale?: number;
+    offsetX?: number;
+    offsetY?: number;
+  };
+  [key: string]: unknown;
+}
+
+const APP_CONFIG_STORAGE_KEY = 'ss_app_config';
 const MASK_LOGO_STORAGE_KEY = 'ss_mask_logo_config';
 
+export function getSystemDefaultLanguage(): 'ru' | 'en' {
+  if (typeof navigator !== 'undefined') {
+    const navLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+    if (navLang.startsWith('ru')) return 'ru';
+  }
+  return 'en';
+}
+
+export async function getDesktopSystemLanguage(): Promise<'ru' | 'en'> {
+  const app = getWailsApp();
+  if (app?.GetSystemLanguage) {
+    try {
+      const res = await app.GetSystemLanguage();
+      if (res && (res === 'ru' || res === 'en')) {
+        return res;
+      }
+    } catch (e) {
+      console.error('Failed to get system language from desktop:', e);
+    }
+  }
+  return getSystemDefaultLanguage();
+}
+
+export async function setDesktopLanguage(lang: 'ru' | 'en'): Promise<void> {
+  const app = getWailsApp();
+  if (app?.SetLanguage) {
+    try {
+      await app.SetLanguage(lang);
+    } catch (e) {
+      console.error('Failed to set desktop language:', e);
+    }
+  }
+}
+
+export async function loadDesktopAppConfig(): Promise<AppConfig> {
+  let config: AppConfig = {
+    language: getSystemDefaultLanguage(),
+  };
+
+  const app = getWailsApp();
+  if (app?.LoadAppConfig) {
+    try {
+      const res = await app.LoadAppConfig();
+      if (res && typeof res.content === 'string' && res.content.trim()) {
+        const parsed = JSON.parse(res.content);
+        if (parsed && typeof parsed === 'object') {
+          config = { ...config, ...parsed };
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(APP_CONFIG_STORAGE_KEY, JSON.stringify(config));
+            } catch {}
+          }
+          return config;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load app config from desktop:', e);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(APP_CONFIG_STORAGE_KEY);
+      if (saved && saved.trim()) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...config, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load app config from localStorage:', e);
+    }
+  }
+
+  return config;
+}
+
+export async function saveDesktopAppConfig(patch: Partial<AppConfig>): Promise<AppConfig> {
+  let current: AppConfig = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(APP_CONFIG_STORAGE_KEY);
+      if (saved) current = JSON.parse(saved);
+    } catch {}
+  }
+
+  const merged: AppConfig = {
+    ...current,
+    ...patch,
+  };
+
+  if (patch.logo && current.logo) {
+    merged.logo = { ...current.logo, ...patch.logo };
+  }
+
+  const content = JSON.stringify(merged, null, 2);
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(APP_CONFIG_STORAGE_KEY, content);
+      if (merged.logo) {
+        localStorage.setItem(MASK_LOGO_STORAGE_KEY, JSON.stringify(merged.logo, null, 2));
+      }
+    } catch {}
+  }
+
+  const app = getWailsApp();
+  if (app?.SaveAppConfig) {
+    try {
+      await app.SaveAppConfig(content);
+    } catch (e) {
+      console.error('Failed to save app config to desktop:', e);
+    }
+  }
+
+  if (merged.language) {
+    await setDesktopLanguage(merged.language);
+  }
+
+  return merged;
+}
+
 export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
+  const cfg = await loadDesktopAppConfig();
+  if (cfg.logo) {
+    return JSON.stringify(cfg.logo);
+  }
+
   const app = getWailsApp();
   if (app?.LoadMaskLogoConfig) {
     try {
       const res = await app.LoadMaskLogoConfig();
       if (res && typeof res.content === 'string' && res.content.trim()) {
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(MASK_LOGO_STORAGE_KEY, res.content);
-          } catch {}
-        }
         return res.content;
       }
     } catch (e) {
@@ -529,12 +670,17 @@ export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
 }
 
 export async function saveDesktopMaskLogoConfig(content: string): Promise<void> {
+  try {
+    const logoParsed = JSON.parse(content);
+    await saveDesktopAppConfig({ logo: logoParsed });
+  } catch {
+    // If not JSON, save as legacy
+  }
+
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(MASK_LOGO_STORAGE_KEY, content);
-    } catch (e) {
-      console.error('Failed to save mask logo config to localStorage:', e);
-    }
+    } catch {}
   }
 
   const app = getWailsApp();

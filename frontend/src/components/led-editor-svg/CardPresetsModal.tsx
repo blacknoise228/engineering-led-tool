@@ -4,6 +4,7 @@ import { DEFAULT_CARD_PRESETS, type CardPreset } from '@/lib/led-editor-svg/pres
 import { slugify } from '@/lib/led-editor-svg/utils';
 import { showToast, openDesktopCardsFileDialog, saveDesktopCardsFileDialog } from '@/lib/desktop';
 import PresetsModalLayout from './PresetsModalLayout';
+import { useI18n } from '@/lib/i18n';
 
 interface CardPresetsModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ export default function CardPresetsModal({
   onSelectPreset,
   filePath,
 }: CardPresetsModalProps) {
+  const { language, t } = useI18n();
   const [list, setList] = useState<CardPreset[]>(presets);
   const [selectedId, setSelectedId] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -91,11 +93,11 @@ export default function CardPresetsModal({
         setIsCreatingNew(false);
         await onSavePresets(DEFAULT_CARD_PRESETS);
         if (onSelectPreset) onSelectPreset(initialId);
-        showToast(`Создан новый файл пресетов: ${fileName}`);
+        showToast(language === 'en' ? `Created new presets file: ${fileName}` : `Создан новый файл пресетов: ${fileName}`);
       }
     } catch (e) {
       console.error('Failed to create new cards file:', e);
-      showToast('Ошибка при создании файла пресетов');
+      showToast(language === 'en' ? 'Error creating presets file' : 'Ошибка при создании файла пресетов');
     }
   };
 
@@ -121,14 +123,14 @@ export default function CardPresetsModal({
     const cloned: CardPreset = {
       ...preset,
       id: nextId,
-      name: `${preset.name} (Копия)`,
+      name: `${preset.name} (${t('panels.copy')})`,
     };
     const nextList = [...list, cloned];
     setList(nextList);
     setSelectedId(nextId);
     setIsCreatingNew(false);
     onSavePresets(nextList);
-    showToast(`Карта "${cloned.name}" скопирована`);
+    showToast(language === 'en' ? `Card "${cloned.name}" copied` : `Карта "${cloned.name}" скопирована`);
   };
 
   const handleSaveForm = async (e: React.FormEvent) => {
@@ -137,30 +139,30 @@ export default function CardPresetsModal({
 
     const name = formName.trim();
     if (!name) {
-      setErrorMessage('Укажите название модели карты');
+      setErrorMessage(language === 'en' ? 'Specify card model name' : 'Укажите название модели карты');
       return;
     }
 
     const id = formId.trim() || slugify(name);
     if (!id) {
-      setErrorMessage('Укажите идентификатор ID');
+      setErrorMessage(language === 'en' ? 'Specify ID identifier' : 'Укажите идентификатор ID');
       return;
     }
 
     if (isCreatingNew) {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase())) {
-        setErrorMessage(`Карта с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Card with ID "${id}" already exists` : `Карта с ID "${id}" уже существует`);
         return;
       }
     } else {
       if (list.some(p => p.id.toLowerCase() === id.toLowerCase() && p.id !== selectedId)) {
-        setErrorMessage(`Карта с ID "${id}" уже существует`);
+        setErrorMessage(language === 'en' ? `Card with ID "${id}" already exists` : `Карта с ID "${id}" уже существует`);
         return;
       }
     }
 
     if (formOutputPorts <= 0) {
-      setErrorMessage('Количество портов должно быть больше 0');
+      setErrorMessage(language === 'en' ? 'Output ports count must be greater than 0' : 'Количество портов должно быть больше 0');
       return;
     }
 
@@ -184,13 +186,13 @@ export default function CardPresetsModal({
     setSelectedId(id);
     setIsCreatingNew(false);
     await onSavePresets(nextList);
-    showToast(`Карта "${name}" успешно сохранена`);
+    showToast(language === 'en' ? `Card "${name}" successfully saved` : `Карта "${name}" успешно сохранена`);
   };
 
   const handleDeleteConfirmed = async () => {
     if (!confirmDeleteId) return;
     if (list.length <= 1) {
-      showToast('Нельзя удалить последнюю модель');
+      showToast(language === 'en' ? 'Cannot delete the last model' : 'Нельзя удалить последнюю модель');
       setConfirmDeleteId(null);
       return;
     }
@@ -208,7 +210,7 @@ export default function CardPresetsModal({
 
     setConfirmDeleteId(null);
     await onSavePresets(nextList);
-    showToast(`Карта "${target?.name || confirmDeleteId}" удалена`);
+    showToast(language === 'en' ? `Card "${target?.name || confirmDeleteId}" deleted` : `Карта "${target?.name || confirmDeleteId}" удалена`);
   };
 
   if (!open) return null;
@@ -217,8 +219,8 @@ export default function CardPresetsModal({
     <PresetsModalLayout<CardPreset>
       open={open}
       onClose={onClose}
-      title="Управление картами и процессорами"
-      subtitle="База отправочных карт и видеопроцессоров"
+      title={t('cards.modalTitle')}
+      subtitle={t('cards.modalSubtitle')}
       accentColor="blue"
       headerIcon={
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -234,13 +236,13 @@ export default function CardPresetsModal({
       isCreatingNew={isCreatingNew}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Поиск карты..."
-      createNewButtonLabel="+ Создать карту"
-      emptyListText="Карты не найдены"
+      searchPlaceholder={t('cards.searchPlaceholder')}
+      createNewButtonLabel={t('cards.createBtn')}
+      emptyListText={t('cards.emptyList')}
       errorMessage={errorMessage}
       confirmDeleteId={confirmDeleteId}
-      confirmDeleteTitle="Удаление карты"
-      confirmDeleteDescription={`Вы уверены, что хотите удалить карту "${list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId}"?`}
+      confirmDeleteTitle={t('cards.deleteTitle')}
+      confirmDeleteDescription={t('cards.deleteDesc', { name: list.find(p => p.id === confirmDeleteId)?.name || confirmDeleteId || '' })}
       onSetConfirmDeleteId={setConfirmDeleteId}
       onConfirmDelete={handleDeleteConfirmed}
       onSelectItem={id => {
@@ -271,12 +273,12 @@ export default function CardPresetsModal({
               : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
           }`}
         >
-          {p.category === 'processor' ? 'Процессор' : 'Карта'}
+          {p.category === 'processor' ? t('cards.typeProcessor') : t('cards.typeSending')}
         </span>
       )}
       renderListItemSubtext={p => (
         <span className="flex items-center gap-2">
-          <span>{p.outputPorts} порт(ов)</span>
+          <span>{t('cards.portsCount', { count: p.outputPorts })}</span>
           <span className="text-neutral-600">•</span>
           <span className="truncate max-w-[120px]">{p.maxInput}</span>
         </span>
@@ -286,12 +288,12 @@ export default function CardPresetsModal({
                 <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                   <div>
                     <h3 className="text-base font-semibold text-white">
-                      {isCreatingNew ? 'Создание новой карты / процессора' : 'Редактирование параметров карты'}
+                      {isCreatingNew ? t('cards.createNewHeader') : t('cards.editHeader')}
                     </h3>
                     <p className="text-xs text-neutral-400 mt-0.5">
                       {isCreatingNew
-                        ? 'Заполните параметры и нажмите "Создать и сохранить"'
-                        : `Изменение параметров для ${formName || selectedId}`}
+                        ? t('panels.createSubtitle')
+                        : t('panels.editSubtitle', { name: formName || selectedId })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -300,13 +302,13 @@ export default function CardPresetsModal({
                         type="button"
                         onClick={handleStartNew}
                         className="px-3 py-1.5 rounded-lg bg-[#1a1d2b] hover:bg-[#222638] text-neutral-300 hover:text-white text-xs font-medium border border-white/[0.1] transition flex items-center gap-1.5"
-                        title="Создать новую карту"
+                        title={t('cards.createBtn')}
                       >
                         <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        <span>+ Создать карту</span>
+                        <span>{t('cards.createBtn')}</span>
                       </button>
                     )}
                   </div>
@@ -318,7 +320,7 @@ export default function CardPresetsModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Название карты / процессора <span className="text-red-400">*</span>
+                        {t('cards.nameLabel')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -331,20 +333,20 @@ export default function CardPresetsModal({
                             setFormId(slugify(val));
                           }
                         }}
-                        placeholder="Например: NovaStar VX1000"
+                        placeholder={t('cards.namePh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        ID (Идентификатор) <span className="text-red-400">*</span>
+                        {t('cards.idLabel')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={formId}
                         onChange={e => setFormId(e.target.value.toLowerCase().trim())}
-                        placeholder="Например: vx1000"
+                        placeholder={t('cards.idPh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
@@ -354,20 +356,20 @@ export default function CardPresetsModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Тип устройства
+                        {t('cards.deviceType')}
                       </label>
                       <select
                         value={formCategory}
                         onChange={e => setFormCategory(e.target.value as 'sending' | 'processor')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                       >
-                        <option value="sending">Отправочная карта (Sending Card)</option>
-                        <option value="processor">Процессор (All-in-one Processor)</option>
+                        <option value="sending">{t('cards.optSending')}</option>
+                        <option value="processor">{t('cards.optProcessor')}</option>
                       </select>
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Количество портов Ethernet <span className="text-red-400">*</span>
+                        {t('cards.ethernetPorts')} <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="number"
@@ -385,7 +387,7 @@ export default function CardPresetsModal({
                   <div className="space-y-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Максимальный входной сигнал (разрешение @ частота)
+                        {t('cards.maxInput')}
                       </label>
                       <input
                         type="text"
@@ -397,13 +399,13 @@ export default function CardPresetsModal({
                     </div>
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                        Примечание / Описание
+                        {t('cards.notes')}
                       </label>
                       <input
                         type="text"
                         value={formNotes}
                         onChange={e => setFormNotes(e.target.value)}
-                        placeholder="Опциональное примечание к оборудованию"
+                        placeholder={t('cards.notesPh')}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
@@ -412,10 +414,10 @@ export default function CardPresetsModal({
                   {/* Summary Card */}
                   <div className="p-3.5 rounded-xl bg-[#0e1017] border border-white/[0.06] flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">Итоговые параметры карты</div>
-                      <div className="text-sm font-semibold text-white mt-0.5">{formName || 'Безымянная модель'}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">{t('cards.summaryTitle')}</div>
+                      <div className="text-sm font-semibold text-white mt-0.5">{formName || t('cards.unnamedModel')}</div>
                       <div className="text-xs text-neutral-400 mt-0.5 font-mono">
-                        {formCategory === 'processor' ? 'Процессор' : 'Отправочная карта'} • {formOutputPorts} порт(ов) • {formMaxInput}
+                        {formCategory === 'processor' ? t('cards.typeProcessor') : t('cards.typeSending')} • {t('cards.portsCount', { count: formOutputPorts })} • {formMaxInput}
                       </div>
                     </div>
                   </div>
@@ -432,7 +434,7 @@ export default function CardPresetsModal({
                       }}
                       className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-white/[0.06] transition"
                     >
-                      Отмена
+                      {t('presets.cancel')}
                     </button>
                   )}
                   <button
@@ -442,7 +444,7 @@ export default function CardPresetsModal({
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <span>{isCreatingNew ? 'Создать прессет' : 'Сохранить изменения'}</span>
+                    <span>{isCreatingNew ? t('presets.createPreset') : t('presets.saveChanges')}</span>
                   </button>
                 </div>
               </form>

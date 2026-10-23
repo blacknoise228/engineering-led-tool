@@ -21,6 +21,7 @@
   <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/Platform-Windows%2010%2F11%20(x64)-informational?style=flat-square&logo=windows" alt="Platform" />
   <img src="https://img.shields.io/badge/Stack-Wails%20v2%20|%20Go%20|%20Next.js%20|%20React%2019-darkgreen?style=flat-square" alt="Stack" />
+  <img src="https://img.shields.io/badge/Languages-Russian%20|%20English-orange?style=flat-square" alt="Languages" />
   <img src="https://img.shields.io/badge/License-GNU%20GPLv3-blue?style=flat-square" alt="License" />
 </p>
 
@@ -61,6 +62,7 @@ The software was originally developed for personal use and to streamline LED scr
 - Automatic pixel load limit monitoring per port for NovaStar controllers and devices with similar capacity limits.
 - Instant calculation of equipment specifications: total cables, ports, cards, CVT optical transceivers, total surface area ($m^2$), and power consumption (kW, A).
 - Creation of pixel-accurate raster masks for media servers (Resolume Arena, disguise, TouchDesigner, Watchout, Millumin) with custom brand logo integration.
+- Full bilingual support (Russian and English) with automatic system locale detection.
 
 ---
 
@@ -74,6 +76,7 @@ The software was originally developed for personal use and to streamline LED scr
 - 📋 **One-Click Specification:** generation of a detailed equipment text rider ready to send to technicians, managers, or clients in chat.
 - 💾 **`.ss` Format with Windows Integration:** saving projects in a compact file with double-click opening directly from File Explorer.
 - 🖼️ **High-Resolution Export:** saving diagrams to PNG and ZIP archive.
+- 🌐 **Multilingual Interface:** full support for Russian and English languages with automatic OS locale detection and seamless language switching.
 
 ---
 

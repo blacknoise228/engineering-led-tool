@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useUpdater, formatBytes, formatSpeed } from '@/lib/useUpdater';
+import { useI18n } from '@/lib/i18n';
 
 export default function UpdateModal() {
   const {
@@ -21,6 +22,7 @@ export default function UpdateModal() {
     openDownloadedFolder,
     openGitHubRelease,
   } = useUpdater();
+  const { language, t } = useI18n();
 
   const [launching, setLaunching] = React.useState(false);
 
@@ -37,7 +39,7 @@ export default function UpdateModal() {
 
   const handleClose = () => {
     if (downloadState === 'downloading') {
-      if (confirm('Идет скачивание обновления. Отменить?')) {
+      if (confirm(t('update.cancelPrompt'))) {
         cancelDownload();
         setIsModalOpen(false);
       }
@@ -61,8 +63,8 @@ export default function UpdateModal() {
               </svg>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">Обновление программы</h2>
-              <p className="text-[11px] text-neutral-400">Текущая версия: v{currentVersion}</p>
+              <h2 className="text-sm font-semibold text-white">{t('update.title')}</h2>
+              <p className="text-[11px] text-neutral-400">{t('update.currentVersion', { version: currentVersion })}</p>
             </div>
           </div>
           <button
@@ -78,8 +80,8 @@ export default function UpdateModal() {
           {checking && (
             <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
               <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-neutral-300 font-medium">Проверка наличия обновлений...</p>
-              <p className="text-neutral-500 text-[11px]">Связываемся с репозиторием GitHub</p>
+              <p className="text-neutral-300 font-medium">{t('update.checking')}</p>
+              <p className="text-neutral-500 text-[11px]">{t('update.contactingGitHub')}</p>
             </div>
           )}
 
@@ -89,7 +91,7 @@ export default function UpdateModal() {
                 ✕
               </div>
               <div>
-                <p className="text-neutral-200 font-medium">Не удалось проверить обновления</p>
+                <p className="text-neutral-200 font-medium">{t('update.checkError')}</p>
                 <p className="text-red-400/80 text-[11px] mt-1 max-w-sm">{checkError}</p>
               </div>
               <div className="flex items-center gap-2 pt-2">
@@ -97,13 +99,13 @@ export default function UpdateModal() {
                   onClick={checkForUpdatesManual}
                   className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white transition font-medium"
                 >
-                  Повторить попытку
+                  {t('update.retry')}
                 </button>
                 <button
                   onClick={openGitHubRelease}
                   className="px-3 py-1.5 rounded-lg bg-transparent border border-white/10 hover:bg-white/5 text-neutral-300 transition"
                 >
-                  Открыть GitHub
+                  {t('update.openGitHub')}
                 </button>
               </div>
             </div>
@@ -117,14 +119,14 @@ export default function UpdateModal() {
                 </svg>
               </div>
               <div>
-                <p className="text-white font-medium text-sm">У вас актуальная версия</p>
-                <p className="text-neutral-400 text-[11px] mt-0.5">Engineering LED Tool v{currentVersion} является самой свежей версией.</p>
+                <p className="text-white font-medium text-sm">{t('update.upToDate')}</p>
+                <p className="text-neutral-400 text-[11px] mt-0.5">{t('update.upToDateDesc', { version: currentVersion })}</p>
               </div>
               <button
                 onClick={checkForUpdatesManual}
                 className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white transition text-xs"
               >
-                Проверить снова
+                {t('update.checkAgain')}
               </button>
             </div>
           )}
@@ -134,7 +136,7 @@ export default function UpdateModal() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      Доступно обновление
+                      {t('update.availableBadge')}
                     </span>
                     <span className="font-bold text-white text-sm">{updateInfo.latestVersion}</span>
                   </div>
@@ -143,7 +145,7 @@ export default function UpdateModal() {
                   )}
                   {updateInfo.fileSize > 0 && (
                     <p className="text-neutral-400 text-[11px] mt-0.5">
-                      Размер файла: <strong className="text-neutral-200">{formatBytes(updateInfo.fileSize)}</strong>
+                      {t('update.fileSize', { size: formatBytes(updateInfo.fileSize, 1, language) })}
                     </p>
                   )}
                 </div>
@@ -151,7 +153,7 @@ export default function UpdateModal() {
 
               {updateInfo.releaseNotes && (
                 <div>
-                  <p className="text-neutral-400 text-[11px] font-medium mb-1.5">Что нового:</p>
+                  <p className="text-neutral-400 text-[11px] font-medium mb-1.5">{t('update.whatsNew')}</p>
                   <div className="max-h-40 overflow-y-auto p-3 rounded-xl bg-black/30 border border-white/[0.06] text-neutral-300 whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
                     {updateInfo.releaseNotes}
                   </div>
@@ -160,7 +162,7 @@ export default function UpdateModal() {
 
               {downloadState === 'error' && (
                 <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-[11px]">
-                  Ошибка загрузки: {downloadError}
+                  {t('update.downloadError', { error: downloadError || '' })}
                 </div>
               )}
             </div>
@@ -169,7 +171,7 @@ export default function UpdateModal() {
           {downloadState === 'downloading' && (
             <div className="py-4 space-y-3">
               <div className="flex items-center justify-between text-neutral-300 text-xs font-medium">
-                <span>Загрузка обновления...</span>
+                <span>{t('update.downloading')}</span>
                 <span className="text-cyan-400 font-mono font-bold">
                   {downloadProgress ? Math.round(downloadProgress.percentage) : 0}%
                 </span>
@@ -184,12 +186,12 @@ export default function UpdateModal() {
 
               <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono">
                 <span>
-                  {downloadProgress ? formatBytes(downloadProgress.bytesDownloaded) : '0 Б'} /{' '}
+                  {downloadProgress ? formatBytes(downloadProgress.bytesDownloaded, 1, language) : (language === 'en' ? '0 B' : '0 Б')} /{' '}
                   {downloadProgress && downloadProgress.totalBytes > 0
-                    ? formatBytes(downloadProgress.totalBytes)
+                    ? formatBytes(downloadProgress.totalBytes, 1, language)
                     : '...'}
                 </span>
-                <span>{downloadProgress ? formatSpeed(downloadProgress.speed) : '0 Б/с'}</span>
+                <span>{downloadProgress ? formatSpeed(downloadProgress.speed, language) : (language === 'en' ? '0 B/s' : '0 Б/с')}</span>
               </div>
             </div>
           )}
@@ -200,9 +202,9 @@ export default function UpdateModal() {
                 ✓
               </div>
               <div>
-                <p className="text-white font-semibold text-sm">Обновление готово к установке!</p>
+                <p className="text-white font-semibold text-sm">{t('update.completed')}</p>
                 <p className="text-neutral-400 text-[11px] mt-1 max-w-sm">
-                  Файл успешно загружен. При запуске установщика текущее приложение закроется для обновления файлов.
+                  {t('update.completedDesc')}
                 </p>
               </div>
             </div>
@@ -212,7 +214,7 @@ export default function UpdateModal() {
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] leading-relaxed flex items-start gap-2">
               <span className="text-red-400 font-bold">✕</span>
               <div className="flex-1">
-                <p className="font-semibold text-red-200">Ошибка запуска установщика</p>
+                <p className="font-semibold text-red-200">{t('update.launchError')}</p>
                 <p className="mt-0.5">{downloadError}</p>
               </div>
             </div>
@@ -225,7 +227,7 @@ export default function UpdateModal() {
             onClick={openGitHubRelease}
             className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition"
           >
-            <span>Страница на GitHub</span>
+            <span>{t('update.githubPage')}</span>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
@@ -237,7 +239,7 @@ export default function UpdateModal() {
                 onClick={cancelDownload}
                 className="px-3.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition font-medium text-xs"
               >
-                Отмена
+                {t('update.cancelDownload')}
               </button>
             ) : downloadState === 'completed' ? (
               <>
@@ -245,7 +247,7 @@ export default function UpdateModal() {
                   onClick={openDownloadedFolder}
                   className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 transition font-medium text-xs cursor-pointer"
                 >
-                  В папке
+                  {t('update.inFolder')}
                 </button>
                 <button
                   onClick={handleInstall}
@@ -255,10 +257,10 @@ export default function UpdateModal() {
                   {launching ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Запуск...</span>
+                      <span>{t('update.launching')}</span>
                     </>
                   ) : (
-                    <span>Установить сейчас</span>
+                    <span>{t('update.installNow')}</span>
                   )}
                 </button>
               </>
@@ -268,7 +270,7 @@ export default function UpdateModal() {
                   onClick={handleClose}
                   className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-300 transition text-xs"
                 >
-                  Позже
+                  {t('confirm.cancel')}
                 </button>
                 <button
                   onClick={startDownload}
@@ -277,7 +279,7 @@ export default function UpdateModal() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  <span>Скачать обновление</span>
+                  <span>{t('nav.updateBadge', { version: updateInfo.latestVersion })}</span>
                 </button>
               </>
             ) : (
@@ -285,7 +287,7 @@ export default function UpdateModal() {
                 onClick={handleClose}
                 className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white transition font-medium text-xs"
               >
-                Закрыть
+                {t('nav.close')}
               </button>
             )}
           </div>

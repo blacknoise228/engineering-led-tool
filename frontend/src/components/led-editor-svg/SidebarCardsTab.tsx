@@ -6,6 +6,7 @@ import {
   type CardPreset,
   type FiberConverterPreset,
 } from '@/lib/led-editor-svg/presets';
+import { useI18n } from '@/lib/i18n';
 
 export type SidebarCardInstance = {
   id: string;
@@ -48,6 +49,7 @@ export default function SidebarCardsTab({
   setFiberCounts,
   textOutline,
 }: SidebarCardsTabProps) {
+  const { t } = useI18n();
   const [newModelId, setNewModelId] = useState<string>(
     () => cardPresetsList[0]?.id ?? ''
   );
@@ -57,14 +59,14 @@ export default function SidebarCardsTab({
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Добавление карты / процессора
+            {t('cards.addTitle')}
           </div>
           {onOpenCardPresetsModal && (
             <button
               type="button"
               onClick={onOpenCardPresetsModal}
               className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-cyan-400 transition"
-              title="Управление моделями карт и процессоров"
+              title={t('cards.manageTooltip')}
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
@@ -78,21 +80,21 @@ export default function SidebarCardsTab({
           value={newModelId}
           onChange={(e) => setNewModelId(e.target.value)}
         >
-          <optgroup label="Отправочные карты">
+          <optgroup label={t('cards.sendingGroup')}>
             {cardPresetsList
               .filter((c) => c.category === 'sending')
               .map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.outputPorts} порт(ов)
+                  {c.name} — {t('cards.portsCount', { count: c.outputPorts })}
                 </option>
               ))}
           </optgroup>
-          <optgroup label="Процессоры">
+          <optgroup label={t('cards.processorsGroup')}>
             {cardPresetsList
               .filter((c) => c.category === 'processor')
               .map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.outputPorts} порт(ов)
+                  {c.name} — {t('cards.portsCount', { count: c.outputPorts })}
                 </option>
               ))}
           </optgroup>
@@ -105,18 +107,17 @@ export default function SidebarCardsTab({
             onSwitchToWiring();
           }}
         >
-          + Добавить карту
+          {t('cards.addBtn')}
         </button>
       </div>
       <div className="text-[11px] text-neutral-400 px-1">
-        После добавления выберите карту во вкладке «Схема». Цвет карты подсветит
-        панели при расключении.
+        {t('cards.hint')}
       </div>
 
       <div className="space-y-2.5">
         {(!cards || cards.length === 0) && (
           <div className="text-xs text-neutral-400 p-3 rounded-xl bg-[#10121a] border border-white/[0.06] text-center">
-            Карты ещё не добавлены.
+            {t('cards.empty')}
           </div>
         )}
         {cards?.map((c) => {
@@ -152,7 +153,7 @@ export default function SidebarCardsTab({
                   S{c.order} — {model?.name ?? c.modelId}
                 </div>
                 <div className="text-[11px] text-neutral-400 mt-0.5">
-                  Портов:{' '}
+                  {t('cards.ports', { count: '' })}{' '}
                   <span className="font-mono text-neutral-200">
                     {model?.outputPorts ?? c.portColors.length}
                   </span>
@@ -170,7 +171,7 @@ export default function SidebarCardsTab({
                           c.portColors[i] ??
                           LINK_COLORS_16[i % LINK_COLORS_16.length],
                       }}
-                      title={`Порт ${i + 1}`}
+                      title={t('cards.port', { num: i + 1 })}
                     />
                   ))}
                 </div>
@@ -186,13 +187,13 @@ export default function SidebarCardsTab({
                   ].join(' ')}
                   onClick={() => onCardSelect?.(c.id)}
                 >
-                  {isActive ? 'Выбрана' : 'Выбрать'}
+                  {isActive ? t('cards.selected') : t('cards.select')}
                 </button>
                 <button
                   className="px-2 py-0.5 rounded-lg text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
                   onClick={() => onCardRemove?.(c.id)}
                 >
-                  Удалить
+                  {t('cards.delete')}
                 </button>
               </div>
             </div>
@@ -202,14 +203,14 @@ export default function SidebarCardsTab({
         <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-              Fiber Converters
+              {t('cards.fiberTitle')}
             </div>
             {onOpenFiberPresetsModal && (
               <button
                 type="button"
                 onClick={onOpenFiberPresetsModal}
                 className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-purple-400 transition cursor-pointer"
-                title="Управление моделями оптических конвертеров"
+                title={t('cards.manageFibers')}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3" />

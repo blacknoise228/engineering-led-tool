@@ -20,6 +20,7 @@ import type {
   MaskLogoConfig,
 } from "@/lib/led-editor-svg/types";
 import { buildSpecText } from "@/lib/led-editor-svg/utils";
+import { useI18n } from "@/lib/i18n";
 import MaskTab from "./MaskTab";
 import SidebarCardsTab, { type SidebarCardInstance } from "./SidebarCardsTab";
 import SidebarWiringTab, { type PortStats } from "./SidebarWiringTab";
@@ -271,6 +272,8 @@ export default function Sidebar(props: SidebarProps) {
     onOpenMaskLogoModal,
   } = props;
 
+  const { language, t } = useI18n();
+
   // вкладки
   const [localTab, setLocalTab] = useState<
     "cards" | "wiring" | "mask" | "info"
@@ -333,6 +336,7 @@ export default function Sidebar(props: SidebarProps) {
       serverPresets: serverPresetsList,
       fiberPresets: fiberPresetsList,
       refreshRate,
+      language,
     });
   }, [
     allPanels,
@@ -352,6 +356,7 @@ export default function Sidebar(props: SidebarProps) {
     serverPresetsList,
     fiberPresetsList,
     refreshRate,
+    language,
   ]);
 
   return (
@@ -391,22 +396,22 @@ export default function Sidebar(props: SidebarProps) {
       <div className="p-1 rounded-xl bg-[#08090e] border border-white/[0.06]">
         <div className="grid grid-cols-4 gap-1">
           {[
-            { id: "cards", label: "Карты" },
-            { id: "wiring", label: "Схема" },
-            { id: "mask", label: "Маска" },
-            { id: "info", label: "Инфо" },
-          ].map((t) => (
+            { id: "cards", label: t('tabs.cards') },
+            { id: "wiring", label: t('tabs.wiring') },
+            { id: "mask", label: t('tabs.mask') },
+            { id: "info", label: t('tabs.info') },
+          ].map((item) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id as typeof tab)}
+              key={item.id}
+              onClick={() => setTab(item.id as typeof tab)}
               className={[
                 "w-full py-1.5 px-2 text-xs font-medium rounded-lg transition text-center truncate",
-                tab === t.id
+                tab === item.id
                   ? "bg-[#1c1f2b] text-white shadow-sm border border-white/[0.08]"
                   : "text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.03]",
               ].join(" ")}
             >
-              {t.label}
+              {item.label}
             </button>
           ))}
         </div>
