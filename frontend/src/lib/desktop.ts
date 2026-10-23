@@ -22,6 +22,30 @@ export function useToastListener(callback: ToastListener) {
   }, [callback]);
 }
 
+export interface UpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  releaseName: string;
+  releaseNotes: string;
+  releaseDate: string;
+  downloadURL: string;
+  fileName: string;
+  fileSize: number;
+  htmlURL: string;
+  errorMessage?: string;
+}
+
+export interface DownloadProgress {
+  bytesDownloaded: number;
+  totalBytes: number;
+  percentage: number;
+  speed: number;
+  status: 'downloading' | 'completed' | 'error' | 'cancelled';
+  filePath: string;
+  error?: string;
+}
+
 interface WailsApp {
   OpenProjectDialog: () => Promise<{ filePath?: string; content?: string }>;
   SaveProject: (targetPath: string, defaultFilename: string, content: string) => Promise<string>;
@@ -55,6 +79,14 @@ interface WailsApp {
 
   LoadMaskLogoConfig?: () => Promise<{ filePath?: string; content?: string }>;
   SaveMaskLogoConfig?: (content: string) => Promise<string>;
+
+  GetAppVersion?: () => Promise<string>;
+  CheckForUpdates?: () => Promise<UpdateInfo>;
+  StartUpdateDownload?: (downloadURL: string, fileName: string) => Promise<void>;
+  CancelUpdateDownload?: () => Promise<void>;
+  InstallUpdate?: (filePath: string) => Promise<void>;
+  ShowFileInFolder?: (filePath: string) => Promise<void>;
+  OpenURLInBrowser?: (url: string) => Promise<void>;
 }
 
 interface WailsRuntime {
@@ -504,6 +536,115 @@ export async function saveDesktopMaskLogoConfig(content: string): Promise<void> 
       console.error('Failed to save mask logo config to desktop:', e);
     }
   }
+}
+
+
+export async function getAppVersion(): Promise<string> {
+  const app = getWailsApp();
+  if (app?.GetAppVersion) {
+    try {
+      return await app.GetAppVersion();
+    } catch (e) {
+      console.error('Failed to get app version:', e);
+    }
+  }
+  return '0.1.0';
+}
+
+export async function checkForUpdates(): Promise<UpdateInfo | null> {
+  const app = getWailsApp();
+  if (app?.CheckForUpdates) {
+    try {
+      const res = await app.CheckForUpdates();
+      return res;
+    } catch (e) {
+      console.error('Failed to check for updates:', e);
+      throw e;
+    }
+  }
+  return null;
+}
+
+export async function startUpdateDownload(downloadURL: string, fileName: string): Promise<boolean> {
+  const app = getWailsApp();
+  if (app?.StartUpdateDownload) {
+    try {
+      await app.StartUpdateDownload(downloadURL, fileName);
+      return true;
+    } catch (e) {
+      console.error('Failed to start update download:', e);
+      throw e;
+    }
+  }
+  return false;
+}
+
+export async function cancelUpdateDownload(): Promise<boolean> {
+  const app = getWailsApp();
+  if (app?.CancelUpdateDownload) {
+    try {
+      await app.CancelUpdateDownload();
+      return true;
+    } catch (e) {
+      console.error('Failed to cancel update download:', e);
+    }
+  }
+  return false;
+}
+
+export async function installUpdate(filePath: string): Promise<boolean> {
+  const app = getWailsApp();
+  if (app?.InstallUpdate) {
+    try {
+      await app.InstallUpdate(filePath);
+      return true;
+    } catch (e) {
+      console.error('Failed to install update:', e);
+      throw e;
+    }
+  }
+  return false;
+}
+
+export async function showFileInFolder(filePath: string): Promise<boolean> {
+  const app = getWailsApp();
+  if (app?.ShowFileInFolder) {
+    try {
+      await app.ShowFileInFolder(filePath);
+      return true;
+    } catch (e) {
+      console.error('Failed to show file in folder:', e);
+    }
+  }
+  return false;
+}
+
+export async function openExternalUrl(url: string): Promise<void> {
+  const app = getWailsApp();
+  if (app?.OpenURLInBrowser) {
+    try {
+      await app.OpenURLInBrowser(url);
+      return;
+    } catch (e) {
+      console.error('Failed to open URL in browser via desktop:', e);
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank');
+  }
+}
+
+export function onUpdateDownloadProgress(callback: (progress: DownloadProgress) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const w = window as unknown as WailsWindow;
+  if (w.runtime?.EventsOn) {
+    return w.runtime.EventsOn('update-download-progress', (data: unknown) => {
+      if (data && typeof data === 'object') {
+        callback(data as DownloadProgress);
+      }
+    });
+  }
+  return () => {};
 }
 
 

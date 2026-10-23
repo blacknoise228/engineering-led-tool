@@ -15,6 +15,7 @@ import (
 type App struct {
 	ctx             context.Context
 	initialFilePath string
+	updateMgr       UpdateManager
 }
 
 type OpenProjectResult struct {
@@ -58,6 +59,7 @@ func findProjectArg(args []string) string {
 
 func NewApp() *App {
 	app := &App{}
+	app.updateMgr.app = app
 	if len(os.Args) > 1 {
 		app.initialFilePath = findProjectArg(os.Args[1:])
 	}
