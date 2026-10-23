@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function GetCardsConfigPath():Promise<string>;
 
+export function GetFibersConfigPath():Promise<string>;
+
 export function GetInitialProject():Promise<main.OpenProjectResult>;
 
 export function GetMaskLogoConfigPath():Promise<string>;
@@ -14,6 +16,8 @@ export function GetServersConfigPath():Promise<string>;
 
 export function LoadCardPresets():Promise<main.PanelsConfigResult>;
 
+export function LoadFiberPresets():Promise<main.PanelsConfigResult>;
+
 export function LoadMaskLogoConfig():Promise<main.PanelsConfigResult>;
 
 export function LoadPanelPresets():Promise<main.PanelsConfigResult>;
@@ -21,6 +25,8 @@ export function LoadPanelPresets():Promise<main.PanelsConfigResult>;
 export function LoadServerPresets():Promise<main.PanelsConfigResult>;
 
 export function OpenCardsFileDialog():Promise<main.PanelsConfigResult>;
+
+export function OpenFibersFileDialog():Promise<main.PanelsConfigResult>;
 
 export function OpenPanelsFileDialog():Promise<main.PanelsConfigResult>;
 
@@ -33,6 +39,10 @@ export function ReadProjectFile(arg1:string):Promise<main.OpenProjectResult>;
 export function SaveCardPresets(arg1:string):Promise<string>;
 
 export function SaveCardsFileDialog(arg1:string,arg2:string):Promise<string>;
+
+export function SaveFiberPresets(arg1:string):Promise<string>;
+
+export function SaveFibersFileDialog(arg1:string,arg2:string):Promise<string>;
 
 export function SaveMaskLogoConfig(arg1:string):Promise<string>;
 

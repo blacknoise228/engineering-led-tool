@@ -47,6 +47,12 @@ interface WailsApp {
   OpenServersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
   SaveServersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
 
+  LoadFiberPresets: () => Promise<{ filePath?: string; content?: string }>;
+  SaveFiberPresets: (content: string) => Promise<string>;
+  GetFibersConfigPath: () => Promise<string>;
+  OpenFibersFileDialog: () => Promise<{ filePath?: string; content?: string } | null>;
+  SaveFibersFileDialog: (defaultFilename: string, content: string) => Promise<string>;
+
   LoadMaskLogoConfig?: () => Promise<{ filePath?: string; content?: string }>;
   SaveMaskLogoConfig?: (content: string) => Promise<string>;
 }
@@ -430,6 +436,22 @@ export const saveDesktopServerPresets = serversPresetAdapter.save;
 export const getDesktopServersConfigPath = serversPresetAdapter.getConfigPath;
 export const openDesktopServersFileDialog = serversPresetAdapter.openFileDialog;
 export const saveDesktopServersFileDialog = serversPresetAdapter.saveFileDialog;
+
+const fibersPresetAdapter = createPresetAdapter({
+  defaultFileName: 'fibers.json',
+  storageKey: 'ss_fibers_presets',
+  loadFromApp: app => app.LoadFiberPresets?.(),
+  saveToApp: (app, content) => app.SaveFiberPresets?.(content),
+  getPathFromApp: app => app.GetFibersConfigPath?.(),
+  openDialogFromApp: app => app.OpenFibersFileDialog?.(),
+  saveDialogFromApp: (app, name, content) => app.SaveFibersFileDialog?.(name, content),
+});
+
+export const loadDesktopFiberPresets = fibersPresetAdapter.load;
+export const saveDesktopFiberPresets = fibersPresetAdapter.save;
+export const getDesktopFibersConfigPath = fibersPresetAdapter.getConfigPath;
+export const openDesktopFibersFileDialog = fibersPresetAdapter.openFileDialog;
+export const saveDesktopFibersFileDialog = fibersPresetAdapter.saveFileDialog;
 
 const MASK_LOGO_STORAGE_KEY = 'ss_mask_logo_config';
 

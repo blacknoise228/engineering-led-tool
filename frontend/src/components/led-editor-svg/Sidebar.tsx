@@ -4,9 +4,11 @@ import React, { useMemo, useState } from "react";
 import {
   CARDS,
   SERVERS,
+  FIBER_CONVERTERS,
   type PanelPreset,
   type CardPreset,
   type ServerPreset,
+  type FiberConverterPreset,
 } from "@/lib/led-editor-svg/presets";
 import type {
   Tool,
@@ -148,6 +150,9 @@ type SidebarProps = {
   serverPresets?: ServerPreset[];
   onOpenServerPresetsModal?: () => void;
 
+  fiberPresets?: FiberConverterPreset[];
+  onOpenFiberPresetsModal?: () => void;
+
   maskLogoConfig?: MaskLogoConfig;
   onOpenMaskLogoModal?: () => void;
 };
@@ -166,6 +171,8 @@ export default function Sidebar(props: SidebarProps) {
     onOpenCardPresetsModal,
     serverPresets,
     onOpenServerPresetsModal,
+    fiberPresets,
+    onOpenFiberPresetsModal,
     createMatrix,
     clearAll,
     exportPNG,
@@ -286,6 +293,8 @@ export default function Sidebar(props: SidebarProps) {
     cardPresets && cardPresets.length > 0 ? cardPresets : CARDS;
   const serverPresetsList =
     serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
+  const fiberPresetsList =
+    fiberPresets && fiberPresets.length > 0 ? fiberPresets : FIBER_CONVERTERS;
 
   const selectedCard: CardInstance | null = useMemo(
     () => cards.find((c) => c.id === selectedCardId) ?? null,
@@ -314,6 +323,7 @@ export default function Sidebar(props: SidebarProps) {
       presets,
       cardPresets: cardPresetsList,
       serverPresets: serverPresetsList,
+      fiberPresets: fiberPresetsList,
     });
   }, [
     allPanels,
@@ -331,6 +341,7 @@ export default function Sidebar(props: SidebarProps) {
     presets,
     cardPresetsList,
     serverPresetsList,
+    fiberPresetsList,
   ]);
 
   return (
@@ -403,6 +414,8 @@ export default function Sidebar(props: SidebarProps) {
           setCardId={setCardId}
           onSwitchToWiring={() => setTab("wiring")}
           onOpenCardPresetsModal={onOpenCardPresetsModal}
+          fiberPresetsList={fiberPresetsList}
+          onOpenFiberPresetsModal={onOpenFiberPresetsModal}
           fiberCounts={fiberCounts}
           setFiberCounts={setFiberCounts}
           textOutline={textOutline}

@@ -4,6 +4,7 @@ import {
   LINK_COLORS_16,
   FIBER_CONVERTERS,
   type CardPreset,
+  type FiberConverterPreset,
 } from '@/lib/led-editor-svg/presets';
 
 export type SidebarCardInstance = {
@@ -24,6 +25,8 @@ interface SidebarCardsTabProps {
   setCardId: (s: string) => void;
   onSwitchToWiring: () => void;
   onOpenCardPresetsModal?: () => void;
+  fiberPresetsList?: FiberConverterPreset[];
+  onOpenFiberPresetsModal?: () => void;
   fiberCounts: Record<string, number>;
   setFiberCounts: (next: Record<string, number>) => void;
   textOutline: (stroke?: string) => React.CSSProperties;
@@ -39,6 +42,8 @@ export default function SidebarCardsTab({
   setCardId,
   onSwitchToWiring,
   onOpenCardPresetsModal,
+  fiberPresetsList,
+  onOpenFiberPresetsModal,
   fiberCounts,
   setFiberCounts,
   textOutline,
@@ -195,17 +200,34 @@ export default function SidebarCardsTab({
         })}
 
         <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
-            Fiber Converters
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+              Fiber Converters
+            </div>
+            {onOpenFiberPresetsModal && (
+              <button
+                type="button"
+                onClick={onOpenFiberPresetsModal}
+                className="p-1 rounded-lg hover:bg-white/[0.08] text-neutral-400 hover:text-purple-400 transition cursor-pointer"
+                title="Управление моделями оптических конвертеров"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            )}
           </div>
           <div className="space-y-2">
-            {FIBER_CONVERTERS.map((fc) => {
+            {(fiberPresetsList && fiberPresetsList.length > 0 ? fiberPresetsList : FIBER_CONVERTERS).map((fc) => {
               const val = Number.isFinite(fiberCounts[fc.id])
                 ? fiberCounts[fc.id]
                 : 0;
               return (
                 <div key={fc.id} className="flex items-center justify-between gap-2">
-                  <div className="text-xs text-neutral-300 truncate">{fc.name}</div>
+                  <div className="text-xs text-neutral-300 truncate" title={fc.notes || fc.name}>
+                    {fc.name}
+                  </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"

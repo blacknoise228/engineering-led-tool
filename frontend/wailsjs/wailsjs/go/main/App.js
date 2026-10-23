@@ -6,6 +6,10 @@ export function GetCardsConfigPath() {
   return window['go']['main']['App']['GetCardsConfigPath']();
 }
 
+export function GetFibersConfigPath() {
+  return window['go']['main']['App']['GetFibersConfigPath']();
+}
+
 export function GetInitialProject() {
   return window['go']['main']['App']['GetInitialProject']();
 }
@@ -26,6 +30,10 @@ export function LoadCardPresets() {
   return window['go']['main']['App']['LoadCardPresets']();
 }
 
+export function LoadFiberPresets() {
+  return window['go']['main']['App']['LoadFiberPresets']();
+}
+
 export function LoadMaskLogoConfig() {
   return window['go']['main']['App']['LoadMaskLogoConfig']();
 }
@@ -40,6 +48,10 @@ export function LoadServerPresets() {
 
 export function OpenCardsFileDialog() {
   return window['go']['main']['App']['OpenCardsFileDialog']();
+}
+
+export function OpenFibersFileDialog() {
+  return window['go']['main']['App']['OpenFibersFileDialog']();
 }
 
 export function OpenPanelsFileDialog() {
@@ -64,6 +76,14 @@ export function SaveCardPresets(arg1) {
 
 export function SaveCardsFileDialog(arg1, arg2) {
   return window['go']['main']['App']['SaveCardsFileDialog'](arg1, arg2);
+}
+
+export function SaveFiberPresets(arg1) {
+  return window['go']['main']['App']['SaveFiberPresets'](arg1);
+}
+
+export function SaveFibersFileDialog(arg1, arg2) {
+  return window['go']['main']['App']['SaveFibersFileDialog'](arg1, arg2);
 }
 
 export function SaveMaskLogoConfig(arg1) {

@@ -14,7 +14,7 @@ interface PresetsModalLayoutProps<T extends BasePresetItem> {
   title: string;
   subtitle: string;
   headerIcon: React.ReactNode;
-  accentColor?: 'cyan' | 'blue' | 'emerald';
+  accentColor?: 'cyan' | 'blue' | 'emerald' | 'purple';
   filePath: string;
   defaultFileName: string;
   items: T[];
@@ -62,6 +62,12 @@ const ACCENT_STYLES = {
     fileText: 'text-emerald-400/90',
     newBtn: 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30',
     activeItem: 'bg-emerald-600/20 border-emerald-500/40 text-white shadow-sm',
+  },
+  purple: {
+    iconWrap: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+    fileText: 'text-purple-400/90',
+    newBtn: 'bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border-purple-500/30',
+    activeItem: 'bg-purple-600/20 border-purple-500/40 text-white shadow-sm',
   },
 };
 

@@ -1,5 +1,5 @@
 import type { Panel, Vec, CableEx, CardInstance, ScreenGroup } from './types';
-import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS, type CardPreset, type ServerPreset } from './presets';
+import { PanelPreset, PRESETS, SERVERS, CARDS, FIBER_CONVERTERS, type CardPreset, type ServerPreset, type FiberConverterPreset } from './presets';
 import { savePngBlob, savePngFile, showToast } from '../desktop';
 
 export const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 9)}`;
@@ -90,6 +90,7 @@ export interface BuildLegendParams {
   presets?: PanelPreset[];
   cardPresets?: CardPreset[];
   serverPresets?: ServerPreset[];
+  fiberPresets?: FiberConverterPreset[];
 }
 
 export function buildExportLegend(params: BuildLegendParams): ExportLegend {
@@ -106,11 +107,13 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     presets,
     cardPresets,
     serverPresets,
+    fiberPresets,
   } = params;
 
   const presetsList = presets && presets.length > 0 ? presets : PRESETS;
   const cardsList = cardPresets && cardPresets.length > 0 ? cardPresets : CARDS;
   const serversList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
+  const fibersList = fiberPresets && fiberPresets.length > 0 ? fiberPresets : FIBER_CONVERTERS;
 
   const cablesCount = cables.length;
 
@@ -176,7 +179,7 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     .filter(([, n]) => (n ?? 0) > 0)
     .map(([id, count]) => ({
       id,
-      name: FIBER_CONVERTERS.find(f => f.id === id)?.name ?? id,
+      name: fibersList.find(f => f.id === id)?.name ?? id,
       count: Number(count),
     }));
 

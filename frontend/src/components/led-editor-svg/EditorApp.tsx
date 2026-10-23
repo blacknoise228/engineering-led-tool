@@ -16,11 +16,13 @@ import {
   DEFAULT_CARD_PRESETS,
   SERVERS,
   DEFAULT_SERVER_PRESETS,
+  DEFAULT_FIBER_PRESETS,
   CARD_COLORS,
   NOVASTAR_PORT_MAX_PIXELS_50HZ,
   type PanelPreset,
   type CardPreset,
   type ServerPreset,
+  type FiberConverterPreset,
 } from '@/lib/led-editor-svg/presets';
 import {
   autoSnakeH_TL, autoSnakeH_TR, autoSnakeH_BL, autoSnakeH_BR,
@@ -47,6 +49,7 @@ import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
 import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
+import FiberPresetsModal from './FiberPresetsModal';
 import EditorToolbar from './EditorToolbar';
 import {
   isDesktopApp,
@@ -66,6 +69,9 @@ import {
   loadDesktopServerPresets,
   saveDesktopServerPresets,
   getDesktopServersConfigPath,
+  loadDesktopFiberPresets,
+  saveDesktopFiberPresets,
+  getDesktopFibersConfigPath,
   loadDesktopMaskLogoConfig,
   saveDesktopMaskLogoConfig,
 } from '@/lib/desktop';
@@ -91,6 +97,10 @@ export default function EditorApp() {
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(DEFAULT_SERVER_PRESETS);
   const [serversConfigPath, setServersConfigPath] = useState<string>('');
   const [isServerPresetsModalOpen, setIsServerPresetsModalOpen] = useState(false);
+
+  const [fiberPresets, setFiberPresets] = useState<FiberConverterPreset[]>(DEFAULT_FIBER_PRESETS);
+  const [fibersConfigPath, setFibersConfigPath] = useState<string>('');
+  const [isFiberPresetsModalOpen, setIsFiberPresetsModalOpen] = useState(false);
 
   const [maskLogoConfig, setMaskLogoConfig] = useState<MaskLogoConfig>(DEFAULT_MASK_LOGO_CONFIG);
   const [isMaskLogoModalOpen, setIsMaskLogoModalOpen] = useState(false);
@@ -998,6 +1008,14 @@ export default function EditorApp() {
       setServerPresets,
       setServersConfigPath
     );
+    initPresetConfig(
+      getDesktopFibersConfigPath,
+      loadDesktopFiberPresets,
+      saveDesktopFiberPresets,
+      DEFAULT_FIBER_PRESETS,
+      setFiberPresets,
+      setFibersConfigPath
+    );
 
     loadDesktopMaskLogoConfig().then(raw => {
       if (raw && raw.trim()) {
@@ -1054,6 +1072,17 @@ export default function EditorApp() {
     } catch (e) {
       console.error('Failed to save server presets:', e);
       showToast('Ошибка при сохранении servers.json');
+    }
+  }, [showToast]);
+
+  const handleSaveFiberPresets = useCallback(async (newPresets: FiberConverterPreset[]) => {
+    setFiberPresets(newPresets);
+    try {
+      const savedPath = await saveDesktopFiberPresets(JSON.stringify(newPresets, null, 2));
+      if (savedPath) setFibersConfigPath(savedPath);
+    } catch (e) {
+      console.error('Failed to save fiber presets:', e);
+      showToast('Ошибка при сохранении fibers.json');
     }
   }, [showToast]);
 
@@ -1696,6 +1725,8 @@ export default function EditorApp() {
         onCardRemove={onCardRemove}
         fiberCounts={fiberCounts}
         setFiberCounts={setFiberCounts}
+        fiberPresets={fiberPresets}
+        onOpenFiberPresetsModal={() => setIsFiberPresetsModalOpen(true)}
         // Маска
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -1889,6 +1920,16 @@ export default function EditorApp() {
           presets={serverPresets}
           onSavePresets={handleSaveServerPresets}
           filePath={serversConfigPath}
+        />
+
+        {/* Модальное окно управления пресетами оптических конвертеров */}
+        <FiberPresetsModal
+          open={isFiberPresetsModalOpen}
+          onClose={() => setIsFiberPresetsModalOpen(false)}
+          presets={fiberPresets}
+          onSavePresets={handleSaveFiberPresets}
+          filePath={fibersConfigPath}
+          availableCards={cardPresets}
         />
 
         {/* Модальное окно подтверждения нового проекта */}

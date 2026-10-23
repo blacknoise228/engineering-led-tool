@@ -75,10 +75,15 @@ export type FiberConverterPreset = {
   notes?: string;
 };
 
-export const FIBER_CONVERTERS: FiberConverterPreset[] = [
+export const DEFAULT_FIBER_PRESETS: FiberConverterPreset[] = [
   { id: 'cvt10', name: 'NovaStar CVT10', pairedWith: ['vx1000', 'h5_e', 'h9_e'], notes: 'Пара к VX1000 (10 Ethernet-выходов).' },
   { id: 'cvt4k-s', name: 'NovaStar CVT4K-S', pairedWith: ['mctrl4k', 'novapro-jr', 'h5', 'h9'], notes: 'Пара к MCTRL4K / NovaProJR / H5 / H9.' },
 ];
+
+export const FIBER_CONVERTERS: FiberConverterPreset[] = DEFAULT_FIBER_PRESETS;
+
+export const getFiberById = (id: string, list: FiberConverterPreset[] = FIBER_CONVERTERS) => list.find(f => f.id === id) || null;
+export const getFiberName = (id: string, list: FiberConverterPreset[] = FIBER_CONVERTERS) => getFiberById(id, list)?.name ?? id;
 
 export type ServerPreset = {
   id: string;

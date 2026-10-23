@@ -138,7 +138,7 @@ The **Cards** tab and presets dialog allow adding the cards you use:
 - Add and rename controllers.
 - Specify device type: Sending Card or Video Processor.
 - Configure maximum number of physical Ethernet ports.
-- Add NovaStar CVT fiber optic transceivers to equipment lists (CVT10, CVT4K-S).
+- Add NovaStar CVT fiber optic transceivers to equipment lists (CVT10, CVT4K-S) with custom preset manager (`fibers.json`).
 - Import and export controller presets database in JSON format (`cards.json`).
 
 <p align="center">

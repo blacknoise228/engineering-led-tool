@@ -560,6 +560,54 @@ func (a *App) SaveServersFileDialog(defaultFilename string, content string) (str
 	return a.saveJSONConfigDialog("Экспорт пресетов серверов", defaultFilename, "servers.json", content)
 }
 
+// ============================================================================
+// FIBER CONVERTERS PRESETS CONFIGURATION
+// ============================================================================
+
+const defaultInitialFibersJSON = `[
+  {
+    "id": "cvt10",
+    "name": "NovaStar CVT10",
+    "pairedWith": [
+      "vx1000",
+      "h5_e",
+      "h9_e"
+    ],
+    "notes": "Пара к VX1000 (10 Ethernet-выходов)."
+  },
+  {
+    "id": "cvt4k-s",
+    "name": "NovaStar CVT4K-S",
+    "pairedWith": [
+      "mctrl4k",
+      "novapro-jr",
+      "h5",
+      "h9"
+    ],
+    "notes": "Пара к MCTRL4K / NovaProJR / H5 / H9."
+  }
+]`
+
+func (a *App) GetFibersConfigPath() (string, error) {
+	return getExeRelativePath("fibers.json")
+}
+
+func (a *App) LoadFiberPresets() (*PanelsConfigResult, error) {
+	return loadConfigFileWithDefault("fibers.json", defaultInitialFibersJSON)
+}
+
+func (a *App) SaveFiberPresets(content string) (string, error) {
+	return saveConfigFile("fibers.json", content)
+}
+
+func (a *App) OpenFibersFileDialog() (*PanelsConfigResult, error) {
+	return a.openJSONConfigDialog("Выбрать файл пресетов оптических конвертеров")
+}
+
+func (a *App) SaveFibersFileDialog(defaultFilename string, content string) (string, error) {
+	return a.saveJSONConfigDialog("Экспорт пресетов оптических конвертеров", defaultFilename, "fibers.json", content)
+}
+
 func (a *App) GetMaskLogoConfigPath() (string, error) {
 	return getExeRelativePath("mask_logo.json")
 }
