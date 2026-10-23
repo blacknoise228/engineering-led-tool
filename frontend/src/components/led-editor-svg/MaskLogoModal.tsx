@@ -26,7 +26,6 @@ export default function MaskLogoModal({
   const [draft, setDraft] = useState<MaskLogoConfig>(config);
   const draftRef = useRef<MaskLogoConfig>(config);
   draftRef.current = draft;
-  const [initialConfig, setInitialConfig] = useState<MaskLogoConfig>(config);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,22 +45,20 @@ export default function MaskLogoModal({
       };
       draftRef.current = normalized;
       setDraft(normalized);
-      setInitialConfig(normalized);
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, config]);
 
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onSaveConfig(initialConfig);
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, initialConfig, onSaveConfig, onClose]);
+  }, [open, onClose]);
 
   const updateDraft = (patch: Partial<MaskLogoConfig>) => {
     const prev = draftRef.current;
@@ -74,7 +71,6 @@ export default function MaskLogoModal({
     };
     draftRef.current = next;
     setDraft(next);
-    onSaveConfig(next);
   };
 
   const handleFile = (file: File) => {
@@ -506,10 +502,7 @@ export default function MaskLogoModal({
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => {
-                onSaveConfig(initialConfig);
-                onClose();
-              }}
+              onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d28] text-neutral-300 hover:text-white border border-white/[0.08] transition"
             >
               {t('presets.cancel')}

@@ -549,11 +549,9 @@ export async function setDesktopLanguage(lang: 'ru' | 'en'): Promise<void> {
   }
 }
 
-export async function loadDesktopAppConfig(): Promise<AppConfig> {
-  let config: AppConfig = {
-    language: getSystemDefaultLanguage(),
-  };
+let cachedAppConfig: AppConfig | null = null;
 
+export async function loadDesktopAppConfig(): Promise<AppConfig> {
   const app = getWailsApp();
   if (app?.LoadAppConfig) {
     try {
@@ -561,13 +559,14 @@ export async function loadDesktopAppConfig(): Promise<AppConfig> {
       if (res && typeof res.content === 'string' && res.content.trim()) {
         const parsed = JSON.parse(res.content);
         if (parsed && typeof parsed === 'object') {
-          config = { ...config, ...parsed };
+          const updated: AppConfig = { ...(cachedAppConfig || {}), ...parsed };
+          cachedAppConfig = updated;
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem(APP_CONFIG_STORAGE_KEY, JSON.stringify(config));
+              localStorage.setItem(APP_CONFIG_STORAGE_KEY, JSON.stringify(updated));
             } catch {}
           }
-          return config;
+          return updated;
         }
       }
     } catch (e) {
@@ -575,13 +574,21 @@ export async function loadDesktopAppConfig(): Promise<AppConfig> {
     }
   }
 
+  if (cachedAppConfig) {
+    return cachedAppConfig;
+  }
+
+  let config: AppConfig = {
+    language: getSystemDefaultLanguage(),
+  };
+
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(APP_CONFIG_STORAGE_KEY);
       if (saved && saved.trim()) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          return { ...config, ...parsed };
+          config = { ...config, ...parsed };
         }
       }
     } catch (e) {
@@ -589,12 +596,13 @@ export async function loadDesktopAppConfig(): Promise<AppConfig> {
     }
   }
 
+  cachedAppConfig = config;
   return config;
 }
 
 export async function saveDesktopAppConfig(patch: Partial<AppConfig>): Promise<AppConfig> {
-  let current: AppConfig = {};
-  if (typeof window !== 'undefined') {
+  let current: AppConfig = cachedAppConfig || {};
+  if (!cachedAppConfig && typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(APP_CONFIG_STORAGE_KEY);
       if (saved) current = JSON.parse(saved);
@@ -608,8 +616,11 @@ export async function saveDesktopAppConfig(patch: Partial<AppConfig>): Promise<A
 
   if (patch.logo && current.logo) {
     merged.logo = { ...current.logo, ...patch.logo };
+  } else if (!patch.logo && current.logo) {
+    merged.logo = current.logo;
   }
 
+  cachedAppConfig = merged;
   const content = JSON.stringify(merged, null, 2);
 
   if (typeof window !== 'undefined') {
@@ -638,21 +649,27 @@ export async function saveDesktopAppConfig(patch: Partial<AppConfig>): Promise<A
 }
 
 export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
-  const cfg = await loadDesktopAppConfig();
-  if (cfg.logo) {
-    return JSON.stringify(cfg.logo);
-  }
-
   const app = getWailsApp();
   if (app?.LoadMaskLogoConfig) {
     try {
       const res = await app.LoadMaskLogoConfig();
       if (res && typeof res.content === 'string' && res.content.trim()) {
+        try {
+          const logoObj = JSON.parse(res.content);
+          if (cachedAppConfig) {
+            cachedAppConfig.logo = logoObj;
+          }
+        } catch {}
         return res.content;
       }
     } catch (e) {
       console.error('Failed to load mask logo config from desktop:', e);
     }
+  }
+
+  const cfg = await loadDesktopAppConfig();
+  if (cfg.logo && (cfg.logo as Record<string, unknown>).customLogoDataUrl) {
+    return JSON.stringify(cfg.logo);
   }
 
   if (typeof window !== 'undefined') {
@@ -666,16 +683,25 @@ export async function loadDesktopMaskLogoConfig(): Promise<string | null> {
     }
   }
 
+  if (cfg.logo) {
+    return JSON.stringify(cfg.logo);
+  }
+
   return null;
 }
 
 export async function saveDesktopMaskLogoConfig(content: string): Promise<void> {
+  let logoParsed: AppConfig['logo'] = undefined;
   try {
-    const logoParsed = JSON.parse(content);
-    await saveDesktopAppConfig({ logo: logoParsed });
-  } catch {
-    // If not JSON, save as legacy
-  }
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === 'object') {
+      logoParsed = parsed as AppConfig['logo'];
+      if (!cachedAppConfig) {
+        cachedAppConfig = {};
+      }
+      cachedAppConfig.logo = logoParsed;
+    }
+  } catch {}
 
   if (typeof window !== 'undefined') {
     try {
@@ -690,6 +716,8 @@ export async function saveDesktopMaskLogoConfig(content: string): Promise<void> 
     } catch (e) {
       console.error('Failed to save mask logo config to desktop:', e);
     }
+  } else if (logoParsed) {
+    await saveDesktopAppConfig({ logo: logoParsed });
   }
 }
 

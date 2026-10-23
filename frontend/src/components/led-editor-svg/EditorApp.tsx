@@ -914,6 +914,7 @@ export default function EditorApp() {
     servers?: Array<{ id: string; modelId: string }>;
     serverId?: string;
     screenGroups?: ScreenGroup[];
+    maskLogoConfig?: Partial<MaskLogoConfig>;
   }) => {
     let parsedWiringPages: WiringPage[] = [];
     let parsedActiveWiringPageId = 'wiring-1';
@@ -982,6 +983,14 @@ export default function EditorApp() {
       }
       if (typeof data.meta?.rows === 'number') setRows(data.meta.rows);
       if (typeof data.meta?.cols === 'number') setCols(data.meta.cols);
+      if (data.maskLogoConfig && typeof data.maskLogoConfig === 'object') {
+        const loadedLogo: MaskLogoConfig = {
+          ...DEFAULT_MASK_LOGO_CONFIG,
+          ...data.maskLogoConfig,
+        };
+        setMaskLogoConfig(loadedLogo);
+        saveDesktopMaskLogoConfig(JSON.stringify(loadedLogo, null, 2)).catch(() => {});
+      }
       setSelectedGroupId(null);
       setSelectedPanels(new Set());
       setSelectedCables(new Set());
@@ -1236,6 +1245,7 @@ export default function EditorApp() {
       serverId: servers[0]?.modelId ?? '',
       servers,
       screenGroups: activeMaskPage.screenGroups,
+      maskLogoConfig,
     };
     const jsonContent = JSON.stringify(payload, null, 2);
 
@@ -1260,7 +1270,7 @@ export default function EditorApp() {
       URL.revokeObjectURL(url);
       showToast(t('toast.saved'));
     }
-  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, showToast, t]);
+  }, [presetId, rows, cols, activeRefreshRate, wiringPages, activeWiringPageId, maskPages, activeMaskPageId, activeWiringPage, activeMaskPage, cards, selectedCardId, activeLink, eventName, fiberCounts, eventDate, servers, maskLogoConfig, showToast, t]);
 
   const saveJSON = useCallback(() => saveProjectToFile(currentFilePath), [saveProjectToFile, currentFilePath]);
   const saveJSONAs = useCallback(() => saveProjectToFile(null), [saveProjectToFile]);
