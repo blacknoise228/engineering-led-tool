@@ -41,6 +41,7 @@ export default function PanelPresetsModal({
   const [formResH, setFormResH] = useState(256);
   const [formPitch, setFormPitch] = useState(3.9);
   const [formPower, setFormPower] = useState(200);
+  const [formWeight, setFormWeight] = useState(13.5);
   const [formSpecial, setFormSpecial] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -74,6 +75,7 @@ export default function PanelPresetsModal({
       setFormResH(cur.resH);
       setFormPitch(cur.pitch_mm);
       setFormPower(cur.power);
+      setFormWeight(cur.weight ?? 0);
       setFormSpecial(cur.special);
       setErrorMessage(null);
     }
@@ -88,8 +90,9 @@ export default function PanelPresetsModal({
     const resH = typeof raw.resH === 'number' && raw.resH > 0 ? raw.resH : 208;
     const pitch_mm = typeof raw.pitch_mm === 'number' && raw.pitch_mm > 0 ? raw.pitch_mm : 4.8;
     const power = typeof raw.power === 'number' && raw.power >= 0 ? raw.power : 200;
+    const weight = typeof raw.weight === 'number' && raw.weight >= 0 ? raw.weight : 0;
     const special = Boolean(raw.special);
-    return { id, name, w, h, resW, resH, pitch_mm, power, special };
+    return { id, name, w, h, resW, resH, pitch_mm, power, weight, special };
   };
 
   const handleResetDefaults = async () => {
@@ -126,6 +129,7 @@ export default function PanelPresetsModal({
     setFormResH(208);
     setFormPitch(4.8);
     setFormPower(322);
+    setFormWeight(13.5);
     setFormSpecial(false);
     setErrorMessage(null);
   };
@@ -194,6 +198,10 @@ export default function PanelPresetsModal({
       setErrorMessage('Мощность не может быть отрицательной');
       return;
     }
+    if (formWeight < 0) {
+      setErrorMessage('Вес не может быть отрицательным');
+      return;
+    }
 
     const newPreset: PanelPreset = {
       id,
@@ -204,6 +212,7 @@ export default function PanelPresetsModal({
       resH: formResH,
       pitch_mm: formPitch,
       power: formPower,
+      weight: formWeight,
       special: formSpecial,
     };
 
@@ -317,6 +326,8 @@ export default function PanelPresetsModal({
           <span>P{p.pitch_mm}</span>
           <span>•</span>
           <span>{p.power} Вт</span>
+          <span>•</span>
+          <span>{p.weight ?? 0} кг</span>
         </span>
       )}
     >
@@ -486,8 +497,8 @@ export default function PanelPresetsModal({
                     </div>
                   </div>
 
-                  {/* Pitch & Power */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Pitch, Power & Weight */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
                         Шаг пикселя (мм) <span className="text-red-400">*</span>
@@ -512,6 +523,19 @@ export default function PanelPresetsModal({
                         required
                         value={formPower}
                         onChange={e => setFormPower(Math.max(0, parseInt(e.target.value || '0', 10)))}
+                        className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
+                        Вес (кг)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        value={formWeight}
+                        onChange={e => setFormWeight(Math.max(0, parseFloat(e.target.value || '0')))}
                         className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-cyan-500 focus:outline-none"
                       />
                     </div>
@@ -548,6 +572,8 @@ export default function PanelPresetsModal({
                         <span>Пикселей: {(formResW * formResH).toLocaleString('ru-RU')} px</span>
                         <span>•</span>
                         <span>Соотношение: {(formW / formH).toFixed(2)}:1</span>
+                        <span>•</span>
+                        <span>Вес: {formWeight || 0} кг</span>
                       </div>
                     </div>
                     {/* Visual aspect preview */}

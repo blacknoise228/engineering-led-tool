@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Panel, ScreenGroup } from '@/lib/led-editor-svg/types';
+import { type PanelPreset } from '@/lib/led-editor-svg/presets';
 import { TEXTURES } from '@/lib/led-editor-svg/textures';
 import {
   computePixelPanels,
@@ -14,6 +15,7 @@ import NumberStepInput from './NumberStepInput';
 export interface ScreenCardProps {
   group: ScreenGroup;
   panels: Panel[];
+  presets?: PanelPreset[];
   defaultPosX: number;
   defaultPosY: number;
   isSelected: boolean;
@@ -115,7 +117,9 @@ export default function ScreenCard({
 
       <div className="flex items-center justify-between text-xs text-neutral-400 mb-2.5">
         <div>Разрешение: <span className="font-mono text-cyan-400 font-semibold">{wPx}×{hPx} px</span></div>
-        <div className="font-mono text-[11px] text-neutral-400">{formatMeters(wM)}×{formatMeters(hM)} м • {panels.length} шт</div>
+        <div className="font-mono text-[11px] text-neutral-400">
+          {formatMeters(wM)}×{formatMeters(hM)} м
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs mb-2.5">

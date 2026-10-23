@@ -156,6 +156,7 @@ The application allows creating cabinet presets:
   - Resolution: width and height in pixels (px).
   - Pixel pitch (Pixel Pitch, mm).
   - Power consumption per cabinet (W).
+  - Cabinet weight (kg).
   - Special shape flag (Special panel) for LED mesh / curtains with interlaced pixel skipping.
 - Database management: add, duplicate, delete, export, and import presets to/from `panels.json`.
 
@@ -182,8 +183,10 @@ The **Info** tab instantly generates a complete technical report:
 - **Summary:**
   - Number of physical screens and total cabinet count (pcs).
   - Total surface area of the LED canvas in square meters ($m^2$).
+  - Total weight of screens / panels (kg).
   - Number of inter-panel jumpers (RJ45 patch cords).
   - Total number of controller ports utilized.
+- **Screens:** breakdown of cabinet count, weight, and power consumption for each individual screen.
 - **Cabinet model breakdown:** exact count for every module type.
 - **List of controllers/cards:** list of active cards and added CVT optical transceiver units.
 - **Power Calculation (Mains):**
@@ -209,19 +212,20 @@ The **Info** tab instantly generates a complete technical report:
 Количество экранов: 3
 Всего панелей: 160 шт.
 Общая площадь: 40.00 м²
+Общий вес экранов: 1680 кг
 Перемычки: 154 шт.
 Занято портов: 6
 
 ----------------------
 ЭКРАНЫ
-• Main Screen: 120 панелей
-• Left Wing: 20 панелей
-• Right Wing: 20 панелей
+• Main Screen: 120 панелей, вес: 1260 кг, потребление: 38.64 кВт (38640 Вт)
+• Left Wing: 20 панелей, вес: 210 кг, потребление: 6.44 кВт (6440 Вт)
+• Right Wing: 20 панелей, вес: 210 кг, потребление: 6.44 кВт (6440 Вт)
 
 ----------------------
 МОДЕЛИ ПАНЕЛЕЙ
-• Dicolor-C 0.5m (500×500) 4.8: 80 шт.
-• Dicolor-C 1m (500×1000) 4.8: 80 шт.
+• Dicolor-C 0.5m (500×500) 4.8 (res 104×104, 7.5 кг): 80 шт.
+• Dicolor-C 1m (500×1000) 4.8 (res 104×208, 13.5 кг): 80 шт.
 
 ----------------------
 КАРТЫ

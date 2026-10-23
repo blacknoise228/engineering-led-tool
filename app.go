@@ -360,7 +360,8 @@ const defaultInitialPanelsJSON = `[
     "special": false,
     "resW": 104,
     "resH": 104,
-    "power": 161
+    "power": 161,
+    "weight": 7.5
   },
   {
     "id": "dicolor-1m-4p8",
@@ -371,7 +372,8 @@ const defaultInitialPanelsJSON = `[
     "special": false,
     "resW": 104,
     "resH": 208,
-    "power": 322
+    "power": 322,
+    "weight": 13.5
   }
 ]`
 

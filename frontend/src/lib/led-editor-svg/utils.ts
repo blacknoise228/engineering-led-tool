@@ -70,9 +70,10 @@ export type ExportLegend = {
   cablesCount: number;
   linksUsedCount: number;
   linksList: number[];
-  panelGroups: { label: string; sub?: string; count: number }[];
+  panelGroups: { label: string; sub?: string; count: number; weight?: number }[];
   cards?: LegendCardRow[];
   totalAreaM2?: number;
+  totalWeight?: number;
   fibers?: { id: string; name: string; count: number }[];
   power: number;
   refreshRate?: number;
@@ -129,25 +130,29 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     new Set(Array.from(usedPairs, s => parseInt(s.split(':')[1], 10)))
   ).sort((a, b) => a - b);
 
-  const groupsMap = new Map<string, { label: string; sub?: string; count: number }>();
+  const groupsMap = new Map<string, { label: string; sub?: string; count: number; weight?: number }>();
   for (const p of panels) {
-    const pr = presetsList.find(pp => pp.id === p.presetId);
+    const pr = presetsList.find(pp => pp.id === p.presetId) ?? presetsList.find(pp => pp.name === p.presetName);
     const res = pr ? `${pr.resW}×${pr.resH}` : `${p.resW}×${p.resH}`;
     const name = pr?.name ?? String(p.presetName || p.presetId);
     const key = `${name}__${res ?? ''}`;
     const existed = groupsMap.get(key);
     if (existed) existed.count += 1;
-    else groupsMap.set(key, { label: name, sub: res ? `res ${res}` : undefined, count: 1 });
+    else groupsMap.set(key, { label: name, sub: res ? `res ${res}` : undefined, count: 1, weight: pr?.weight });
   }
   const panelGroups = Array.from(groupsMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 
   const byId = new Map(presetsList.map(p => [p.id, p]));
   let power = 0;
+  let totalWeight = 0;
   let n05 = 0, n10 = 0, otherArea = 0;
   for (const p of panels) {
-    const pr = byId.get(p.presetId);
+    const pr = byId.get(p.presetId) ?? presetsList.find(pp => pp.name === p.presetName);
     if (pr) {
       power += pr.power;
+      if (typeof pr.weight === 'number' && pr.weight > 0) {
+        totalWeight += pr.weight;
+      }
       if (pr.w === 500 && pr.h === 500) n05++;
       else if (pr.w === 500 && pr.h === 1000) n10++;
       else otherArea += (pr.w * pr.h) / 1_000_000;
@@ -156,6 +161,7 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     }
   }
   const totalAreaM2 = Math.round((n05 * 0.25 + n10 * 0.50 + otherArea) * 100) / 100;
+  const totalWeightKg = Math.round(totalWeight * 100) / 100;
 
   const formatServerInfo = (modelId: string) => {
     const found = serversList.find(m => m.id === modelId);
@@ -197,6 +203,7 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
     panelGroups,
     cards: cardsLegend,
     totalAreaM2,
+    totalWeight: totalWeightKg,
     fibers,
     power,
     refreshRate: params.refreshRate,
@@ -209,8 +216,11 @@ export interface BuildSpecTextParams extends BuildLegendParams {
 
 export function buildSpecText(params: BuildSpecTextParams): string {
   const legend = buildExportLegend(params);
-  const { panels, screenGroups = [], servers, serverPresets } = params;
+  const { panels, screenGroups = [], servers, serverPresets, presets } = params;
   const serversList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
+  const presetsList = presets && presets.length > 0 ? presets : PRESETS;
+  const presetById = new Map(presetsList.map(p => [p.id, p]));
+  const panelMap = new Map(panels.map(p => [p.id, p]));
 
   const lines: string[] = [
     'СПЕЦИФИКАЦИЯ ОБОРУДОВАНИЯ',
@@ -229,6 +239,9 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   if (typeof legend.totalAreaM2 === 'number') {
     lines.push(`Общая площадь: ${legend.totalAreaM2} м²`);
   }
+  if (typeof legend.totalWeight === 'number' && legend.totalWeight > 0) {
+    lines.push(`Общий вес экранов: ${legend.totalWeight} кг`);
+  }
   lines.push(`Перемычки: ${legend.cablesCount} шт.`);
   lines.push(`Занято портов: ${legend.linksUsedCount}`);
   if (typeof legend.refreshRate === 'number' && legend.refreshRate > 0) {
@@ -241,7 +254,28 @@ export function buildSpecText(params: BuildSpecTextParams): string {
     lines.push('----------------------');
     lines.push('ЭКРАНЫ');
     screenGroups.forEach((g, idx) => {
-      lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${g.panelIds.length} панелей`);
+      let screenWeight = 0;
+      let screenPower = 0;
+      let hasWeight = false;
+      let hasPower = false;
+      for (const pid of g.panelIds) {
+        const pan = panelMap.get(pid);
+        const pr = pan ? (presetById.get(pan.presetId) ?? presetsList.find(x => x.name === pan.presetName)) : undefined;
+        if (pr) {
+          if (typeof pr.weight === 'number' && pr.weight > 0) {
+            screenWeight += pr.weight;
+            hasWeight = true;
+          }
+          if (typeof pr.power === 'number' && pr.power > 0) {
+            screenPower += pr.power;
+            hasPower = true;
+          }
+        }
+      }
+      const roundedWeight = Math.round(screenWeight * 100) / 100;
+      const weightStr = (hasWeight && roundedWeight > 0) ? `, вес: ${roundedWeight} кг` : '';
+      const powerStr = (hasPower && screenPower > 0) ? `, потребление: ${(screenPower / 1000).toFixed(2)} кВт (${screenPower} Вт)` : '';
+      lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${g.panelIds.length} панелей${weightStr}${powerStr}`);
     });
     lines.push('');
   }
@@ -250,7 +284,11 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   lines.push('МОДЕЛИ ПАНЕЛЕЙ');
   if (legend.panelGroups.length > 0) {
     legend.panelGroups.forEach(pg => {
-      lines.push(`• ${pg.label}${pg.sub ? ` (${pg.sub})` : ''}: ${pg.count} шт.`);
+      const details: string[] = [];
+      if (pg.sub) details.push(pg.sub);
+      if (typeof pg.weight === 'number' && pg.weight > 0) details.push(`${pg.weight} кг`);
+      const subText = details.length > 0 ? ` (${details.join(', ')})` : '';
+      lines.push(`• ${pg.label}${subText}: ${pg.count} шт.`);
     });
   } else {
     lines.push('  —');
@@ -281,8 +319,22 @@ export function buildSpecText(params: BuildSpecTextParams): string {
   }
   lines.push('----------------------');
   lines.push('ЭЛЕКТРОПИТАНИЕ (СИЛА)');
-  lines.push(`Потребление: ${(legend.power / 1000).toFixed(2)} кВт (${legend.power} Вт)`);
+  lines.push(`Общее потребление: ${(legend.power / 1000).toFixed(2)} кВт (${legend.power} Вт)`);
   lines.push(`Ток (3 фазы, 230В): ${(legend.power / 230 / 3).toFixed(2)} A`);
+  if (screenGroups.length > 1) {
+    lines.push('По экранам:');
+    screenGroups.forEach((g, idx) => {
+      let sp = 0;
+      for (const pid of g.panelIds) {
+        const pan = panelMap.get(pid);
+        const pr = pan ? (presetById.get(pan.presetId) ?? presetsList.find(x => x.name === pan.presetName)) : undefined;
+        if (pr?.power) sp += pr.power;
+      }
+      if (sp > 0) {
+        lines.push(`• ${g.name || `Screen ${idx + 1}`}: ${(sp / 1000).toFixed(2)} кВт (${sp} Вт, ${(sp / 230 / 3).toFixed(1)} A/фаза)`);
+      }
+    });
+  }
   lines.push('');
 
   lines.push('----------------------');

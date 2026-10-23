@@ -8,6 +8,7 @@ export type PanelPreset = {
   resW: number;
   resH: number;
   power: number;
+  weight?: number;
 };
 
 export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
@@ -21,6 +22,7 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     resW: 104,
     resH: 104,
     power: 161,
+    weight: 7.5,
   },
   {
     id: 'dicolor-1m-4p8',
@@ -32,6 +34,7 @@ export const DEFAULT_PANEL_PRESETS: PanelPreset[] = [
     resW: 104,
     resH: 208,
     power: 322,
+    weight: 13.5,
   },
 ];
 

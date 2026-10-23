@@ -1,12 +1,14 @@
 'use client';
 import React, { useMemo } from 'react';
 import { Panel, ScreenGroup, MaskPage, WiringPage, MaskLogoConfig, DEFAULT_MASK_LOGO_URL } from '@/lib/led-editor-svg/types';
+import { type PanelPreset } from '@/lib/led-editor-svg/presets';
 import { prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import ScreenCard from './ScreenCard';
 
 interface MaskTabProps {
   panels: Panel[];
   screenGroups: ScreenGroup[];
+  presets?: PanelPreset[];
   selectedGroupId: string | null;
   selectedGroupIds?: Set<string>;
   hasPanelSelection: boolean;
@@ -44,6 +46,7 @@ interface MaskTabProps {
 export default function MaskTab({
   panels,
   screenGroups,
+  presets,
   selectedGroupId,
   selectedGroupIds,
   hasPanelSelection,
@@ -358,6 +361,7 @@ export default function MaskTab({
               key={g.id}
               group={g}
               panels={gPanels}
+              presets={presets}
               defaultPosX={sd?.offsetX ?? 0}
               defaultPosY={sd?.offsetY ?? 0}
               isSelected={selectedGroupIds ? selectedGroupIds.has(g.id) : selectedGroupId === g.id}

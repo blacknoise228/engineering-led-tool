@@ -487,6 +487,7 @@ export default function Sidebar(props: SidebarProps) {
         <MaskTab
           panels={allPanels ?? panels}
           screenGroups={screenGroups}
+          presets={presets}
           selectedGroupId={selectedGroupId}
           selectedGroupIds={selectedGroupIds}
           hasPanelSelection={hasPanelSelection}
