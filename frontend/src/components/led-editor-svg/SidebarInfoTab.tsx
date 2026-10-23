@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo, useState, useCallback } from 'react';
 import { type ServerPreset } from '@/lib/led-editor-svg/presets';
+import { useUpdater } from '@/lib/useUpdater';
 
 interface SidebarInfoTabProps {
   eventName: string;
@@ -43,6 +44,7 @@ export default function SidebarInfoTab({
     () => serverPresetsList[0]?.id ?? 'hp-z2'
   );
   const [copiedSpec, setCopiedSpec] = useState(false);
+  const { currentVersion, updateInfo, checking, setIsModalOpen, checkForUpdatesManual } = useUpdater();
 
   const serverValue = useMemo(() => {
     const byId = serverPresetsList.find((s) => s.id === serverName)?.id;
@@ -287,6 +289,44 @@ export default function SidebarInfoTab({
             Загрузить проект
           </button>
         </div>
+      </div>
+
+      {/* Версия и обновление */}
+      <div className="pt-2 border-t border-white/[0.06] space-y-2">
+        <div className="flex items-center justify-between text-xs text-neutral-400">
+          <span>Версия программы:</span>
+          <span className="font-mono text-neutral-200 font-semibold">v{currentVersion}</span>
+        </div>
+
+        {updateInfo?.hasUpdate ? (
+          <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-cyan-300">
+                Доступна версия {updateInfo.latestVersion}!
+              </span>
+            </div>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full py-1.5 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition flex items-center justify-center gap-1.5 shadow-sm shadow-cyan-900/30"
+            >
+              <span>Посмотреть и обновить</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setIsModalOpen(true);
+              checkForUpdatesManual();
+            }}
+            disabled={checking}
+            className="w-full py-2 px-3 rounded-xl bg-[#141620] hover:bg-[#1a1d28] hover:border-cyan-500/30 text-neutral-300 hover:text-white border border-white/[0.08] text-xs font-medium transition flex items-center justify-center gap-1.5"
+          >
+            <svg className={`w-3.5 h-3.5 text-cyan-400 ${checking ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{checking ? 'Проверка...' : 'Проверить обновления'}</span>
+          </button>
+        )}
       </div>
     </>
   );
