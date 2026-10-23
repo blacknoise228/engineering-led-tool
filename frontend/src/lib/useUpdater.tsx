@@ -8,6 +8,7 @@ import {
   startUpdateDownload as apiStartUpdateDownload,
   cancelUpdateDownload as apiCancelUpdateDownload,
   installUpdate as apiInstallUpdate,
+  getDownloadedUpdatePath as apiGetDownloadedUpdatePath,
   showFileInFolder as apiShowFileInFolder,
   openExternalUrl,
   onUpdateDownloadProgress,
@@ -147,18 +148,28 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const installAndRestart = useCallback(async () => {
-    if (downloadedFilePath) {
-      try {
-        await apiInstallUpdate(downloadedFilePath);
-      } catch (e: unknown) {
-        setDownloadError(e instanceof Error ? e.message : 'Не удалось запустить установщик');
+    setDownloadError(null);
+    try {
+      let path = downloadedFilePath;
+      if (!path) {
+        path = await apiGetDownloadedUpdatePath();
       }
+      await apiInstallUpdate(path || '');
+    } catch (e: unknown) {
+      console.error('Failed to install update:', e);
+      setDownloadError(e instanceof Error ? e.message : 'Не удалось запустить установщик');
     }
   }, [downloadedFilePath]);
 
   const openDownloadedFolder = useCallback(async () => {
-    if (downloadedFilePath) {
-      await apiShowFileInFolder(downloadedFilePath);
+    try {
+      let path = downloadedFilePath;
+      if (!path) {
+        path = await apiGetDownloadedUpdatePath();
+      }
+      await apiShowFileInFolder(path || '');
+    } catch (e: unknown) {
+      console.error('Failed to show file in folder:', e);
     }
   }, [downloadedFilePath]);
 

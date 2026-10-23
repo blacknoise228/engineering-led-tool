@@ -22,7 +22,18 @@ export default function UpdateModal() {
     openGitHubRelease,
   } = useUpdater();
 
+  const [launching, setLaunching] = React.useState(false);
+
   if (!isModalOpen) return null;
+
+  const handleInstall = async () => {
+    setLaunching(true);
+    try {
+      await installAndRestart();
+    } finally {
+      setTimeout(() => setLaunching(false), 2000);
+    }
+  };
 
   const handleClose = () => {
     if (downloadState === 'downloading') {
@@ -196,6 +207,16 @@ export default function UpdateModal() {
               </div>
             </div>
           )}
+
+          {downloadError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] leading-relaxed flex items-start gap-2">
+              <span className="text-red-400 font-bold">✕</span>
+              <div className="flex-1">
+                <p className="font-semibold text-red-200">Ошибка запуска установщика</p>
+                <p className="mt-0.5">{downloadError}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer actions */}
@@ -222,15 +243,23 @@ export default function UpdateModal() {
               <>
                 <button
                   onClick={openDownloadedFolder}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 transition font-medium text-xs"
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 transition font-medium text-xs cursor-pointer"
                 >
                   В папке
                 </button>
                 <button
-                  onClick={installAndRestart}
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition font-medium text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-900/30"
+                  onClick={handleInstall}
+                  disabled={launching}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white transition font-medium text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-900/30 cursor-pointer disabled:opacity-60"
                 >
-                  <span>Установить сейчас</span>
+                  {launching ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Запуск...</span>
+                    </>
+                  ) : (
+                    <span>Установить сейчас</span>
+                  )}
                 </button>
               </>
             ) : updateInfo?.hasUpdate ? (

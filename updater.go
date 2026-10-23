@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CurrentAppVersion = "1.0.1"
+	CurrentAppVersion = "0.0.9"
 	GitHubRepoOwner   = "blacknoise228"
 	GitHubRepoName    = "engineering-led-tool"
 	FallbackRepoName  = "ss-engineering-desktop"
@@ -69,10 +69,11 @@ type DownloadProgress struct {
 }
 
 type UpdateManager struct {
-	app         *App
-	mu          sync.Mutex
-	cancelFunc  context.CancelFunc
-	downloading bool
+	app                *App
+	mu                 sync.Mutex
+	cancelFunc         context.CancelFunc
+	downloading        bool
+	lastDownloadedPath string
 }
 
 type semver struct {
@@ -470,6 +471,10 @@ func (a *App) performDownload(ctx context.Context, downloadURL string, fileName 
 		return
 	}
 
+	a.updateMgr.mu.Lock()
+	a.updateMgr.lastDownloadedPath = destPath
+	a.updateMgr.mu.Unlock()
+
 	emitProgress(DownloadProgress{
 		Status:          "completed",
 		BytesDownloaded: downloadedBytes,
@@ -478,6 +483,12 @@ func (a *App) performDownload(ctx context.Context, downloadURL string, fileName 
 		Speed:           0,
 		FilePath:        destPath,
 	})
+}
+
+func (a *App) GetDownloadedUpdatePath() string {
+	a.updateMgr.mu.Lock()
+	defer a.updateMgr.mu.Unlock()
+	return a.updateMgr.lastDownloadedPath
 }
 
 func (a *App) CancelUpdateDownload() error {
@@ -493,19 +504,45 @@ func (a *App) CancelUpdateDownload() error {
 }
 
 func (a *App) InstallUpdate(filePath string) error {
+	if strings.TrimSpace(filePath) == "" {
+		a.updateMgr.mu.Lock()
+		filePath = a.updateMgr.lastDownloadedPath
+		a.updateMgr.mu.Unlock()
+	}
+
 	cleanPath := filepath.Clean(filePath)
-	if _, err := os.Stat(cleanPath); err != nil {
-		return fmt.Errorf("файл обновления не найден: %w", err)
+
+	// If path is empty, doesn't exist or is a directory, check default updates directory
+	if fi, err := os.Stat(cleanPath); err != nil || fi.IsDir() {
+		destDir := filepath.Join(os.TempDir(), "engineering-led-tool-updates")
+		if entries, readErr := os.ReadDir(destDir); readErr == nil {
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(strings.ToLower(e.Name()), ".exe") && !strings.HasSuffix(e.Name(), ".part") {
+					cleanPath = filepath.Join(destDir, e.Name())
+					break
+				}
+			}
+		}
+	}
+
+	fi, err := os.Stat(cleanPath)
+	if err != nil || fi.IsDir() {
+		return fmt.Errorf("файл обновления не найден: %s", cleanPath)
 	}
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd := exec.Command(cleanPath)
+		// On Windows, NSIS installers require admin elevation.
+		// Using cmd /c start "" "<path>" triggers Windows ShellExecute with UAC elevation support
+		cmd := exec.Command("cmd", "/c", "start", "", cleanPath)
 		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("ошибка запуска установщика: %w", err)
+			psCmd := exec.Command("powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", fmt.Sprintf("Start-Process -FilePath '%s'", cleanPath))
+			if psErr := psCmd.Start(); psErr != nil {
+				return fmt.Errorf("ошибка запуска установщика: %v (ps: %v)", err, psErr)
+			}
 		}
 		go func() {
-			time.Sleep(600 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			if a.ctx != nil {
 				wailsRuntime.Quit(a.ctx)
 			}
@@ -525,7 +562,25 @@ func (a *App) InstallUpdate(filePath string) error {
 }
 
 func (a *App) ShowFileInFolder(filePath string) error {
+	if strings.TrimSpace(filePath) == "" {
+		a.updateMgr.mu.Lock()
+		filePath = a.updateMgr.lastDownloadedPath
+		a.updateMgr.mu.Unlock()
+	}
+
 	cleanPath := filepath.Clean(filePath)
+	if fi, err := os.Stat(cleanPath); err != nil || fi.IsDir() {
+		destDir := filepath.Join(os.TempDir(), "engineering-led-tool-updates")
+		if entries, readErr := os.ReadDir(destDir); readErr == nil {
+			for _, e := range entries {
+				if !e.IsDir() && !strings.HasSuffix(e.Name(), ".part") {
+					cleanPath = filepath.Join(destDir, e.Name())
+					break
+				}
+			}
+		}
+	}
+
 	switch runtime.GOOS {
 	case "windows":
 		return exec.Command("explorer.exe", "/select,", cleanPath).Start()

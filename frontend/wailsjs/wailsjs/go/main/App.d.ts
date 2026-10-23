@@ -10,6 +10,8 @@ export function GetAppVersion():Promise<string>;
 
 export function GetCardsConfigPath():Promise<string>;
 
+export function GetDownloadedUpdatePath():Promise<string>;
+
 export function GetFibersConfigPath():Promise<string>;
 
 export function GetInitialProject():Promise<main.OpenProjectResult>;

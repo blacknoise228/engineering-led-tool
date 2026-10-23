@@ -85,12 +85,14 @@ interface WailsApp {
   StartUpdateDownload?: (downloadURL: string, fileName: string) => Promise<void>;
   CancelUpdateDownload?: () => Promise<void>;
   InstallUpdate?: (filePath: string) => Promise<void>;
+  GetDownloadedUpdatePath?: () => Promise<string>;
   ShowFileInFolder?: (filePath: string) => Promise<void>;
   OpenURLInBrowser?: (url: string) => Promise<void>;
 }
 
 interface WailsRuntime {
-  EventsOn?: (eventName: string, callback: (data: unknown) => void) => () => void;
+  EventsOn?: (eventName: string, callback: (...args: unknown[]) => void) => () => void;
+  EventsOnMultiple?: (eventName: string, callback: (...args: unknown[]) => void, maxCallbacks: number) => () => void;
   OnFileDrop?: (callback: (x: number, y: number, paths: string[]) => void, useDropTarget: boolean) => void;
   OnFileDropOff?: () => void;
 }
@@ -246,21 +248,28 @@ export async function readDesktopProjectFile(filePath: string): Promise<{ filePa
   return null;
 }
 
-export function onDesktopProjectOpen(callback: (project: { filePath: string; content: string }) => void): () => void {
+function subscribeWailsEvent(eventName: string, callback: (...args: unknown[]) => void): () => void {
   if (typeof window === 'undefined') return () => {};
   const w = window as unknown as WailsWindow;
+  if (w.runtime?.EventsOnMultiple) {
+    return w.runtime.EventsOnMultiple(eventName, callback, -1);
+  }
   if (w.runtime?.EventsOn) {
-    return w.runtime.EventsOn('open-project', (data: unknown) => {
-      const res = data as { filePath?: string; content?: string } | null;
-      if (res && res.filePath && res.content) {
-        callback({
-          filePath: res.filePath,
-          content: res.content,
-        });
-      }
-    });
+    return w.runtime.EventsOn(eventName, callback);
   }
   return () => {};
+}
+
+export function onDesktopProjectOpen(callback: (project: { filePath: string; content: string }) => void): () => void {
+  return subscribeWailsEvent('open-project', (data: unknown) => {
+    const res = data as { filePath?: string; content?: string } | null;
+    if (res && res.filePath && res.content) {
+      callback({
+        filePath: res.filePath,
+        content: res.content,
+      });
+    }
+  });
 }
 
 export function setupDesktopFileDrop(onFilePaths: (paths: string[]) => void): () => void {
@@ -634,17 +643,24 @@ export async function openExternalUrl(url: string): Promise<void> {
   }
 }
 
-export function onUpdateDownloadProgress(callback: (progress: DownloadProgress) => void): () => void {
-  if (typeof window === 'undefined') return () => {};
-  const w = window as unknown as WailsWindow;
-  if (w.runtime?.EventsOn) {
-    return w.runtime.EventsOn('update-download-progress', (data: unknown) => {
-      if (data && typeof data === 'object') {
-        callback(data as DownloadProgress);
-      }
-    });
+export async function getDownloadedUpdatePath(): Promise<string> {
+  const app = getWailsApp();
+  if (app?.GetDownloadedUpdatePath) {
+    try {
+      return await app.GetDownloadedUpdatePath();
+    } catch (e) {
+      console.error('Failed to get downloaded update path:', e);
+    }
   }
-  return () => {};
+  return '';
+}
+
+export function onUpdateDownloadProgress(callback: (progress: DownloadProgress) => void): () => void {
+  return subscribeWailsEvent('update-download-progress', (data: unknown) => {
+    if (data && typeof data === 'object') {
+      callback(data as DownloadProgress);
+    }
+  });
 }
 
 

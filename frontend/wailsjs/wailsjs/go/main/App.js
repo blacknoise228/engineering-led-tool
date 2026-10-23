@@ -18,6 +18,10 @@ export function GetCardsConfigPath() {
   return window['go']['main']['App']['GetCardsConfigPath']();
 }
 
+export function GetDownloadedUpdatePath() {
+  return window['go']['main']['App']['GetDownloadedUpdatePath']();
+}
+
 export function GetFibersConfigPath() {
   return window['go']['main']['App']['GetFibersConfigPath']();
 }
