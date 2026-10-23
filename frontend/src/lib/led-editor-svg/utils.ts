@@ -152,9 +152,15 @@ export function buildExportLegend(params: BuildLegendParams): ExportLegend {
   }
   const totalAreaM2 = Math.round((n05 * 0.25 + n10 * 0.50 + otherArea) * 100) / 100;
 
+  const formatServerInfo = (modelId: string) => {
+    const found = serversList.find(m => m.id === modelId);
+    if (!found) return modelId;
+    return found.specs ? `${found.name} (${found.specs})` : found.name;
+  };
+
   const serverName = Array.isArray(servers)
-    ? servers.map(s => serversList.find(m => m.id === s.modelId)?.name ?? s.modelId).join(', ')
-    : (servers ? (serversList.find(s => s.id === servers)?.name ?? servers) : '');
+    ? servers.map(s => formatServerInfo(s.modelId)).join(', ')
+    : (servers ? formatServerInfo(servers) : '');
 
   const modelName = cardsList.find(c => c.id === cardId)?.name ?? cardId;
 
@@ -197,7 +203,8 @@ export interface BuildSpecTextParams extends BuildLegendParams {
 
 export function buildSpecText(params: BuildSpecTextParams): string {
   const legend = buildExportLegend(params);
-  const { panels, screenGroups = [] } = params;
+  const { panels, screenGroups = [], servers, serverPresets } = params;
+  const serversList = serverPresets && serverPresets.length > 0 ? serverPresets : SERVERS;
 
   const lines: string[] = [
     'СПЕЦИФИКАЦИЯ ОБОРУДОВАНИЯ',
@@ -270,7 +277,23 @@ export function buildSpecText(params: BuildSpecTextParams): string {
 
   lines.push('----------------------');
   lines.push('МЕДИАСЕРВЕРЫ');
-  lines.push(`Сервер: ${legend.serverName || '—'}`);
+  if (Array.isArray(servers) && servers.length > 0) {
+    if (servers.length === 1) {
+      const found = serversList.find(m => m.id === servers[0].modelId);
+      const name = found ? (found.specs ? `${found.name} (${found.specs})` : found.name) : servers[0].modelId;
+      lines.push(`Сервер: ${name}`);
+    } else {
+      servers.forEach((s, idx) => {
+        const found = serversList.find(m => m.id === s.modelId);
+        const name = found ? (found.specs ? `${found.name} (${found.specs})` : found.name) : s.modelId;
+        lines.push(`• Сервер ${idx + 1}: ${name}`);
+      });
+    }
+  } else if (legend.serverName) {
+    lines.push(`Сервер: ${legend.serverName}`);
+  } else {
+    lines.push('  —');
+  }
   lines.push('');
 
   return lines.join('\n');

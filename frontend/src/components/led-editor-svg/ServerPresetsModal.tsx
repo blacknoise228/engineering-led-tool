@@ -32,6 +32,7 @@ export default function ServerPresetsModal({
 
   const [formName, setFormName] = useState('');
   const [formId, setFormId] = useState('');
+  const [formSpecs, setFormSpecs] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export default function ServerPresetsModal({
     if (cur) {
       setFormName(cur.name);
       setFormId(cur.id);
+      setFormSpecs(cur.specs || (cur as unknown as Record<string, unknown>).characteristics as string || '');
       setFormNotes(cur.notes || '');
       setErrorMessage(null);
     }
@@ -63,8 +65,16 @@ export default function ServerPresetsModal({
   const validateImportedServer = (raw: Record<string, unknown>, idx: number): ServerPreset | null => {
     const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `server-${idx + 1}`;
     const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : `Сервер ${idx + 1}`;
-    const notes = typeof raw.notes === 'string' ? raw.notes : undefined;
-    return { id, name, ...(notes ? { notes } : {}) };
+    const specs = typeof raw.specs === 'string' && raw.specs.trim()
+      ? raw.specs.trim()
+      : (typeof raw.characteristics === 'string' && raw.characteristics.trim() ? raw.characteristics.trim() : undefined);
+    const notes = typeof raw.notes === 'string' && raw.notes.trim() ? raw.notes.trim() : undefined;
+    return {
+      id,
+      name,
+      ...(specs ? { specs } : {}),
+      ...(notes ? { notes } : {}),
+    };
   };
 
   const handleResetDefaults = async () => {
@@ -93,6 +103,7 @@ export default function ServerPresetsModal({
     setSelectedId('');
     setFormName('');
     setFormId('');
+    setFormSpecs('');
     setFormNotes('');
     setErrorMessage(null);
   };
@@ -148,6 +159,7 @@ export default function ServerPresetsModal({
     const newPreset: ServerPreset = {
       id,
       name,
+      specs: formSpecs.trim() || undefined,
       notes: formNotes.trim() || undefined,
     };
 
@@ -241,7 +253,17 @@ export default function ServerPresetsModal({
       validateImportedItem={validateImportedServer}
       openDesktopDialog={openDesktopServersFileDialog}
       saveDesktopDialog={saveDesktopServersFileDialog}
-      renderListItemSubtext={p => `ID: ${p.id}`}
+      renderListItemSubtext={p => (
+        <span className="flex items-center gap-1.5 truncate">
+          <span className="font-mono text-neutral-500">ID: {p.id}</span>
+          {p.specs && (
+            <>
+              <span className="text-neutral-600">•</span>
+              <span className="text-neutral-400 truncate">{p.specs}</span>
+            </>
+          )}
+        </span>
+      )}
     >
       <form onSubmit={handleSaveForm} className="space-y-6">
                 <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
@@ -275,47 +297,63 @@ export default function ServerPresetsModal({
 
                 {/* Form fields */}
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
+                        Название сервера / ноутбука <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formName}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setFormName(val);
+                          if (isCreatingNew && (!formId || formId === slugify(formName))) {
+                            setFormId(slugify(val));
+                          }
+                        }}
+                        placeholder="Например: HP Z2 или Acer Predator"
+                        className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
+                        ID (Идентификатор) <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formId}
+                        onChange={e => setFormId(e.target.value.toLowerCase().trim())}
+                        placeholder="Например: hp-z2"
+                        className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                      Название сервера / ноутбука <span className="text-red-400">*</span>
+                      Характеристики
                     </label>
                     <input
                       type="text"
-                      required
-                      value={formName}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setFormName(val);
-                        if (isCreatingNew && (!formId || formId === slugify(formName))) {
-                          setFormId(slugify(val));
-                        }
-                      }}
-                      placeholder="Например: HP Z2 или Acer Predator"
+                      value={formSpecs}
+                      onChange={e => setFormSpecs(e.target.value)}
+                      placeholder="Например: Intel i9, RTX 4090, 4x DP 1.4, 64GB RAM"
                       className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                     />
                   </div>
+
                   <div>
                     <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                      ID (Идентификатор) <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formId}
-                      onChange={e => setFormId(e.target.value.toLowerCase().trim())}
-                      placeholder="Например: hp-z2"
-                      className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:border-cyan-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400 block mb-1.5">
-                      Примечание / Конфигурация
+                      Примечания
                     </label>
                     <input
                       type="text"
                       value={formNotes}
                       onChange={e => setFormNotes(e.target.value)}
-                      placeholder="Опциональное примечание (GPU, выходы, и т.д.)"
+                      placeholder="Опциональное примечание или комментарий"
                       className="w-full bg-[#181a24] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
                     />
                   </div>

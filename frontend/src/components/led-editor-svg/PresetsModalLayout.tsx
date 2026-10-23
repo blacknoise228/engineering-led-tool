@@ -118,7 +118,13 @@ export default function PresetsModalLayout<T extends BasePresetItem>({
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return items;
-    return items.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q));
+    return items.filter(p => {
+      const hasName = p.name.toLowerCase().includes(q);
+      const hasId = p.id.toLowerCase().includes(q);
+      const hasSpecs = typeof (p as { specs?: string }).specs === 'string' &&
+        (p as { specs?: string }).specs!.toLowerCase().includes(q);
+      return hasName || hasId || hasSpecs;
+    });
   }, [items, searchQuery]);
 
   if (!open) return null;

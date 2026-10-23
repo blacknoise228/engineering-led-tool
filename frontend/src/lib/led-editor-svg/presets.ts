@@ -83,6 +83,7 @@ export const FIBER_CONVERTERS: FiberConverterPreset[] = [
 export type ServerPreset = {
   id: string;
   name: string;
+  specs?: string;
   notes?: string;
 };
 

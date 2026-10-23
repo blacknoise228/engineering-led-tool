@@ -45,6 +45,7 @@ export type CardInstance = {
 export type ServerInstance = {
   id: string;
   modelId: string;
+  specs?: string;
 };
 
 export type ScreenGroup = {

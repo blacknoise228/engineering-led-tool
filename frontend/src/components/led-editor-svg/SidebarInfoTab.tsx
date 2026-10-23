@@ -128,47 +128,67 @@ export default function SidebarInfoTab({
 
           {servers && servers.length > 0 ? (
             <div className="space-y-2">
-              {servers.map((srv, idx) => (
-                <div key={srv.id} className="flex items-center gap-2">
-                  <span className="text-[11px] text-neutral-500 w-3.5 text-right font-mono">
-                    {idx + 1}.
-                  </span>
-                  <select
-                    className="flex-1 bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
-                    value={srv.modelId}
-                    onChange={(e) => onServerChange?.(srv.id, e.target.value)}
-                  >
-                    {serverPresetsList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  {servers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onServerRemove?.(srv.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition"
-                      title="Удалить сервер"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
+              {servers.map((srv, idx) => {
+                const preset = serverPresetsList.find((s) => s.id === srv.modelId);
+                return (
+                  <div key={srv.id} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-neutral-500 w-3.5 text-right font-mono">
+                        {idx + 1}.
+                      </span>
+                      <select
+                        className="flex-1 bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                        value={srv.modelId}
+                        onChange={(e) => onServerChange?.(srv.id, e.target.value)}
+                      >
+                        {serverPresetsList.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                      {servers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => onServerRemove?.(srv.id)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition"
+                          title="Удалить сервер"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    {preset?.specs && (
+                      <div className="text-[10px] text-neutral-400 pl-5.5 truncate font-mono" title={preset.specs}>
+                        {preset.specs}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <select
-              className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
-              value={serverValue}
-              onChange={(e) => setServerId?.(e.target.value)}
-            >
-              {serverPresetsList.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1">
+              <select
+                className="w-full bg-[#181a24] border border-white/[0.08] rounded-lg p-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                value={serverValue}
+                onChange={(e) => setServerId?.(e.target.value)}
+              >
+                {serverPresetsList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              {(() => {
+                const cur = serverPresetsList.find((s) => s.id === serverValue);
+                return cur?.specs ? (
+                  <div className="text-[10px] text-neutral-400 truncate font-mono" title={cur.specs}>
+                    {cur.specs}
+                  </div>
+                ) : null;
+              })()}
+            </div>
           )}
 
           <div className="flex items-center gap-2 pt-1">
