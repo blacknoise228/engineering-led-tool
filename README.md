@@ -55,10 +55,10 @@
 
 **Engineering LED Tool** is a dedicated desktop application for video engineers, technical specialists, VJs, and rental / production companies.
 
-The software is designed to streamline LED screen preparation for events or installations:
+The software was originally developed for personal use and to streamline LED screen preparation for events or installations:
 - Screen geometry design from modules of any size and pixel pitch.
 - Clean visual wiring diagrams showing twisted-pair (Ethernet) patching between cabinets with signal direction arrows and sequential module numbers in the chain.
-- Automatic pixel load limit monitoring per NovaStar controller port (for 50 Hz and 60 Hz).
+- Automatic pixel load limit monitoring per port for NovaStar controllers and devices with similar capacity limits.
 - Instant calculation of equipment specifications: total cables, ports, cards, CVT optical transceivers, total surface area ($m^2$), and power consumption (kW, A).
 - Creation of pixel-accurate raster masks for media servers (Resolume Arena, disguise, TouchDesigner, Watchout, Millumin) with custom brand logo integration.
 
@@ -101,6 +101,9 @@ The diagram clearly displays the signal patch cable daisy chains between cabinet
 - Each sending card or video processor is highlighted with a unique color.
 - Each cabinet displays its sequential number in the port's signal line.
 - Real-time tracking of used pixels per port in 8-bit:
+  - **24 Hz:** up to 1,649,306 px / port
+  - **25 Hz:** up to 1,583,333 px / port
+  - **30 Hz:** up to 1,319,444 px / port
   - **50 Hz:** up to 791,667 px / port
   - **60 Hz:** up to 659,722 px / port
 - One-click automatic daisy-chain wiring for selected cabinets.
@@ -138,7 +141,7 @@ The **Cards** tab and presets dialog allow adding the cards you use:
 - Add and rename controllers.
 - Specify device type: Sending Card or Video Processor.
 - Configure maximum number of physical Ethernet ports.
-- Add NovaStar CVT fiber optic transceivers to equipment lists (CVT10, CVT4K-S) with custom preset manager (`fibers.json`).
+- Add NovaStar CVT fiber optic transceivers to equipment lists (CVT10, CVT4K-S).
 - Import and export controller presets database in JSON format (`cards.json`).
 
 <p align="center">
