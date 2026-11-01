@@ -57,9 +57,9 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
     >
       {items.map((item, idx) => {
         if ('type' in item) {
-          if (item.type === 'separator') return <div key={idx} className="h-px bg-white/[0.08] my-1" />;
+          if (item.type === 'separator') return <div key={`sep-${idx}`} className="h-px bg-white/[0.08] my-1" />;
           return (
-            <div key={idx} className="px-2.5 py-1 text-[10px] uppercase font-semibold text-neutral-400">
+            <div key={`hdr-${idx}-${item.label}`} className="px-2.5 py-1 text-[10px] uppercase font-semibold text-neutral-400">
               {item.label}
             </div>
           );
@@ -68,7 +68,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         const isOpen = subId === item.id;
         return (
           <div
-            key={item.id}
+            key={item.id ? `${item.id}-${idx}` : `item-${idx}`}
             className="relative"
             onMouseEnter={() => {
               if (!item.disabled && hasSub) setSubId(item.id);
@@ -110,16 +110,16 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
               >
                 {item.children!.map((sub, sIdx) => {
                   if ('type' in sub) {
-                    if (sub.type === 'separator') return <div key={sIdx} className="h-px bg-white/[0.08] my-1" />;
+                    if (sub.type === 'separator') return <div key={`sub-sep-${sIdx}`} className="h-px bg-white/[0.08] my-1" />;
                     return (
-                      <div key={sIdx} className="px-2.5 py-1 text-[10px] uppercase font-semibold text-neutral-400">
+                      <div key={`sub-hdr-${sIdx}-${sub.label}`} className="px-2.5 py-1 text-[10px] uppercase font-semibold text-neutral-400">
                         {sub.label}
                       </div>
                     );
                   }
                   return (
                     <button
-                      key={sub.id}
+                      key={sub.id ? `${sub.id}-${sIdx}` : `sub-${sIdx}`}
                       type="button"
                       disabled={sub.disabled}
                       onClick={() => { if (!sub.disabled) { sub.onClick?.(); onClose(); } }}

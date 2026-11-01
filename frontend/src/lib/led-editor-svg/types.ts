@@ -79,6 +79,7 @@ export type MaskPage = {
 export type PanelClipboardData = {
   panels: Panel[];
   cables: CableEx[];
+  screenGroups?: (ScreenGroup & { isFullGroup?: boolean })[];
   sourcePageId: string;
   sourcePasteCount: number;
   isCut?: boolean;
