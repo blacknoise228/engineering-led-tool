@@ -740,8 +740,9 @@ export default function EditorApp() {
     list.some(c => (c.a === a && c.b === b) || (c.a === b && c.b === a)), [cables]);
 
   /** Панель уже привязана к другой карте/порту? */
-  const panelHasOtherAssignment = useCallback((panelId: string, cardNo: number, link: number) => {
-    for (const c of cables) {
+  const panelHasOtherAssignment = useCallback((panelId: string, cardNo: number, link: number, cablesOverride?: CableEx[]) => {
+    const list = cablesOverride ?? cables;
+    for (const c of list) {
       if (c.a !== panelId && c.b !== panelId) continue;
       const cCard = (c as CableEx).card ?? 1;
       const cLink = c.link;
@@ -754,10 +755,12 @@ export default function EditorApp() {
   const bboxPixelsFor = useCallback((
     cardNo: number,
     link: number,
-    extras: string[] = []
+    extras: string[] = [],
+    cablesOverride?: CableEx[]
   ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number; hz: number; panelCount: number } => {
+    const cableList = cablesOverride ?? cables;
     const nodeIds = new Set<string>();
-    for (const c of cables) {
+    for (const c of cableList) {
       const cc = c as CableEx;
       if ((cc.card ?? 0) === cardNo && cc.link === link) {
         nodeIds.add(cc.a);
@@ -801,8 +804,8 @@ export default function EditorApp() {
     return { ok: true, pixels, widthPx, heightPx, limit, hz, panelCount: arr.length };
   }, [cables, panelsById, activeWiringPage?.refreshRate]);
 
-  const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = []) => {
-    const r = bboxPixelsFor(cardNo, link, extras);
+  const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = [], cablesOverride?: CableEx[]) => {
+    const r = bboxPixelsFor(cardNo, link, extras, cablesOverride);
     return r.ok && r.pixels <= r.limit;
   }, [bboxPixelsFor]);
 
@@ -1607,17 +1610,38 @@ export default function EditorApp() {
     if (!src.length) return;
 
     pushHistory();
-    const clones: Panel[] = src.map(p => ({
-      ...p,
-      id: uid('p'),
-      x: p.x + offset.x,
-      y: p.y + offset.y,
-      label: '', // имена пустые — автонумерация по кабелям их задаст
-    }));
+    const idMap = new Map<string, string>();
+    const clones: Panel[] = src.map(p => {
+      const newId = uid('p');
+      idMap.set(p.id, newId);
+      return {
+        ...p,
+        id: newId,
+        x: p.x + offset.x,
+        y: p.y + offset.y,
+        label: '', // имена пустые — автонумерация по кабелям их задаст
+      };
+    });
+
+    const groupsToClone: ScreenGroup[] = wiringScreenGroups
+      .map(g => {
+        const matching = g.panelIds.filter(id => selectedPanels.has(id));
+        if (matching.length === 0) return null;
+        return {
+          ...g,
+          id: uid('screen'),
+          name: `${g.name} (copy)`,
+          panelIds: matching.map(oldId => idMap.get(oldId)!).filter(Boolean),
+        };
+      })
+      .filter((g): g is ScreenGroup => Boolean(g));
 
     setPanels(prev => [...prev, ...clones]);
+    if (groupsToClone.length > 0) {
+      setWiringScreenGroups(prev => [...prev, ...groupsToClone]);
+    }
     setSelectedPanels(new Set(clones.map(p => p.id)));
-  }, [panels, selectedPanels, pushHistory, setPanels]);
+  }, [panels, selectedPanels, wiringScreenGroups, pushHistory, setPanels, setWiringScreenGroups]);
 
   // ======== COPY / CUT / PASTE PANELS ========
   const copySelectedPanels = useCallback(() => {
@@ -1627,9 +1651,23 @@ export default function EditorApp() {
 
     const srcCables = cables.filter(c => selectedPanels.has(c.a) && selectedPanels.has(c.b));
 
+    const killPanels = new Set(selectedPanels);
+    const srcGroups = wiringScreenGroups
+      .map(g => {
+        const matchingPanelIds = g.panelIds.filter(id => killPanels.has(id));
+        if (matchingPanelIds.length === 0) return null;
+        return {
+          ...g,
+          panelIds: matchingPanelIds,
+          isFullGroup: matchingPanelIds.length === g.panelIds.length,
+        };
+      })
+      .filter((g): g is ScreenGroup & { isFullGroup: boolean } => Boolean(g));
+
     const payload: PanelClipboardData = {
       panels: srcPanels,
       cables: srcCables,
+      screenGroups: srcGroups,
       sourcePageId: activeWiringPageId,
       sourcePasteCount: 0,
       isCut: false,
@@ -1647,7 +1685,7 @@ export default function EditorApp() {
     } catch {}
 
     showToast(t('toast.copiedPanels', { count: srcPanels.length }));
-  }, [selectedPanels, panels, cables, activeWiringPageId, showToast, t]);
+  }, [selectedPanels, panels, cables, wiringScreenGroups, activeWiringPageId, showToast, t]);
 
   const cutSelectedPanels = useCallback(() => {
     if (!selectedPanels.size) return;
@@ -1656,9 +1694,23 @@ export default function EditorApp() {
 
     const srcCables = cables.filter(c => selectedPanels.has(c.a) && selectedPanels.has(c.b));
 
+    const killPanels = new Set(selectedPanels);
+    const srcGroups = wiringScreenGroups
+      .map(g => {
+        const matchingPanelIds = g.panelIds.filter(id => killPanels.has(id));
+        if (matchingPanelIds.length === 0) return null;
+        return {
+          ...g,
+          panelIds: matchingPanelIds,
+          isFullGroup: matchingPanelIds.length === g.panelIds.length,
+        };
+      })
+      .filter((g): g is ScreenGroup & { isFullGroup: boolean } => Boolean(g));
+
     const payload: PanelClipboardData = {
       panels: srcPanels,
       cables: srcCables,
+      screenGroups: srcGroups,
       sourcePageId: activeWiringPageId,
       sourcePasteCount: 0,
       isCut: true,
@@ -1676,10 +1728,9 @@ export default function EditorApp() {
     } catch {}
 
     pushHistory();
-    const killPanels = new Set(selectedPanels);
     setPanels(ps => ps.filter(p => !killPanels.has(p.id)));
     setCables(cs => cs.filter(c => !killPanels.has(c.a) && !killPanels.has(c.b)));
-    setScreenGroups(groups =>
+    setWiringScreenGroups(groups =>
       groups
         .map(g => ({
           ...g,
@@ -1692,7 +1743,7 @@ export default function EditorApp() {
     setDraft(null);
 
     showToast(t('toast.cutPanels', { count: srcPanels.length }));
-  }, [selectedPanels, panels, cables, activeWiringPageId, pushHistory, setPanels, setCables, setScreenGroups, showToast, t]);
+  }, [selectedPanels, panels, cables, wiringScreenGroups, activeWiringPageId, pushHistory, setPanels, setCables, setWiringScreenGroups, showToast, t]);
 
   const pastePanels = useCallback(() => {
     let clip = clipboard;
@@ -1757,6 +1808,64 @@ export default function EditorApp() {
       setCables(prev => [...prev, ...clonedCables]);
     }
 
+    let pastedGroups: ScreenGroup[] = [];
+    if (clip.screenGroups && clip.screenGroups.length > 0) {
+      const isCutFirstPaste = Boolean(clip.isCut && clip.sourcePasteCount === 0);
+      const targetExistingGroupIds = new Set(wiringScreenGroups.map(g => g.id));
+      const targetExistingNames = new Set(wiringScreenGroups.map(g => g.name.toLowerCase()));
+
+      pastedGroups = clip.screenGroups.map(g => {
+        const mappedPanelIds = g.panelIds
+          .map(oldId => idMap.get(oldId))
+          .filter((id): id is string => Boolean(id));
+
+        const canKeepId = isCutFirstPaste && g.isFullGroup && !targetExistingGroupIds.has(g.id);
+        const newGroupId = canKeepId ? g.id : uid('screen');
+
+        let groupName = g.name;
+        if (!isCutFirstPaste || targetExistingNames.has(g.name.toLowerCase())) {
+          if (targetExistingNames.has(g.name.toLowerCase())) {
+            groupName = `${g.name} (copy)`;
+          }
+        }
+
+        return {
+          ...g,
+          id: newGroupId,
+          name: groupName,
+          panelIds: mappedPanelIds,
+        };
+      }).filter(g => g.panelIds.length > 0);
+
+      if (pastedGroups.length > 0) {
+        setWiringScreenGroups(prev => [...prev, ...pastedGroups]);
+
+        if (isCutFirstPaste) {
+          const groupIdMap = new Map<string, string>();
+          clip.screenGroups.forEach((g, idx) => {
+            const pasted = pastedGroups[idx];
+            if (pasted) {
+              groupIdMap.set(g.id, pasted.id);
+            }
+          });
+
+          setMaskPages(prev => prev.map(mp => ({
+            ...mp,
+            screenGroups: mp.screenGroups.map(mg => {
+              const targetNewGroupId = groupIdMap.get(mg.id);
+              if (!targetNewGroupId) return mg;
+              return {
+                ...mg,
+                id: targetNewGroupId,
+                name: pastedGroups.find(pg => pg.id === targetNewGroupId)?.name ?? mg.name,
+                panelIds: mg.panelIds.map(oldId => idMap.get(oldId) ?? oldId),
+              };
+            }),
+          })));
+        }
+      }
+    }
+
     setSelectedPanels(new Set(clonedPanels.map(p => p.id)));
     setSelectedCables(new Set());
     setDraft(null);
@@ -1772,7 +1881,7 @@ export default function EditorApp() {
     } catch {}
 
     showToast(t('toast.pastedPanels', { count: clonedPanels.length }));
-  }, [clipboard, activeWiringPageId, panels, pushHistory, setPanels, setCables, showToast, t]);
+  }, [clipboard, activeWiringPageId, panels, wiringScreenGroups, pushHistory, setPanels, setCables, setWiringScreenGroups, setMaskPages, showToast, t]);
 
   // ======== LABELS: S{card}-{port}-{n} (жёсткие типы) ========
 
@@ -1806,9 +1915,9 @@ export default function EditorApp() {
       base, sel, selectedCard, cables,
       activeLinkRef, panelHasOtherAssignment, willPortFit,
     );
-    if (!add.length && (!sel || existing.length === cables.length)) return;
+    if (!add.length) return;
     pushHistory();
-    setCables(sel ? [...existing, ...add] : add);
+    setCables([...existing, ...add]);
   }
 
   const selectAll = useCallback(() => {
@@ -1832,10 +1941,10 @@ export default function EditorApp() {
       wiringPages.forEach(wp => {
         const groups = wp.screenGroups ?? [];
         if (groups.length === 0) return;
-        const groupItems: ContextMenuItem[] = groups.map(g => {
+        const groupItems: ContextMenuItem[] = groups.map((g, gIdx) => {
           const isAdded = activeMaskPage?.screenGroups.some(mg => mg.id === g.id);
           return {
-            id: `add-${g.id}`,
+            id: `add-${wp.id}-${g.id}-${gIdx}`,
             label: `${g.name} (${g.panelIds.length} ${t('mask.panelsUnit')})`,
             disabled: isAdded,
             onClick: () => addScreenToMask(g),

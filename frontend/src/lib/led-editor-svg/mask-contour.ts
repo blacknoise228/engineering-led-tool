@@ -1,6 +1,7 @@
 // src/lib/led-editor-svg/mask-contour.ts
 import { Panel, ScreenGroup, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
 import { TEXTURES } from './textures';
+import { uid } from './utils';
 
 export interface PixelPanel {
   id: string;
@@ -385,14 +386,16 @@ export function autoGroupPanels(panels: Panel[], existingGroups?: ScreenGroup[])
     return minX1 - minX2;
   });
 
+  const usedExisting = new Set<string>();
   return clusters.map((panelIds, idx) => {
     const existing = existingGroups?.find(g =>
-      g.panelIds.some(id => panelIds.includes(id))
+      !usedExisting.has(g.id) && g.panelIds.some(id => panelIds.includes(id))
     );
+    if (existing) usedExisting.add(existing.id);
     const texture = TEXTURES[idx % TEXTURES.length];
 
     return {
-      id: existing?.id ?? `screen-${idx + 1}`,
+      id: existing?.id ?? uid('screen'),
       name: existing?.name ?? `Screen ${idx + 1}`,
       panelIds,
       textureId: existing?.textureId ?? texture.id,

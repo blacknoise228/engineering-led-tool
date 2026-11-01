@@ -56,7 +56,7 @@ export default function AddScreenModal({
                     <span className="text-[11px] text-neutral-400">{groups.length}</span>
                   </div>
                   <div className="grid gap-2">
-                    {groups.map(group => {
+                    {groups.map((group, gIdx) => {
                       const isAdded = activeMaskScreenGroupIds.has(group.id);
                       const gPanels = group.panelIds.map(pid => panelsById.get(pid)).filter((p): p is Panel => Boolean(p));
                       let resW = 0, resH = 0;
@@ -68,7 +68,7 @@ export default function AddScreenModal({
                         resH = Math.round(((maxY - minY) / gPanels[0].h) * r.resH);
                       }
                       return (
-                        <div key={group.id} className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${isAdded ? 'bg-[#141620] border-cyan-500/30' : 'bg-[#141620] border-white/[0.06]'}`}>
+                        <div key={`${wp.id}-${group.id}-${gIdx}`} className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${isAdded ? 'bg-[#141620] border-cyan-500/30' : 'bg-[#141620] border-white/[0.06]'}`}>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold text-white truncate">{group.name}</span>

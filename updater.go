@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CurrentAppVersion = "1.2.0"
+	CurrentAppVersion = "1.2.1"
 	GitHubRepoOwner   = "blacknoise228"
 	GitHubRepoName    = "engineering-led-tool"
 	FallbackRepoName  = "ss-engineering-desktop"
