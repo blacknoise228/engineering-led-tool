@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { savePngFile, saveDesktopZIP, blobToBase64, isDesktopApp, showToast } from '../desktop';
-import { Panel, ScreenGroup, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
+import { Panel, ScreenGroup, MaskPage, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from './types';
 import { getTextureById } from './textures';
 import {
   computePixelPanels,
@@ -449,21 +449,59 @@ export async function exportMaskPNG(
 
 export async function exportMaskZIP(
   panels: Panel[],
-  groups: ScreenGroup[],
+  groupsOrPages: ScreenGroup[] | MaskPage[],
   eventName = 'Mask',
-  pageName?: string,
+  pageNameOrLogo?: string | Partial<MaskLogoConfig> | null,
   logoConfig?: Partial<MaskLogoConfig> | null
 ): Promise<void> {
-  const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, groups, logoConfig);
-  if (totalW === 0 || totalH === 0) return;
+  if (!groupsOrPages || groupsOrPages.length === 0) return;
+
+  let effectivePageName: string | undefined = undefined;
+  let effectiveLogoConfig: Partial<MaskLogoConfig> | null | undefined = logoConfig;
+
+  if (typeof pageNameOrLogo === 'object' && pageNameOrLogo !== null) {
+    effectiveLogoConfig = pageNameOrLogo as Partial<MaskLogoConfig>;
+  } else if (typeof pageNameOrLogo === 'string') {
+    effectivePageName = pageNameOrLogo;
+  }
+
+  const isPagesArray = groupsOrPages.length > 0 && typeof groupsOrPages[0] === 'object' && 'screenGroups' in (groupsOrPages[0] as object);
+
+  const pages: MaskPage[] = isPagesArray
+    ? (groupsOrPages as MaskPage[])
+    : [{ id: 'page-1', name: effectivePageName || 'Page 1', screenGroups: groupsOrPages as ScreenGroup[] }];
 
   const zip = new JSZip();
-  const fullDataUrl = canvas.toDataURL('image/png');
-  const safePage = pageName ? `_${pageName.replace(/[/\\?%*:|"<>]/g, '_')}` : '';
-  zip.file(`${eventName}${safePage}_mask_${totalW}x${totalH}.png`, fullDataUrl.split(',')[1], { base64: true });
+  const safeEvent = (eventName || 'Mask').replace(/[/\\?%*:|"<>]/g, '_');
+  let exportedCount = 0;
+
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    if (!page.screenGroups || page.screenGroups.length === 0) continue;
+
+    const { canvas, totalW, totalH } = await renderFullMaskCanvas(panels, page.screenGroups, effectiveLogoConfig);
+    if (totalW === 0 || totalH === 0) continue;
+
+    const fullDataUrl = canvas.toDataURL('image/png');
+    const safePage = (page.name || `Page_${i + 1}`).replace(/[/\\?%*:|"<>]/g, '_');
+    const baseName = `${safeEvent}_${safePage}_mask_${totalW}x${totalH}`;
+    let pngFilename = `${baseName}.png`;
+    let dup = 1;
+    while (zip.file(pngFilename)) {
+      dup++;
+      pngFilename = `${baseName}_(${dup}).png`;
+    }
+
+    zip.file(pngFilename, fullDataUrl.split(',')[1], { base64: true });
+    exportedCount++;
+  }
+
+  if (exportedCount === 0) return;
 
   const blob = await zip.generateAsync({ type: 'blob' });
-  const filename = `${eventName}${safePage}_mask_${totalW}x${totalH}.zip`;
+  const filename = isPagesArray && pages.length > 1
+    ? `${safeEvent}_masks.zip`
+    : `${safeEvent}_${(pages[0]?.name || effectivePageName || 'mask').replace(/[/\\?%*:|"<>]/g, '_')}_mask.zip`;
 
   if (isDesktopApp()) {
     const base64 = await blobToBase64(blob);

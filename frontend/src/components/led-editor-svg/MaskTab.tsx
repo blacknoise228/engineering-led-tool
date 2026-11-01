@@ -402,7 +402,8 @@ export default function MaskTab({
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={onExportMaskZIP}
-            className="py-2 px-3 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d2b] text-neutral-200 border border-white/[0.08] transition flex items-center justify-center gap-1.5"
+            title={t('mask.downloadZipTitle')}
+            className="py-2 px-2.5 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d2b] text-neutral-200 border border-white/[0.08] transition flex items-center justify-center text-center gap-1.5 leading-snug"
           >
             {t('mask.downloadZip')}
           </button>

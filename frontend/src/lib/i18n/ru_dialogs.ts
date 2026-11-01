@@ -36,7 +36,8 @@ export const ruDialogs = {
   'preview.generating': 'Генерация маски...',
   'preview.noData': 'Нет данных для отображения',
   'preview.downloadPng': 'Скачать PNG',
-  'preview.downloadZip': 'Скачать ZIP',
+  'preview.downloadZip': 'Скачать все страницы (ZIP)',
+  'preview.downloadZipTitle': 'Экспорт всех страниц маски в ZIP-архив',
 
   // Confirm Modal
   'confirm.defaultTitle': 'Подтверждение действия',

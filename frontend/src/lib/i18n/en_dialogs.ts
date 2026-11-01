@@ -36,7 +36,8 @@ export const enDialogs = {
   'preview.generating': 'Generating mask...',
   'preview.noData': 'No data to display',
   'preview.downloadPng': 'Download PNG',
-  'preview.downloadZip': 'Download ZIP',
+  'preview.downloadZip': 'Download all pages (ZIP)',
+  'preview.downloadZipTitle': 'Export all mask pages to ZIP archive',
 
   // Confirm Modal
   'confirm.defaultTitle': 'Confirm Action',

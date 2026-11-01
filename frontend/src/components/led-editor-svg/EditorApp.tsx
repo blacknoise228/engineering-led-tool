@@ -1532,8 +1532,8 @@ export default function EditorApp() {
   }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onExportMaskZIP = useCallback(() => {
-    exportMaskZIP(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
-  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
+    exportMaskZIP(allPanels, maskPages, eventName, maskLogoConfig);
+  }, [allPanels, maskPages, eventName, maskLogoConfig]);
 
   const onPreviewMask = useCallback(() => {
     setPreviewModalOpen(true);
@@ -2392,6 +2392,7 @@ export default function EditorApp() {
           eventName={eventName}
           pageName={activeMaskPage.name}
           maskLogoConfig={maskLogoConfig}
+          maskPages={maskPages}
         />
 
         {/* Модальное окно настройки логотипа бейджей на масках */}

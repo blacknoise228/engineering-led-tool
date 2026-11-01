@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
+import { Panel, ScreenGroup, MaskPage, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { renderFullMaskCanvas, exportMaskPNG, exportMaskZIP, ScreenRenderData } from '@/lib/led-editor-svg/mask-export';
 import { formatMeters } from '@/lib/led-editor-svg/mask-contour';
 import { useI18n } from '@/lib/i18n';
@@ -13,6 +13,7 @@ interface MaskPreviewModalProps {
   eventName: string;
   pageName?: string;
   maskLogoConfig?: MaskLogoConfig;
+  maskPages?: MaskPage[];
 }
 
 export default function MaskPreviewModal({
@@ -23,6 +24,7 @@ export default function MaskPreviewModal({
   eventName,
   pageName,
   maskLogoConfig,
+  maskPages,
 }: MaskPreviewModalProps) {
   const { language, t } = useI18n();
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -116,7 +118,8 @@ export default function MaskPreviewModal({
               {t('preview.downloadPng')}
             </button>
             <button
-              onClick={() => exportMaskZIP(panels, groups, eventName, pageName, maskLogoConfig)}
+              onClick={() => exportMaskZIP(panels, maskPages && maskPages.length > 0 ? maskPages : groups, eventName, pageName, maskLogoConfig)}
+              title={t('preview.downloadZipTitle')}
               className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1a1d28] text-white border border-white/[0.08] shadow-sm transition flex items-center gap-2"
             >
               {t('preview.downloadZip')}
