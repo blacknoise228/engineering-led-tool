@@ -37,6 +37,9 @@ interface EditorToolbarProps {
   setScale: React.Dispatch<React.SetStateAction<number>>;
   resetView: () => void;
   activeRefreshRate?: number;
+  onGroupSelectedPanels?: () => void;
+  onUngroupSelectedPanels?: () => void;
+  onOpenAddScreenModal?: () => void;
 }
 
 export default function EditorToolbar({
@@ -72,29 +75,45 @@ export default function EditorToolbar({
   setScale,
   resetView,
   activeRefreshRate,
+  onGroupSelectedPanels,
+  onUngroupSelectedPanels,
+  onOpenAddScreenModal,
 }: EditorToolbarProps) {
   const { t } = useI18n();
 
   return (
     <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
       <div className="pointer-events-auto flex items-center gap-2 bg-[#0c0d14]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-2xl">
-        {activeTab === 'mask' && selectedGroupCount > 0 ? (
+        {activeTab === 'mask' ? (
           <>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-            </span>
-            <span className="text-xs text-neutral-300">
-              {t('toolbar.selectedScreens', { count: selectedGroupCount })}
-            </span>
-            <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
-            <button
-              onClick={deleteSelected}
-              className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-              title={t('toolbar.deleteScreens')}
-            >
-              ✕
-            </button>
+            {onOpenAddScreenModal && (
+              <button
+                onClick={onOpenAddScreenModal}
+                className="px-2.5 py-0.5 rounded text-[11px] font-medium bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-600/45 hover:to-blue-600/45 text-cyan-200 border border-cyan-500/40 transition flex items-center gap-1"
+              >
+                <span>+</span>
+                <span>{t('mask.addScreenBtn')}</span>
+              </button>
+            )}
+            {selectedGroupCount > 0 && (
+              <>
+                <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+                <span className="text-xs text-neutral-300">
+                  {t('toolbar.selectedScreens', { count: selectedGroupCount })}
+                </span>
+                <button
+                  onClick={deleteSelected}
+                  className="px-1.5 py-0.5 rounded text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
+                  title={t('toolbar.deleteScreens')}
+                >
+                  ✕
+                </button>
+              </>
+            )}
           </>
         ) : selectedPanelCount > 0 ? (
           <>
@@ -106,6 +125,25 @@ export default function EditorToolbar({
               {t('toolbar.selectedPanels', { count: selectedPanelCount })}
             </span>
             <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
+            {onGroupSelectedPanels && (
+              <button
+                onClick={onGroupSelectedPanels}
+                className="px-2 py-0.5 rounded text-[11px] font-medium bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 transition flex items-center gap-1"
+                title={t('wiring.groupSelectedTitle')}
+              >
+                <span>+</span>
+                <span>{t('wiring.groupSelected')}</span>
+              </button>
+            )}
+            {onUngroupSelectedPanels && (
+              <button
+                onClick={onUngroupSelectedPanels}
+                className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-300 border border-white/[0.08] transition"
+                title={t('wiring.ungroupSelectedTitle')}
+              >
+                {t('wiring.ungroup')}
+              </button>
+            )}
             <button
               onClick={copySelectedPanels}
               className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.06] hover:bg-white/[0.12] text-neutral-200 border border-white/[0.08] transition"
@@ -158,7 +196,7 @@ export default function EditorToolbar({
                 </span>
               </>
             )}
-            {activeTab !== 'mask' && typeof activeRefreshRate === 'number' && (
+            {typeof activeRefreshRate === 'number' && (
               <>
                 <span className="text-neutral-600 text-xs">•</span>
                 <span className="text-xs text-neutral-400">

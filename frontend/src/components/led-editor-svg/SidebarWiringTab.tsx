@@ -9,7 +9,7 @@ import {
   type PanelPreset,
   type CardPreset,
 } from '@/lib/led-editor-svg/presets';
-import type { Tool, WiringPage } from '@/lib/led-editor-svg/types';
+import type { Tool, WiringPage, ScreenGroup } from '@/lib/led-editor-svg/types';
 import SnakeIcon from './icons/SnakeIcon';
 import type { SidebarCardInstance } from './SidebarCardsTab';
 import { useI18n } from '@/lib/i18n';
@@ -71,6 +71,13 @@ interface SidebarWiringTabProps {
   clearSelectedWiring: () => void;
   exportPNG: () => void;
   textOutline: (stroke?: string) => React.CSSProperties;
+  screenGroups?: ScreenGroup[];
+  onGroupSelectedPanels?: () => void;
+  onUngroupSelectedPanels?: () => void;
+  onSelectGroupPanels?: (groupId: string) => void;
+  onUngroupScreen?: (groupId: string) => void;
+  onAutoGroupPanels?: () => void;
+  onRenameScreenGroup?: (groupId: string, newName: string) => void;
 }
 
 export default function SidebarWiringTab(props: SidebarWiringTabProps) {
@@ -122,6 +129,13 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
     clearSelectedWiring,
     exportPNG,
     textOutline,
+    screenGroups = [],
+    onGroupSelectedPanels,
+    onUngroupSelectedPanels,
+    onSelectGroupPanels,
+    onUngroupScreen,
+    onAutoGroupPanels,
+    onRenameScreenGroup,
   } = props;
 
   const currentWiringPage = wiringPages.find((p) => p.id === activeWiringPageId);
@@ -316,6 +330,105 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
             <span className="text-[9px] text-neutral-500 font-mono">Ctrl+V</span>
           </button>
         </div>
+      </div>
+
+      {/* ЭКРАНЫ СХЕМЫ (ГРУППЫ) */}
+      <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-neutral-400">
+            {t('wiring.screensSection')}
+          </div>
+          {onAutoGroupPanels && (
+            <button
+              type="button"
+              onClick={onAutoGroupPanels}
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium transition hover:underline"
+              title={t('wiring.autoGroupHint')}
+            >
+              {t('wiring.autoGroup')}
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={!hasPanelSelection}
+            onClick={onGroupSelectedPanels}
+            className="flex-1 py-1.5 px-2.5 rounded-lg border border-cyan-500/40 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 text-cyan-300 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5"
+            title={t('wiring.groupSelectedTitle')}
+          >
+            <span>+</span>
+            <span>{t('wiring.groupSelected')}</span>
+            <span className="text-[9px] text-cyan-400/60 font-mono">Ctrl+G</span>
+          </button>
+          {onUngroupSelectedPanels && (
+            <button
+              type="button"
+              disabled={!hasPanelSelection}
+              onClick={onUngroupSelectedPanels}
+              className="py-1.5 px-2.5 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed transition"
+              title={t('wiring.ungroupSelectedTitle')}
+            >
+              {t('wiring.ungroup')}
+            </button>
+          )}
+        </div>
+
+        {screenGroups.length === 0 ? (
+          <div className="text-[11px] text-neutral-500 py-1 text-center">
+            {t('wiring.noScreensYet')}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {screenGroups.map(g => {
+              const count = g.panelIds.length;
+              return (
+                <div
+                  key={g.id}
+                  className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#141622] border border-white/[0.06] hover:border-white/[0.12] transition"
+                >
+                  <div className="min-w-0 flex items-center gap-1.5 flex-1">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0 ml-1"
+                      style={{ backgroundColor: g.strokeColor || '#38bdf8' }}
+                    />
+                    <input
+                      type="text"
+                      value={g.name}
+                      onChange={(e) => onRenameScreenGroup?.(g.id, e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-white focus:outline-none focus:bg-[#1a1e2e] focus:ring-1 focus:ring-cyan-400 rounded px-1.5 py-0.5 w-full min-w-0 transition border border-transparent hover:border-white/[0.1]"
+                      placeholder="Screen name"
+                    />
+                    <span className="text-[10px] text-neutral-400 font-mono shrink-0 pr-1">
+                      {count} {t('wiring.panelsCountUnit')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onSelectGroupPanels?.(g.id)}
+                      className="px-2 py-0.5 rounded text-[11px] bg-white/[0.06] hover:bg-white/[0.12] text-neutral-300 hover:text-white transition"
+                      title={t('wiring.selectPanels')}
+                    >
+                      {t('wiring.selectBtn')}
+                    </button>
+                    {onUngroupScreen && (
+                      <button
+                        type="button"
+                        onClick={() => onUngroupScreen(g.id)}
+                        className="w-5 h-5 rounded hover:bg-red-500/20 hover:text-red-300 text-neutral-500 flex items-center justify-center text-xs transition"
+                        title={t('wiring.ungroupScreenTitle')}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.06] space-y-2.5">

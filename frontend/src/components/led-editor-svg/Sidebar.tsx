@@ -161,6 +161,15 @@ type SidebarProps = {
 
   maskLogoConfig?: MaskLogoConfig;
   onOpenMaskLogoModal?: () => void;
+  onOpenAddScreenModal?: () => void;
+
+  wiringScreenGroups?: ScreenGroup[];
+  onGroupSelectedPanels?: () => void;
+  onUngroupSelectedPanels?: () => void;
+  onSelectWiringGroupPanels?: (groupId: string) => void;
+  onUngroupScreen?: (groupId: string) => void;
+  onAutoGroupWiringPanels?: () => void;
+  onRenameScreenGroup?: (groupId: string, newName: string) => void;
 };
 
 export default function Sidebar(props: SidebarProps) {
@@ -270,6 +279,14 @@ export default function Sidebar(props: SidebarProps) {
     onAddScreensFromWiringPage,
     maskLogoConfig,
     onOpenMaskLogoModal,
+    onOpenAddScreenModal,
+    wiringScreenGroups,
+    onGroupSelectedPanels,
+    onUngroupSelectedPanels,
+    onSelectWiringGroupPanels,
+    onUngroupScreen,
+    onAutoGroupWiringPanels,
+    onRenameScreenGroup,
   } = props;
 
   const { language, t } = useI18n();
@@ -485,6 +502,13 @@ export default function Sidebar(props: SidebarProps) {
           clearSelectedWiring={clearSelectedWiring}
           exportPNG={exportPNG}
           textOutline={textOutline}
+          screenGroups={wiringScreenGroups}
+          onGroupSelectedPanels={onGroupSelectedPanels}
+          onUngroupSelectedPanels={onUngroupSelectedPanels}
+          onSelectGroupPanels={onSelectWiringGroupPanels}
+          onUngroupScreen={onUngroupScreen}
+          onAutoGroupPanels={onAutoGroupWiringPanels}
+          onRenameScreenGroup={onRenameScreenGroup}
         />
       )}
       {/* === TAB: Маска === */}
@@ -523,6 +547,7 @@ export default function Sidebar(props: SidebarProps) {
           onAddScreensFromWiringPage={onAddScreensFromWiringPage}
           maskLogoConfig={maskLogoConfig}
           onOpenMaskLogoModal={onOpenMaskLogoModal}
+          onOpenAddScreenModal={onOpenAddScreenModal}
         />
       )}
 

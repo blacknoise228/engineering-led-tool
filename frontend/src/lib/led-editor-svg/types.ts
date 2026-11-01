@@ -67,6 +67,7 @@ export type WiringPage = {
   panels: Panel[];
   cables: CableEx[];
   refreshRate?: number;
+  screenGroups?: ScreenGroup[];
 };
 
 export type MaskPage = {

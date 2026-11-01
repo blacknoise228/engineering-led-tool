@@ -42,6 +42,7 @@ interface MaskTabProps {
   // Кастомный логотип бейджей масок
   maskLogoConfig?: MaskLogoConfig;
   onOpenMaskLogoModal?: () => void;
+  onOpenAddScreenModal?: () => void;
 }
 
 export default function MaskTab({
@@ -50,10 +51,7 @@ export default function MaskTab({
   presets,
   selectedGroupId,
   selectedGroupIds,
-  hasPanelSelection,
   onSelectGroup,
-  onAddGroup,
-  onAutoGroup,
   onUpdateGroup,
   onUpdateGroups,
   onRemoveGroup,
@@ -69,10 +67,9 @@ export default function MaskTab({
   onAddMaskPage,
   onRemoveMaskPage,
   onDuplicateMaskPage,
-  wiringPages = [],
-  onAddScreensFromWiringPage,
   maskLogoConfig,
   onOpenMaskLogoModal,
+  onOpenAddScreenModal,
 }: MaskTabProps) {
   const { t } = useI18n();
   const panelsById = new Map(panels.map(p => [p.id, p]));
@@ -247,49 +244,41 @@ export default function MaskTab({
       </div>
 
       {/* Шапка вкладки */}
+      {/* ЭКРАНЫ НА ЭТОМ ХОЛСТЕ */}
       <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold">
           {t('mask.screens', { name: currentMaskPage ? `(${currentMaskPage.name})` : '' })}
         </span>
-        <button
-          onClick={onAutoGroup}
-          className="text-xs text-cyan-400 hover:text-cyan-300 transition hover:underline"
-          title={t('mask.autoGroupTitle')}
-        >
-          {t('mask.autoGroup')}
-        </button>
+        <span className="text-xs text-neutral-400 font-mono">
+          {screenGroups.length}
+        </span>
       </div>
 
-      <button
-        onClick={onAddGroup}
-        disabled={!hasPanelSelection}
-        className="w-full py-2 px-3 text-xs font-medium rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5"
-      >
-        <span>+</span> {t('mask.mergePanels')}
-      </button>
+      {onOpenAddScreenModal && (
+        <button
+          type="button"
+          onClick={onOpenAddScreenModal}
+          className="w-full py-2 px-3 text-xs font-medium rounded-xl border border-cyan-500/40 bg-gradient-to-r from-cyan-600/20 to-blue-600/20 hover:from-cyan-600/30 hover:to-blue-600/30 text-cyan-300 transition flex items-center justify-center gap-1.5 shadow-sm"
+        >
+          <span>+</span>
+          <span>{t('mask.addScreenBtn')}</span>
+        </button>
+      )}
 
-      {/* Быстрое добавление экранов из схем расключения */}
-      {wiringPages.length > 0 && onAddScreensFromWiringPage && (
-        <div className="p-2.5 rounded-xl bg-[#10121a]/60 border border-white/[0.04] space-y-1.5">
-          <div className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">
-            {t('mask.importFromSchema')}
+      {screenGroups.length === 0 && (
+        <div className="p-4 rounded-xl border border-dashed border-white/[0.08] bg-[#10121a]/60 text-center space-y-2">
+          <div className="text-xs text-neutral-400">
+            {t('mask.emptyCanvasHint')}
           </div>
-          <div className="flex flex-wrap gap-1">
-            {wiringPages.map(wp => (
-              <button
-                key={wp.id}
-                type="button"
-                disabled={wp.panels.length === 0}
-                onClick={() => onAddScreensFromWiringPage(wp.id)}
-                className="px-2 py-1 rounded bg-[#181a24] hover:bg-[#222533] disabled:opacity-30 disabled:pointer-events-none text-neutral-300 hover:text-white text-xs border border-white/[0.06] transition flex items-center gap-1"
-                title={t('mask.importSchemaTitle', { name: wp.name, count: wp.panels.length })}
-              >
-                <span>+</span>
-                <span>{wp.name}</span>
-                <span className="text-[10px] text-cyan-400 font-mono">({wp.panels.length})</span>
-              </button>
-            ))}
-          </div>
+          {onOpenAddScreenModal && (
+            <button
+              type="button"
+              onClick={onOpenAddScreenModal}
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium underline"
+            >
+              {t('mask.addScreenBtn')}
+            </button>
+          )}
         </div>
       )}
 
