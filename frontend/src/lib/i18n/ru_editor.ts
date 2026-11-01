@@ -103,6 +103,10 @@ export const ruEditor = {
   // Mask Tab
   'mask.pages': 'Страницы',
   'mask.badgeLogo': 'Логотип в бейдже',
+  'mask.hideBadgeLogo': 'Убрать логотип из бейджика',
+  'mask.logoHidden': 'Скрыт',
+  'mask.logoHiddenDesc': 'Логотип скрыт во всех бейджиках',
+  'mask.logoHiddenBadge': 'Логотип скрыт',
   'mask.customLogo': 'Свой логотип',
   'mask.appLogo': 'Логотип приложения',
   'mask.defaultForAll': 'Стандарт под все бейджики',

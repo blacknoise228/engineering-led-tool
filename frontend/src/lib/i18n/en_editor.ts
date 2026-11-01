@@ -103,6 +103,10 @@ export const enEditor = {
   // Mask Tab
   'mask.pages': 'Pages',
   'mask.badgeLogo': 'Badge Logo',
+  'mask.hideBadgeLogo': 'Remove logo from badge',
+  'mask.logoHidden': 'Hidden',
+  'mask.logoHiddenDesc': 'Logo hidden in all badges',
+  'mask.logoHiddenBadge': 'Logo hidden',
   'mask.customLogo': 'Custom logo',
   'mask.appLogo': 'Application logo',
   'mask.defaultForAll': 'Default for all screen badges',

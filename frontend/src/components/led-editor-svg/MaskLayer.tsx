@@ -514,14 +514,16 @@ export default function MaskLayer({
                   filter={isSelected ? 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))' : undefined}
                 />
                 <g clipPath={`url(#badge-clip-${group.id})`} pointerEvents="none">
-                  <image
-                    href={logoRect.href}
-                    x={logoRect.x}
-                    y={logoRect.y}
-                    width={logoRect.width}
-                    height={logoRect.height}
-                    preserveAspectRatio="xMidYMid meet"
-                  />
+                  {!maskLogoConfig?.hideLogo && (
+                    <image
+                      href={logoRect.href}
+                      x={logoRect.x}
+                      y={logoRect.y}
+                      width={logoRect.width}
+                      height={logoRect.height}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  )}
                   <text
                     x={badgeCx}
                     y={badgeCy}

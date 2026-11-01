@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo } from 'react';
-import { Panel, ScreenGroup, MaskPage, WiringPage, MaskLogoConfig, DEFAULT_MASK_LOGO_URL } from '@/lib/led-editor-svg/types';
+import { Panel, ScreenGroup, MaskPage, WiringPage, MaskLogoConfig, DEFAULT_MASK_LOGO_CONFIG, DEFAULT_MASK_LOGO_URL } from '@/lib/led-editor-svg/types';
 import { type PanelPreset } from '@/lib/led-editor-svg/presets';
 import { prepareScreensData } from '@/lib/led-editor-svg/mask-export';
 import ScreenCard from './ScreenCard';
@@ -41,6 +41,7 @@ interface MaskTabProps {
   onAddScreensFromWiringPage?: (pageId: string) => void;
   // Кастомный логотип бейджей масок
   maskLogoConfig?: MaskLogoConfig;
+  onUpdateMaskLogoConfig?: (cfg: MaskLogoConfig) => void;
   onOpenMaskLogoModal?: () => void;
   onOpenAddScreenModal?: () => void;
 }
@@ -68,6 +69,7 @@ export default function MaskTab({
   onRemoveMaskPage,
   onDuplicateMaskPage,
   maskLogoConfig,
+  onUpdateMaskLogoConfig,
   onOpenMaskLogoModal,
   onOpenAddScreenModal,
 }: MaskTabProps) {
@@ -203,11 +205,11 @@ export default function MaskTab({
             {t('mask.badgeLogo')}
           </span>
           <span className="text-[10px] text-neutral-400 font-mono">
-            {Math.round((maskLogoConfig?.scale ?? 1) * 100)}%
+            {maskLogoConfig?.hideLogo ? t('mask.logoHidden') : `${Math.round((maskLogoConfig?.scale ?? 1) * 100)}%`}
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2.5">
+        <div className={`flex items-center justify-between gap-2.5 transition-opacity ${maskLogoConfig?.hideLogo ? 'opacity-40' : ''}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-12 h-9 rounded-lg bg-[#090a0f] border border-white/[0.08] flex items-center justify-center p-1 shrink-0 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -228,7 +230,7 @@ export default function MaskTab({
                   : t('mask.appLogo')}
               </div>
               <div className="text-[10px] text-neutral-400 truncate">
-                {t('mask.defaultForAll')}
+                {maskLogoConfig?.hideLogo ? t('mask.logoHiddenDesc') : t('mask.defaultForAll')}
               </div>
             </div>
           </div>
@@ -240,6 +242,26 @@ export default function MaskTab({
           >
             {t('mask.configure')}
           </button>
+        </div>
+
+        <div className="pt-2 border-t border-white/[0.06]">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="hide-badge-logo-checkbox"
+              checked={Boolean(maskLogoConfig?.hideLogo)}
+              onChange={(e) => {
+                onUpdateMaskLogoConfig?.({
+                  ...(maskLogoConfig || DEFAULT_MASK_LOGO_CONFIG),
+                  hideLogo: e.target.checked,
+                });
+              }}
+              className="rounded border-white/20 bg-neutral-900 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+            />
+            <span className="text-xs text-neutral-300 hover:text-white transition">
+              {t('mask.hideBadgeLogo')}
+            </span>
+          </label>
         </div>
       </div>
 

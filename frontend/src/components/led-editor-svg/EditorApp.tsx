@@ -2180,6 +2180,7 @@ export default function EditorApp() {
         allCables={allCables}
         allScreenGroups={allScreenGroups}
         maskLogoConfig={maskLogoConfig}
+        onUpdateMaskLogoConfig={handleSaveMaskLogoConfig}
         onOpenMaskLogoModal={() => setIsMaskLogoModalOpen(true)}
         onOpenAddScreenModal={() => setIsAddScreenModalOpen(true)}
         wiringScreenGroups={wiringScreenGroups}

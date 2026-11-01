@@ -19,6 +19,8 @@ export const enDialogs = {
   'logo.resetToAppLogo': 'Reset to app logo',
   'logo.resetToAppLogoTitle': 'Remove custom logo and restore default app logo',
   'logo.sizeAndPosition': 'Size and position in badge',
+  'logo.hideLogo': 'Remove logo from badge',
+  'logo.hideLogoDesc': 'Do not display logo inside info badges on masks',
   'logo.resetTransform': 'Reset (100% / 0, 0)',
   'logo.logoSize': 'Logo size',
   'logo.offsetX': 'Horizontal offset (X)',

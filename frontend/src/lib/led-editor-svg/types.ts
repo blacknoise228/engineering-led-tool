@@ -90,6 +90,7 @@ export type MaskLogoConfig = {
   scale: number;
   offsetX: number;
   offsetY: number;
+  hideLogo?: boolean;
 };
 
 export const DEFAULT_MASK_LOGO_URL = '/logo3.png';
@@ -100,6 +101,7 @@ export const DEFAULT_MASK_LOGO_CONFIG: MaskLogoConfig = {
   scale: 1,
   offsetX: 0,
   offsetY: 0,
+  hideLogo: false,
 };
 
 

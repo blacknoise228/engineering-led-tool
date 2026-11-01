@@ -339,7 +339,7 @@ export async function renderScreenOnCanvas(
 
   const logoRect = computeBadgeLogoRect(octSide, badgeCx, oy, logoConfig);
 
-  if (logoImg && logoImg.width > 0 && logoImg.height > 0) {
+  if (!logoConfig?.hideLogo && logoImg && logoImg.width > 0 && logoImg.height > 0) {
     const imgRatio = logoImg.width / logoImg.height;
     const boxRatio = logoRect.width / logoRect.height;
     let drawW = logoRect.width;
@@ -408,13 +408,16 @@ export async function renderFullMaskCanvas(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const effectiveLogoCfg = getEffectiveLogoConfig(logoConfig);
-  const logoSrc = effectiveLogoCfg.customLogoDataUrl && effectiveLogoCfg.customLogoDataUrl.trim()
-    ? effectiveLogoCfg.customLogoDataUrl.trim()
-    : DEFAULT_MASK_LOGO_URL;
+  let logoImg: HTMLImageElement | null = null;
+  if (!effectiveLogoCfg.hideLogo) {
+    const logoSrc = effectiveLogoCfg.customLogoDataUrl && effectiveLogoCfg.customLogoDataUrl.trim()
+      ? effectiveLogoCfg.customLogoDataUrl.trim()
+      : DEFAULT_MASK_LOGO_URL;
 
-  let logoImg = await loadImage(logoSrc);
-  if ((!logoImg || logoImg.width === 0) && logoSrc !== DEFAULT_MASK_LOGO_URL) {
-    logoImg = await loadImage(DEFAULT_MASK_LOGO_URL);
+    logoImg = await loadImage(logoSrc);
+    if ((!logoImg || logoImg.width === 0) && logoSrc !== DEFAULT_MASK_LOGO_URL) {
+      logoImg = await loadImage(DEFAULT_MASK_LOGO_URL);
+    }
   }
 
   for (const s of screens) {

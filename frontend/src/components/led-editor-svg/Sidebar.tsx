@@ -160,6 +160,7 @@ type SidebarProps = {
   onOpenFiberPresetsModal?: () => void;
 
   maskLogoConfig?: MaskLogoConfig;
+  onUpdateMaskLogoConfig?: (cfg: MaskLogoConfig) => void;
   onOpenMaskLogoModal?: () => void;
   onOpenAddScreenModal?: () => void;
 
@@ -278,6 +279,7 @@ export default function Sidebar(props: SidebarProps) {
     allScreenGroups,
     onAddScreensFromWiringPage,
     maskLogoConfig,
+    onUpdateMaskLogoConfig,
     onOpenMaskLogoModal,
     onOpenAddScreenModal,
     wiringScreenGroups,
@@ -546,6 +548,7 @@ export default function Sidebar(props: SidebarProps) {
           wiringPages={wiringPages}
           onAddScreensFromWiringPage={onAddScreensFromWiringPage}
           maskLogoConfig={maskLogoConfig}
+          onUpdateMaskLogoConfig={onUpdateMaskLogoConfig}
           onOpenMaskLogoModal={onOpenMaskLogoModal}
           onOpenAddScreenModal={onOpenAddScreenModal}
         />

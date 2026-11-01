@@ -19,6 +19,8 @@ export const ruDialogs = {
   'logo.resetToAppLogo': 'Сбросить к лого приложения',
   'logo.resetToAppLogoTitle': 'Удалить кастомный логотип и вернуть стандартный логотип приложения',
   'logo.sizeAndPosition': 'Размер и расположение в бейдже',
+  'logo.hideLogo': 'Убрать логотип из бейджика',
+  'logo.hideLogoDesc': 'Не отображать логотип внутри инфо-плашек на масках',
   'logo.resetTransform': 'Сбросить (100% / 0, 0)',
   'logo.logoSize': 'Размер логотипа',
   'logo.offsetX': 'Смещение по горизонтали (X)',

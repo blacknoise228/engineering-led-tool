@@ -476,11 +476,13 @@ export function computeBadgeLogoRect(
   scale: number;
   offsetX: number;
   offsetY: number;
+  hideLogo: boolean;
 } {
   const cfg = { ...DEFAULT_MASK_LOGO_CONFIG, ...(logoConfig || {}) };
   const scale = Math.max(0.2, Math.min(3.0, Number.isFinite(cfg.scale) ? cfg.scale : 1));
   const offsetX = Math.max(-45, Math.min(45, Number.isFinite(cfg.offsetX) ? cfg.offsetX : 0));
   const offsetY = Math.max(-20, Math.min(60, Number.isFinite(cfg.offsetY) ? cfg.offsetY : 0));
+  const hideLogo = Boolean(cfg.hideLogo);
 
   const width = octSide * 0.6 * scale;
   const height = octSide * 0.26 * scale;
@@ -508,6 +510,7 @@ export function computeBadgeLogoRect(
     scale,
     offsetX,
     offsetY,
+    hideLogo,
   };
 }
 
