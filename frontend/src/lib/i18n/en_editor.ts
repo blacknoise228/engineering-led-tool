@@ -47,6 +47,8 @@ export const enEditor = {
   'wiring.ungroupSelectedTitle': 'Ungroup selected cabinets (Ctrl+Shift+G)',
   'wiring.noScreensYet': 'Select cabinets on canvas and click "Group into Screen"',
   'wiring.panelsCountUnit': 'cabs',
+  'wiring.snapEdge': 'Panel edge',
+  'wiring.snapGrid': 'Grid',
   'wiring.selectPanels': 'Select cabinets of this screen on canvas',
   'wiring.selectBtn': 'Select',
   'wiring.ungroupScreenTitle': 'Ungroup screen',
@@ -125,6 +127,10 @@ export const enEditor = {
   'mask.downloadZip': 'Download ZIP',
   'mask.preview': 'Preview',
   'mask.dragBadgeTooltip': 'Drag badge to offset from center. Shift+drag to resize',
+  'mask.snapCornerToCenter': 'Corner to Center',
+  'mask.snapCenter': 'Center',
+  'mask.snapEdge': 'Edge',
+  'mask.snapOrigin': 'Canvas edge (0)',
 
   // Context menu
   'menu.group': 'Group into Screen',

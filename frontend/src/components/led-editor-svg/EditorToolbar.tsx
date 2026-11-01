@@ -40,6 +40,8 @@ interface EditorToolbarProps {
   onGroupSelectedPanels?: () => void;
   onUngroupSelectedPanels?: () => void;
   onOpenAddScreenModal?: () => void;
+  snapEnabled?: boolean;
+  onToggleSnap?: () => void;
 }
 
 export default function EditorToolbar({
@@ -78,6 +80,8 @@ export default function EditorToolbar({
   onGroupSelectedPanels,
   onUngroupSelectedPanels,
   onOpenAddScreenModal,
+  snapEnabled = true,
+  onToggleSnap,
 }: EditorToolbarProps) {
   const { t } = useI18n();
 
@@ -288,6 +292,29 @@ export default function EditorToolbar({
       </div>
 
       <div className="pointer-events-auto flex items-center gap-1.5 bg-[#0c0d14]/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/[0.08] shadow-2xl">
+        {onToggleSnap && (
+          <>
+            <button
+              type="button"
+              onClick={onToggleSnap}
+              title={snapEnabled ? t('toolbar.snappingOn') : t('toolbar.snappingOff')}
+              className={[
+                'h-7 px-2 flex items-center gap-1.5 rounded-lg border text-xs font-medium transition select-none',
+                snapEnabled
+                  ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                  : 'border-white/[0.08] bg-white/[0.03] text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08]',
+              ].join(' ')}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3v7a6 6 0 0 0 12 0V3" />
+                <path d="M4 3h4" />
+                <path d="M16 3h4" />
+              </svg>
+              <span className="hidden md:inline">{t('toolbar.snapping')}</span>
+            </button>
+            <div className="w-px h-3.5 bg-white/[0.1] mx-0.5" />
+          </>
+        )}
         <button
           onClick={undo}
           title={t('toolbar.undo')}

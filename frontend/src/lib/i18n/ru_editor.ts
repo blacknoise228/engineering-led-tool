@@ -47,6 +47,8 @@ export const ruEditor = {
   'wiring.ungroupSelectedTitle': 'Разгруппировать выделенные кабинеты (Ctrl+Shift+G)',
   'wiring.noScreensYet': 'Выделите кабинеты на холсте и нажмите «Сгруппировать в экран»',
   'wiring.panelsCountUnit': 'каб.',
+  'wiring.snapEdge': 'Стык панелей',
+  'wiring.snapGrid': 'Сетка',
   'wiring.selectPanels': 'Выделить кабинеты этого экрана на холсте',
   'wiring.selectBtn': 'Выбрать',
   'wiring.ungroupScreenTitle': 'Разгруппировать экран',
@@ -125,6 +127,10 @@ export const ruEditor = {
   'mask.downloadZip': 'Скачать ZIP',
   'mask.preview': 'Предпросмотр',
   'mask.dragBadgeTooltip': 'Перетащите бейдж для смещения от центра. Shift+перетаскивание — изменить размер',
+  'mask.snapCornerToCenter': 'Угол к центру',
+  'mask.snapCenter': 'Центр',
+  'mask.snapEdge': 'Край',
+  'mask.snapOrigin': 'Край холста (0)',
 
   // Context menu
   'menu.group': 'Сгруппировать в экран',

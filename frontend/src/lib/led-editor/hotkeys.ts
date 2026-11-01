@@ -10,6 +10,7 @@ export function useHotkeys(
         selectedGroupIds?: Set<string>,
         tool: Tool,
         pan: Vec,
+        snapEnabled?: boolean,
 
         draft: {
             fromId: string;
@@ -56,7 +57,7 @@ export function useHotkeys(
     groupSelected?: () => void,
     ungroupSelected?: () => void
 ) {
-    const { scale, svgRef, draft, pan, tool, selectedCables, selectedPanels, selectedGroupIds } = values;
+    const { scale, svgRef, draft, pan, tool, selectedCables, selectedPanels, selectedGroupIds, snapEnabled = true } = values;
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
             if (draft && svgRef.current) {
@@ -72,7 +73,8 @@ export function useHotkeys(
                 const rawDx = (e.clientX - dg.startClient.x) / scale;
                 const rawDy = (e.clientY - dg.startClient.y) / scale;
                 const selSet = new Set(dg.ids);
-                const { dx, dy } = applySnapToDelta(selSet, rawDx, rawDy);
+                const isBypassed = e.altKey || snapEnabled === false;
+                const { dx, dy } = isBypassed ? { dx: rawDx, dy: rawDy } : applySnapToDelta(selSet, rawDx, rawDy);
                 setPanels(ps => ps.map(p => selSet.has(p.id)
                     ? ({ ...p, x: dg.starts[p.id].x + dx, y: dg.starts[p.id].y + dy })
                     : p
@@ -206,7 +208,7 @@ export function useHotkeys(
             window.removeEventListener('contextmenu', onContextMenu);
         };
     }, [
-        draft, pan, scale, applySnapToDelta, onPointerUp,
+        draft, pan, scale, applySnapToDelta, onPointerUp, snapEnabled,
         deleteSelected, exportPNG, redo, undo,
         selectedPanels.size, selectedCables.size, selectedGroupIds, tool,
         duplicateSelectedPanels, selectAll, copySelected, cutSelected, paste, saveProject, saveProjectAs, newProject,

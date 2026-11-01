@@ -4,6 +4,8 @@ import { Panel, ScreenGroup, MaskLogoConfig } from '@/lib/led-editor-svg/types';
 import { getTextureById } from '@/lib/led-editor-svg/textures';
 import { computeContour, computePixelPanels, formatMeters, getMaskPanelResolution, computeBadgeSize, getBadgeBounds, computeBadgeLogoRect, OCT_POINTS } from '@/lib/led-editor-svg/mask-contour';
 import { computeAutoPositions } from '@/lib/led-editor-svg/mask-export';
+import { useI18n } from '@/lib/i18n';
+import { computeMaskSnap, type ActiveMaskSnapGuide, type ScreenBox } from '@/lib/led-editor-svg/mask-snap';
 
 interface MaskLayerProps {
   panels: Panel[];
@@ -18,6 +20,7 @@ interface MaskLayerProps {
   showGuides?: boolean;
   showBadges?: boolean;
   maskLogoConfig?: MaskLogoConfig;
+  snapEnabled?: boolean;
 }
 
 export default function MaskLayer({
@@ -33,7 +36,9 @@ export default function MaskLayer({
   showGuides = true,
   showBadges = true,
   maskLogoConfig,
+  snapEnabled = true,
 }: MaskLayerProps) {
+  const { t } = useI18n();
   const panelsById = useMemo(() => new Map(panels.map(p => [p.id, p])), [panels]);
 
   const activeSelectedIds = useMemo(() => {
@@ -46,6 +51,7 @@ export default function MaskLayer({
     deltaX: number;
     deltaY: number;
     groupIds: Set<string>;
+    guides?: ActiveMaskSnapGuide[];
   } | null>(null);
 
   // Локальное состояние драга бейджа (смещение или масштаб с Shift)
@@ -177,13 +183,18 @@ export default function MaskLayer({
     const minStartY = Math.min(...movingItems.map(it => it.posPxY));
 
     // Неподвижные экраны для прилипания
-    const otherBoxes = screenItems
+    const otherBoxes: ScreenBox[] = screenItems
       .filter(it => !movingIds.includes(it.group.id))
       .map(it => ({
+        id: it.group.id,
         x: it.posPxX,
         y: it.posPxY,
         w: it.wPx,
         h: it.hPx,
+        r: it.posPxX + it.wPx,
+        b: it.posPxY + it.hPx,
+        cx: it.posPxX + it.wPx / 2,
+        cy: it.posPxY + it.hPx / 2,
       }));
 
     let curDeltaX = 0;
@@ -202,64 +213,23 @@ export default function MaskLayer({
 
       let deltaX = Math.max(-minStartX, rawDx);
       let deltaY = Math.max(-minStartY, rawDy);
+      let activeGuides: ActiveMaskSnapGuide[] = [];
 
-      // Прилипание к краю холста (0) и границам других экранов (отключается с Alt)
-      if (!moveEv.altKey) {
-        const snapDist = 20; // в пикселях
-
-        let bestDiffX = snapDist;
-        let bestDeltaX = deltaX;
-
-        // 1. Прилипание самого левого экрана группы к 0
-        if (Math.abs(minStartX + deltaX) < bestDiffX) {
-          bestDiffX = Math.abs(minStartX + deltaX);
-          bestDeltaX = -minStartX;
-        }
-
-        // 2. Прилипание перетаскиваемого экрана к другим экранам
-        const candItemX = startPosX + deltaX;
-        for (const ob of otherBoxes) {
-          if (Math.abs(candItemX - ob.x) < bestDiffX) {
-            bestDiffX = Math.abs(candItemX - ob.x);
-            bestDeltaX = ob.x - startPosX;
-          }
-          if (Math.abs(candItemX - (ob.x + ob.w)) < bestDiffX) {
-            bestDiffX = Math.abs(candItemX - (ob.x + ob.w));
-            bestDeltaX = (ob.x + ob.w) - startPosX;
-          }
-          if (Math.abs(candItemX - (ob.x - item.wPx)) < bestDiffX) {
-            bestDiffX = Math.abs(candItemX - (ob.x - item.wPx));
-            bestDeltaX = (ob.x - item.wPx) - startPosX;
-          }
-        }
-        deltaX = Math.max(-minStartX, bestDeltaX);
-
-        let bestDiffY = snapDist;
-        let bestDeltaY = deltaY;
-
-        // 1. Прилипание самого верхнего экрана группы к 0
-        if (Math.abs(minStartY + deltaY) < bestDiffY) {
-          bestDiffY = Math.abs(minStartY + deltaY);
-          bestDeltaY = -minStartY;
-        }
-
-        // 2. Прилипание перетаскиваемого экрана к другим экранам
-        const candItemY = startPosY + deltaY;
-        for (const ob of otherBoxes) {
-          if (Math.abs(candItemY - ob.y) < bestDiffY) {
-            bestDiffY = Math.abs(candItemY - ob.y);
-            bestDeltaY = ob.y - startPosY;
-          }
-          if (Math.abs(candItemY - (ob.y + ob.h)) < bestDiffY) {
-            bestDiffY = Math.abs(candItemY - (ob.y + ob.h));
-            bestDeltaY = (ob.y + ob.h) - startPosY;
-          }
-          if (Math.abs(candItemY - (ob.y - item.hPx)) < bestDiffY) {
-            bestDiffY = Math.abs(candItemY - (ob.y - item.hPx));
-            bestDeltaY = (ob.y - item.hPx) - startPosY;
-          }
-        }
-        deltaY = Math.max(-minStartY, bestDeltaY);
+      // Прилипание к краю холста (0), центрам и границам других экранов (отключается с Alt или snapEnabled === false)
+      if (snapEnabled && !moveEv.altKey) {
+        const snapRes = computeMaskSnap(
+          { startX: startPosX, startY: startPosY, w: item.wPx, h: item.hPx },
+          minStartX,
+          minStartY,
+          rawDx,
+          rawDy,
+          otherBoxes,
+          scale,
+          t
+        );
+        deltaX = snapRes.deltaX;
+        deltaY = snapRes.deltaY;
+        activeGuides = snapRes.guides;
       }
 
       curDeltaX = deltaX;
@@ -269,6 +239,7 @@ export default function MaskLayer({
         deltaX,
         deltaY,
         groupIds: new Set(movingIds),
+        guides: activeGuides,
       });
     };
 
@@ -589,6 +560,99 @@ export default function MaskLayer({
           </g>
         );
       })}
+
+      {/* 5. Умные направляющие линии и метки примагничивания при драге (Smart Guides) */}
+      {dragState?.guides && dragState.guides.length > 0 && (
+        <g id="mask-snap-guides" pointerEvents="none" className="select-none">
+          {dragState.guides.map((g, idx) => {
+            const isX = g.axis === 'x';
+            const pos = g.pos;
+            const x1 = isX ? pos : g.lineMin;
+            const y1 = isX ? g.lineMin : pos;
+            const x2 = isX ? pos : g.lineMax;
+            const y2 = isX ? g.lineMax : pos;
+
+            const isCornerToCenter = g.type === 'corner-to-center';
+            const isCenter = g.type === 'center';
+            const lineColor = isCornerToCenter ? '#f43f5e' : (isCenter ? '#06b6d4' : '#a855f7');
+            const glowColor = isCornerToCenter ? 'rgba(244, 63, 94, 0.35)' : (isCenter ? 'rgba(6, 182, 212, 0.35)' : 'rgba(168, 85, 247, 0.35)');
+
+            const badgeX = isX ? pos : (g.lineMin + g.lineMax) / 2;
+            const badgeY = isX ? Math.max(20, g.lineMin + 15) : pos;
+
+            return (
+              <g key={`guide-${g.axis}-${pos}-${idx}`}>
+                {/* Мягкое свечение */}
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={glowColor} strokeWidth={4} />
+                {/* Четкая пунктирная линия */}
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={lineColor} strokeWidth={1.5} strokeDasharray="5 3" />
+
+                {/* Точки привязки */}
+                {g.points.map((pt, pIdx) => {
+                  if (pt.kind === 'center') {
+                    return (
+                      <g key={`pt-${pIdx}`} transform={`translate(${pt.x}, ${pt.y})`}>
+                        <rect
+                          x={-5}
+                          y={-5}
+                          width={10}
+                          height={10}
+                          transform="rotate(45)"
+                          fill={lineColor}
+                          stroke="#ffffff"
+                          strokeWidth={1.5}
+                          filter="drop-shadow(0 0 4px rgba(0,0,0,0.8))"
+                        />
+                        <circle cx={0} cy={0} r={1.5} fill="#ffffff" />
+                      </g>
+                    );
+                  }
+                  if (pt.kind === 'corner') {
+                    return (
+                      <g key={`pt-${pIdx}`} transform={`translate(${pt.x}, ${pt.y})`}>
+                        <circle cx={0} cy={0} r={5.5} fill="#ffffff" stroke={lineColor} strokeWidth={1.5} filter="drop-shadow(0 0 4px rgba(0,0,0,0.8))" />
+                        <circle cx={0} cy={0} r={2.5} fill={lineColor} />
+                      </g>
+                    );
+                  }
+                  return (
+                    <g key={`pt-${pIdx}`} transform={`translate(${pt.x}, ${pt.y})`}>
+                      <circle cx={0} cy={0} r={4} fill={lineColor} stroke="#ffffff" strokeWidth={1.2} filter="drop-shadow(0 0 3px rgba(0,0,0,0.8))" />
+                    </g>
+                  );
+                })}
+
+                {/* Бейдж с описанием и точной координатой */}
+                <g transform={`translate(${badgeX}, ${badgeY})`}>
+                  <g transform={`translate(${isX ? 8 : 0}, ${isX ? 0 : -14})`}>
+                    <rect
+                      x={-4}
+                      y={-10}
+                      width={Math.max(70, g.label.length * 6.5 + 46)}
+                      height={20}
+                      rx={5}
+                      fill="#0f111a"
+                      stroke={lineColor}
+                      strokeWidth={1}
+                      filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))"
+                    />
+                    <text
+                      x={4}
+                      y={4}
+                      fill="#ffffff"
+                      fontSize={10}
+                      fontWeight="600"
+                      fontFamily="sans-serif"
+                    >
+                      {g.label} • {Math.round(pos)} px
+                    </text>
+                  </g>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+      )}
     </g>
   );
 }

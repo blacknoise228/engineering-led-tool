@@ -696,6 +696,14 @@ export default function EditorApp() {
   }, [pushHistory, setSelectedGroupId]);
 
   // ======== SNAP ========
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [wiringSnapGuides, setWiringSnapGuides] = useState<{
+    x: number | null;
+    y: number | null;
+    kindX?: 'edge' | 'grid';
+    kindY?: 'edge' | 'grid';
+  } | null>(null);
+
   type XEdge = 'L' | 'R'; type YEdge = 'T' | 'B';
   const snapLock = useRef<{
     x: { kind: 'edge' | 'grid'; mId: string; mEdge: XEdge; target: number } | null;
@@ -704,9 +712,24 @@ export default function EditorApp() {
 
   const applySnapToDelta = useCallback(
     (ids: Set<string>, rawDx: number, rawDy: number) => {
-      return snapFunc(panels, snapLock, ids, rawDx, rawDy)
+      if (!snapEnabled) {
+        setWiringSnapGuides(null);
+        return { dx: rawDx, dy: rawDy };
+      }
+      const res = snapFunc(panels, snapLock, ids, rawDx, rawDy);
+      if (snapLock.current.x || snapLock.current.y) {
+        setWiringSnapGuides({
+          x: snapLock.current.x ? snapLock.current.x.target : null,
+          y: snapLock.current.y ? snapLock.current.y.target : null,
+          kindX: snapLock.current.x?.kind,
+          kindY: snapLock.current.y?.kind,
+        });
+      } else {
+        setWiringSnapGuides(null);
+      }
+      return res;
     },
-    [panels]
+    [panels, snapEnabled]
   );
 
   // ======== WIRING RULES ========
@@ -936,6 +959,7 @@ export default function EditorApp() {
 
   const onPointerUp = useCallback(() => {
     snapLock.current.x = null; snapLock.current.y = null;
+    setWiringSnapGuides(null);
 
     if (marquee && marqueeStart.current) {
       const rect = marquee;
@@ -1979,6 +2003,7 @@ export default function EditorApp() {
       pan,
       draft,
       svgRef,
+      snapEnabled,
     },
     setDraft,
     marqueeStart,
@@ -2189,6 +2214,7 @@ export default function EditorApp() {
                 showGuides={true}
                 showBadges={true}
                 maskLogoConfig={maskLogoConfig}
+                snapEnabled={snapEnabled}
               />
             ) : (
               <PanelsLayer
@@ -2224,6 +2250,34 @@ export default function EditorApp() {
                   onCableMouseDown={onCableMouseDown}
                 />
                 <SelectionMarquee rect={marquee} />
+                {wiringSnapGuides && (
+                  <g id="wiring-snap-guides" pointerEvents="none" className="select-none">
+                    {wiringSnapGuides.x !== null && (
+                      <g>
+                        <line x1={wiringSnapGuides.x} y1="-10000" x2={wiringSnapGuides.x} y2="10000" stroke="rgba(6, 182, 212, 0.35)" strokeWidth={4} />
+                        <line x1={wiringSnapGuides.x} y1="-10000" x2={wiringSnapGuides.x} y2="10000" stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="5 3" />
+                        <g transform={`translate(${wiringSnapGuides.x + 8}, 60)`}>
+                          <rect x="-4" y="-10" width={wiringSnapGuides.kindX === 'grid' ? 84 : 96} height={20} rx={5} fill="#0f111a" stroke="#06b6d4" strokeWidth={1} filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))" />
+                          <text x="4" y="4" fill="#ffffff" fontSize={10} fontWeight="600" fontFamily="sans-serif">
+                            {wiringSnapGuides.kindX === 'grid' ? t('wiring.snapGrid') : t('wiring.snapEdge')} • {Math.round(wiringSnapGuides.x)}
+                          </text>
+                        </g>
+                      </g>
+                    )}
+                    {wiringSnapGuides.y !== null && (
+                      <g>
+                        <line x1="-10000" y1={wiringSnapGuides.y} x2="10000" y2={wiringSnapGuides.y} stroke="rgba(6, 182, 212, 0.35)" strokeWidth={4} />
+                        <line x1="-10000" y1={wiringSnapGuides.y} x2="10000" y2={wiringSnapGuides.y} stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="5 3" />
+                        <g transform={`translate(60, ${wiringSnapGuides.y - 14})`}>
+                          <rect x="-4" y="-10" width={wiringSnapGuides.kindY === 'grid' ? 84 : 96} height={20} rx={5} fill="#0f111a" stroke="#06b6d4" strokeWidth={1} filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))" />
+                          <text x="4" y="4" fill="#ffffff" fontSize={10} fontWeight="600" fontFamily="sans-serif">
+                            {wiringSnapGuides.kindY === 'grid' ? t('wiring.snapGrid') : t('wiring.snapEdge')} • {Math.round(wiringSnapGuides.y)}
+                          </text>
+                        </g>
+                      </g>
+                    )}
+                  </g>
+                )}
               </>
             )
           }
@@ -2246,6 +2300,8 @@ export default function EditorApp() {
           onGroupSelectedPanels={groupSelectedPanels}
           onUngroupSelectedPanels={ungroupSelectedPanels}
           onOpenAddScreenModal={() => setIsAddScreenModalOpen(true)}
+          snapEnabled={snapEnabled}
+          onToggleSnap={() => setSnapEnabled(v => !v)}
           maskPages={maskPages}
           activeMaskPageId={activeMaskPageId}
           switchMaskPage={switchMaskPage}
