@@ -740,8 +740,9 @@ export default function EditorApp() {
     list.some(c => (c.a === a && c.b === b) || (c.a === b && c.b === a)), [cables]);
 
   /** Панель уже привязана к другой карте/порту? */
-  const panelHasOtherAssignment = useCallback((panelId: string, cardNo: number, link: number) => {
-    for (const c of cables) {
+  const panelHasOtherAssignment = useCallback((panelId: string, cardNo: number, link: number, cablesOverride?: CableEx[]) => {
+    const list = cablesOverride ?? cables;
+    for (const c of list) {
       if (c.a !== panelId && c.b !== panelId) continue;
       const cCard = (c as CableEx).card ?? 1;
       const cLink = c.link;
@@ -754,10 +755,12 @@ export default function EditorApp() {
   const bboxPixelsFor = useCallback((
     cardNo: number,
     link: number,
-    extras: string[] = []
+    extras: string[] = [],
+    cablesOverride?: CableEx[]
   ): { ok: boolean; pixels: number; widthPx: number; heightPx: number; limit: number; hz: number; panelCount: number } => {
+    const cableList = cablesOverride ?? cables;
     const nodeIds = new Set<string>();
-    for (const c of cables) {
+    for (const c of cableList) {
       const cc = c as CableEx;
       if ((cc.card ?? 0) === cardNo && cc.link === link) {
         nodeIds.add(cc.a);
@@ -801,8 +804,8 @@ export default function EditorApp() {
     return { ok: true, pixels, widthPx, heightPx, limit, hz, panelCount: arr.length };
   }, [cables, panelsById, activeWiringPage?.refreshRate]);
 
-  const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = []) => {
-    const r = bboxPixelsFor(cardNo, link, extras);
+  const willPortFit = useCallback((cardNo: number, link: number, extras: string[] = [], cablesOverride?: CableEx[]) => {
+    const r = bboxPixelsFor(cardNo, link, extras, cablesOverride);
     return r.ok && r.pixels <= r.limit;
   }, [bboxPixelsFor]);
 
@@ -1806,9 +1809,9 @@ export default function EditorApp() {
       base, sel, selectedCard, cables,
       activeLinkRef, panelHasOtherAssignment, willPortFit,
     );
-    if (!add.length && (!sel || existing.length === cables.length)) return;
+    if (!add.length) return;
     pushHistory();
-    setCables(sel ? [...existing, ...add] : add);
+    setCables([...existing, ...add]);
   }
 
   const selectAll = useCallback(() => {

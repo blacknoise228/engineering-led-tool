@@ -166,8 +166,8 @@ export function buildAddEdges(
   selectedCard: CardInstance | null,
   cables: CableEx[],
   activeLinkRef: React.RefObject<number>,
-  panelHasOtherAssignment: (panelId: string, cardNo: number, link: number) => boolean,
-  willPortFit: (cardNo: number, link: number, extras?: string[]) => boolean,
+  panelHasOtherAssignment: (panelId: string, cardNo: number, link: number, cablesOverride?: CableEx[]) => boolean,
+  willPortFit: (cardNo: number, link: number, extras?: string[], cablesOverride?: CableEx[]) => boolean,
   cardPresets: CardPreset[] = CARDS
 ) {
   if (!selectedCard) return { existing: cables, add: [] as CableEx[] };
@@ -175,9 +175,12 @@ export function buildAddEdges(
   const model = cardPresets.find(m => m.id === selectedCard.modelId) ?? CARDS.find(m => m.id === selectedCard.modelId);
   const ports = model?.outputPorts ?? selectedCard.portColors.length;
 
+  const link = activeLinkRef.current;
+  if (link >= ports) return { existing: cables, add: [] as CableEx[] };
+
   const existing = selection
     ? cables.filter(c => !(selection.has(c.a) || selection.has(c.b)))
-    : cables.slice();
+    : cables.filter(c => (c as CableEx).card !== selectedCard.order || c.link !== link);
 
   const add: CableEx[] = [];
   const pairSet = new Set<string>(
@@ -189,9 +192,6 @@ export function buildAddEdges(
     degMap.set(c.b, (degMap.get(c.b) || 0) + 1);
   }
 
-  const link = activeLinkRef.current;
-  if (link >= ports) return { existing, add };
-
   const plannedNodes = new Set<string>();
 
   for (const e of base) {
@@ -199,11 +199,11 @@ export function buildAddEdges(
     if (pairSet.has(k)) continue;
     if ((degMap.get(e.a) || 0) >= 2 || (degMap.get(e.b) || 0) >= 2) continue;
 
-    if (panelHasOtherAssignment(e.a, selectedCard.order, link)) continue;
-    if (panelHasOtherAssignment(e.b, selectedCard.order, link)) continue;
+    if (panelHasOtherAssignment(e.a, selectedCard.order, link, existing)) continue;
+    if (panelHasOtherAssignment(e.b, selectedCard.order, link, existing)) continue;
 
     const extrasForCheck = [...plannedNodes, e.a, e.b];
-    if (!willPortFit(selectedCard.order, link, extrasForCheck)) continue;
+    if (!willPortFit(selectedCard.order, link, extrasForCheck, existing)) continue;
 
     degMap.set(e.a, (degMap.get(e.a) || 0) + 1);
     degMap.set(e.b, (degMap.get(e.b) || 0) + 1);
