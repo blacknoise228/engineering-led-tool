@@ -53,6 +53,8 @@ import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
 import FiberPresetsModal from './FiberPresetsModal';
 import EditorToolbar from './EditorToolbar';
+import ContextMenu, { type ContextMenuItem } from './ContextMenu';
+import AddScreenModal from './AddScreenModal';
 import {
   isDesktopApp,
   openDesktopProject,
@@ -140,6 +142,17 @@ export default function EditorApp() {
       if (page.id !== activeWiringPageId) return page;
       const nextCables = typeof action === 'function' ? action(page.cables) : action;
       return { ...page, cables: nextCables };
+    }));
+  }, [activeWiringPageId]);
+
+  const wiringScreenGroups = useMemo(() => activeWiringPage?.screenGroups ?? [], [activeWiringPage]);
+
+  const setWiringScreenGroups = useCallback((action: React.SetStateAction<ScreenGroup[]>) => {
+    setWiringPages(prev => prev.map(page => {
+      if (page.id !== activeWiringPageId) return page;
+      const cur = page.screenGroups ?? [];
+      const nextGroups = typeof action === 'function' ? action(cur) : action;
+      return { ...page, screenGroups: nextGroups };
     }));
   }, [activeWiringPageId]);
 
@@ -244,9 +257,12 @@ export default function EditorApp() {
   // Агрегаты по всем страницам
   const allPanels = useMemo(() => wiringPages.flatMap(p => p.panels), [wiringPages]);
   const allCables = useMemo(() => wiringPages.flatMap(p => p.cables), [wiringPages]);
-  const allScreenGroups = useMemo(() => maskPages.flatMap(p => p.screenGroups), [maskPages]);
+  const allScreenGroups = useMemo(() => wiringPages.flatMap(p => p.screenGroups ?? []), [wiringPages]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
   const selectedGroupId = useMemo(() => Array.from(selectedGroupIds)[0] ?? null, [selectedGroupIds]);
+
+  const [isAddScreenModalOpen, setIsAddScreenModalOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
 
   const onSelectGroup = useCallback((groupId: string | null, multi = false) => {
     if (!groupId) {
@@ -353,6 +369,7 @@ export default function EditorApp() {
       panels: [],
       cables: [],
       refreshRate: activeWiringPage?.refreshRate ?? DEFAULT_REFRESH_RATE,
+      screenGroups: [],
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
@@ -394,12 +411,18 @@ export default function EditorApp() {
       a: idMap.get(c.a) ?? c.a,
       b: idMap.get(c.b) ?? c.b,
     }));
+    const clonedGroups = (target.screenGroups ?? []).map(g => ({
+      ...g,
+      id: uid('screen'),
+      panelIds: g.panelIds.map(pid => idMap.get(pid) ?? pid),
+    }));
     const newPage: WiringPage = {
       id: uid('page'),
       name: `${target.name} (copy)`,
       panels: clonedPanels,
       cables: clonedCables,
       refreshRate: target.refreshRate ?? DEFAULT_REFRESH_RATE,
+      screenGroups: clonedGroups,
     };
     setWiringPages(prev => [...prev, newPage]);
     setActiveWiringPageId(newPage.id);
@@ -464,13 +487,125 @@ export default function EditorApp() {
     setSelectedGroupId(null);
   }, [activeMaskPageId, setSelectedGroupId]);
 
-  const addScreensFromWiringPage = useCallback((wiringPageId: string) => {
-    const targetPage = wiringPages.find(p => p.id === wiringPageId);
-    if (!targetPage || !targetPage.panels.length) return;
+  const addScreenToMask = useCallback((group: ScreenGroup) => {
     pushHistory();
-    const newGroups = autoGroupPanels(targetPage.panels, screenGroups);
-    setScreenGroups(newGroups);
-  }, [wiringPages, screenGroups, pushHistory, setScreenGroups]);
+    setMaskPages(prev => prev.map(mp => {
+      if (mp.id !== activeMaskPageId) return mp;
+      if (mp.screenGroups.some(g => g.id === group.id)) return mp;
+      return {
+        ...mp,
+        screenGroups: [...mp.screenGroups, { ...group, posX: 0, posY: 0 }],
+      };
+    }));
+    setSelectedGroupIds(new Set([group.id]));
+    showToast(t('mask.screenAdded', { name: group.name }));
+  }, [activeMaskPageId, pushHistory, setSelectedGroupIds, showToast, t]);
+
+  const removeScreenFromMask = useCallback((groupId: string) => {
+    pushHistory();
+    setMaskPages(prev => prev.map(mp => {
+      if (mp.id !== activeMaskPageId) return mp;
+      return {
+        ...mp,
+        screenGroups: mp.screenGroups.filter(g => g.id !== groupId),
+      };
+    }));
+    setSelectedGroupIds(prev => {
+      const next = new Set(prev);
+      next.delete(groupId);
+      return next;
+    });
+  }, [activeMaskPageId, pushHistory, setSelectedGroupIds]);
+
+  const groupSelectedPanels = useCallback(() => {
+    if (!selectedPanels.size) return;
+    pushHistory();
+    const selIds = Array.from(selectedPanels);
+    const existing = activeWiringPage?.screenGroups ?? [];
+
+    const updatedExisting = existing
+      .map(g => ({
+        ...g,
+        panelIds: g.panelIds.filter(id => !selectedPanels.has(id)),
+      }))
+      .filter(g => g.panelIds.length > 0);
+
+    const totalExistingScreensCount = wiringPages.reduce((acc, wp) => acc + (wp.screenGroups?.length ?? 0), 0);
+    const nextIdx = totalExistingScreensCount + 1;
+
+    const newGroup: ScreenGroup = {
+      id: uid('screen'),
+      name: `Screen ${nextIdx}`,
+      panelIds: selIds,
+      textureId: TEXTURES[updatedExisting.length % TEXTURES.length].id,
+      strokeColor: '#38bdf8',
+    };
+
+    setWiringScreenGroups([...updatedExisting, newGroup]);
+    showToast(t('wiring.groupCreated', { name: newGroup.name }));
+  }, [selectedPanels, activeWiringPage, wiringPages, pushHistory, setWiringScreenGroups, showToast, t]);
+
+  const ungroupSelectedPanels = useCallback(() => {
+    if (!selectedPanels.size) return;
+    const existing = activeWiringPage?.screenGroups ?? [];
+    const affectedGroupIds = new Set<string>();
+    for (const g of existing) {
+      if (g.panelIds.some(id => selectedPanels.has(id))) {
+        affectedGroupIds.add(g.id);
+      }
+    }
+    if (!affectedGroupIds.size) return;
+
+    pushHistory();
+    setWiringPages(prev => prev.map(wp => {
+      if (wp.id !== activeWiringPageId) return wp;
+      return {
+        ...wp,
+        screenGroups: (wp.screenGroups ?? []).filter(g => !affectedGroupIds.has(g.id)),
+      };
+    }));
+    setMaskPages(prev => prev.map(mp => ({
+      ...mp,
+      screenGroups: mp.screenGroups.filter(g => !affectedGroupIds.has(g.id)),
+    })));
+    showToast(t('wiring.ungrouped'));
+  }, [selectedPanels, activeWiringPage, activeWiringPageId, pushHistory, showToast, t]);
+
+  const ungroupScreen = useCallback((groupId: string) => {
+    pushHistory();
+    setWiringPages(prev => prev.map(wp => ({
+      ...wp,
+      screenGroups: (wp.screenGroups ?? []).filter(g => g.id !== groupId),
+    })));
+    setMaskPages(prev => prev.map(mp => ({
+      ...mp,
+      screenGroups: mp.screenGroups.filter(g => g.id !== groupId),
+    })));
+  }, [pushHistory]);
+
+  const onSelectWiringGroupPanels = useCallback((groupId: string) => {
+    const target = (activeWiringPage?.screenGroups ?? []).find(g => g.id === groupId);
+    if (!target) return;
+    setSelectedPanels(new Set(target.panelIds));
+  }, [activeWiringPage]);
+
+  const autoGroupWiringPanels = useCallback(() => {
+    if (!panels.length) return;
+    pushHistory();
+    const newGroups = autoGroupPanels(panels, activeWiringPage?.screenGroups ?? []);
+    setWiringScreenGroups(newGroups);
+  }, [panels, activeWiringPage, pushHistory, setWiringScreenGroups]);
+
+  const renameScreenGroup = useCallback((groupId: string, newName: string) => {
+    setWiringPages(prev => prev.map(wp => ({
+      ...wp,
+      screenGroups: (wp.screenGroups ?? []).map(g => g.id === groupId ? { ...g, name: newName } : g),
+    })));
+    setMaskPages(prev => prev.map(mp => ({
+      ...mp,
+      screenGroups: mp.screenGroups.map(g => g.id === groupId ? { ...g, name: newName } : g),
+    })));
+  }, []);
 
   const onServerAdd = useCallback((modelId: string) => {
     pushHistory();
@@ -550,7 +685,7 @@ export default function EditorApp() {
   
   const clearAll = useCallback(() => {
     pushHistory();
-    setWiringPages([{ id: 'wiring-1', name: 'Schema 1', panels: [], cables: [] }]);
+    setWiringPages([{ id: 'wiring-1', name: 'Schema 1', panels: [], cables: [], screenGroups: [] }]);
     setActiveWiringPageId('wiring-1');
     setSelectedPanels(new Set()); setSelectedCables(new Set());
     setDraft(null);
@@ -560,13 +695,15 @@ export default function EditorApp() {
     setSelectedGroupId(null);
   }, [pushHistory, setSelectedGroupId]);
 
-  useEffect(() => {
-    if (panels.length > 0 && screenGroups.length === 0 && maskPages.length === 1 && wiringPages.length === 1) {
-      setScreenGroups(autoGroupPanels(panels));
-    }
-  }, [panels, screenGroups.length, maskPages.length, wiringPages.length, setScreenGroups]);
-
   // ======== SNAP ========
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [wiringSnapGuides, setWiringSnapGuides] = useState<{
+    x: number | null;
+    y: number | null;
+    kindX?: 'edge' | 'grid';
+    kindY?: 'edge' | 'grid';
+  } | null>(null);
+
   type XEdge = 'L' | 'R'; type YEdge = 'T' | 'B';
   const snapLock = useRef<{
     x: { kind: 'edge' | 'grid'; mId: string; mEdge: XEdge; target: number } | null;
@@ -575,9 +712,24 @@ export default function EditorApp() {
 
   const applySnapToDelta = useCallback(
     (ids: Set<string>, rawDx: number, rawDy: number) => {
-      return snapFunc(panels, snapLock, ids, rawDx, rawDy)
+      if (!snapEnabled) {
+        setWiringSnapGuides(null);
+        return { dx: rawDx, dy: rawDy };
+      }
+      const res = snapFunc(panels, snapLock, ids, rawDx, rawDy);
+      if (snapLock.current.x || snapLock.current.y) {
+        setWiringSnapGuides({
+          x: snapLock.current.x ? snapLock.current.x.target : null,
+          y: snapLock.current.y ? snapLock.current.y.target : null,
+          kindX: snapLock.current.x?.kind,
+          kindY: snapLock.current.y?.kind,
+        });
+      } else {
+        setWiringSnapGuides(null);
+      }
+      return res;
     },
-    [panels]
+    [panels, snapEnabled]
   );
 
   // ======== WIRING RULES ========
@@ -807,6 +959,7 @@ export default function EditorApp() {
 
   const onPointerUp = useCallback(() => {
     snapLock.current.x = null; snapLock.current.y = null;
+    setWiringSnapGuides(null);
 
     if (marquee && marqueeStart.current) {
       const rect = marquee;
@@ -865,7 +1018,7 @@ export default function EditorApp() {
       const killPanels = new Set(selectedPanels);
       setPanels(ps => ps.filter(p => !killPanels.has(p.id)));
       setCables(cs => cs.filter(c => !killPanels.has(c.a) && !killPanels.has(c.b)));
-      setScreenGroups(groups =>
+      setWiringScreenGroups(groups =>
         groups
           .map(g => ({
             ...g,
@@ -873,15 +1026,17 @@ export default function EditorApp() {
           }))
           .filter(g => g.panelIds.length > 0)
       );
-      setSelectedGroupIds(curr => {
-        const next = new Set(curr);
-        for (const id of curr) {
-          if (!screenGroups.some(g => g.id === id && g.panelIds.some(pid => !killPanels.has(pid)))) {
-            next.delete(id);
-          }
-        }
-        return next;
-      });
+      setMaskPages(mps =>
+        mps.map(mp => ({
+          ...mp,
+          screenGroups: mp.screenGroups
+            .map(g => ({
+              ...g,
+              panelIds: g.panelIds.filter(id => !killPanels.has(id)),
+            }))
+            .filter(g => g.panelIds.length > 0),
+        }))
+      );
       setSelectedPanels(new Set());
     }
     if (selectedCables.size) {
@@ -889,7 +1044,7 @@ export default function EditorApp() {
       setCables(cs => cs.filter(c => !killCables.has(c.id)));
       setSelectedCables(new Set());
     }
-  }, [activeTab, selectedGroupIds, selectedPanels, selectedCables, screenGroups, pushHistory, setPanels, setCables, setScreenGroups]);
+  }, [activeTab, selectedGroupIds, selectedPanels, selectedCables, pushHistory, setPanels, setCables, setWiringScreenGroups, setScreenGroups]);
 
   // ======== PNG EXPORT ========
   const exportPNG = useCallback(() => {
@@ -940,6 +1095,26 @@ export default function EditorApp() {
     }
 
     if (parsedWiringPages.length > 0) {
+      // Ensure each wiring page has screenGroups array, migrating from older project format if needed
+      parsedWiringPages = parsedWiringPages.map(wp => {
+        let sgs = Array.isArray(wp.screenGroups) ? wp.screenGroups : [];
+        if (sgs.length === 0) {
+          const panelIdSet = new Set(wp.panels.map(p => p.id));
+          const candidateGroups: ScreenGroup[] = [
+            ...(Array.isArray(data.maskPages) ? data.maskPages.flatMap(mp => mp.screenGroups ?? []) : []),
+            ...(Array.isArray(data.screenGroups) ? data.screenGroups : []),
+          ];
+          const matched = candidateGroups.filter(g => g.panelIds.some(pid => panelIdSet.has(pid)));
+          const seen = new Set<string>();
+          sgs = matched.filter(g => {
+            if (seen.has(g.id)) return false;
+            seen.add(g.id);
+            return true;
+          });
+        }
+        return { ...wp, screenGroups: sgs };
+      });
+
       setWiringPages(parsedWiringPages);
       setActiveWiringPageId(parsedActiveWiringPageId);
 
@@ -956,11 +1131,10 @@ export default function EditorApp() {
         }];
         parsedActiveMaskPageId = 'mask-1';
       } else {
-        const allP = parsedWiringPages.flatMap(wp => wp.panels);
         parsedMaskPages = [{
           id: 'mask-1',
           name: 'Page 1',
-          screenGroups: autoGroupPanels(allP),
+          screenGroups: [],
         }];
         parsedActiveMaskPageId = 'mask-1';
       }
@@ -1308,6 +1482,15 @@ export default function EditorApp() {
 
   const onUpdateGroup = useCallback((updated: ScreenGroup) => {
     setScreenGroups(prev => prev.map(g => (g.id === updated.id ? updated : g)));
+    setWiringPages(prev => prev.map(wp => ({
+      ...wp,
+      screenGroups: (wp.screenGroups ?? []).map(g => g.id === updated.id ? {
+        ...g,
+        name: updated.name,
+        textureId: updated.textureId,
+        strokeColor: updated.strokeColor,
+      } : g),
+    })));
   }, [setScreenGroups]);
 
   const onUpdateGroups = useCallback((updatedList: ScreenGroup[]) => {
@@ -1349,8 +1532,8 @@ export default function EditorApp() {
   }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
 
   const onExportMaskZIP = useCallback(() => {
-    exportMaskZIP(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
-  }, [allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig]);
+    exportMaskZIP(allPanels, maskPages, eventName, maskLogoConfig);
+  }, [allPanels, maskPages, eventName, maskLogoConfig]);
 
   const onPreviewMask = useCallback(() => {
     setPreviewModalOpen(true);
@@ -1636,6 +1819,179 @@ export default function EditorApp() {
     }
   }, [activeTab, screenGroups, panels]);
 
+  // ======== CONTEXT MENU ========
+  const handleContextMenu = useCallback((e: React.MouseEvent, panelId?: string, screenId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (activeTab === 'mask') {
+      const activeMaskScreenId = screenId ?? (selectedGroupIds.size > 0 ? Array.from(selectedGroupIds)[0] : undefined);
+      const items: ContextMenuItem[] = [];
+
+      const schemaSubItems: ContextMenuItem[] = [];
+      wiringPages.forEach(wp => {
+        const groups = wp.screenGroups ?? [];
+        if (groups.length === 0) return;
+        const groupItems: ContextMenuItem[] = groups.map(g => {
+          const isAdded = activeMaskPage?.screenGroups.some(mg => mg.id === g.id);
+          return {
+            id: `add-${g.id}`,
+            label: `${g.name} (${g.panelIds.length} ${t('mask.panelsUnit')})`,
+            disabled: isAdded,
+            onClick: () => addScreenToMask(g),
+          };
+        });
+        schemaSubItems.push({ type: 'header', label: wp.name });
+        schemaSubItems.push(...groupItems);
+      });
+
+      items.push({
+        id: 'add-screen',
+        label: t('menu.addScreen'),
+        children: schemaSubItems.length > 0 ? schemaSubItems : [
+          { id: 'no-screens', label: t('menu.noScreensInSchemas'), disabled: true }
+        ],
+      });
+
+      if (activeMaskScreenId) {
+        const found = screenGroups.find(g => g.id === activeMaskScreenId);
+        if (found) {
+          items.push({
+            id: 'rename-mask-screen',
+            label: t('menu.renameScreen', { name: found.name }),
+            onClick: () => {
+              const newName = window.prompt(t('menu.renameScreenPrompt'), found.name);
+              if (newName && newName.trim()) renameScreenGroup(found.id, newName.trim());
+            },
+          });
+        }
+        items.push({ type: 'separator' });
+        items.push({
+          id: 'remove-screen',
+          label: t('menu.removeFromCanvas'),
+          shortcut: 'Del',
+          danger: true,
+          onClick: () => removeScreenFromMask(activeMaskScreenId),
+        });
+      }
+
+      if (screenGroups.length > 0) {
+        items.push({ type: 'separator' });
+        items.push({
+          id: 'in-row',
+          label: t('menu.arrangeRow'),
+          onClick: () => {
+            let curX = 0;
+            const sds = prepareScreensData(allPanels, screenGroups).screens;
+            const list = screenGroups.map(g => {
+              const sd = sds.find(s => s.group.id === g.id);
+              const item = { ...g, posX: curX, posY: 0 };
+              curX += sd?.wPx ?? 0;
+              return item;
+            });
+            onUpdateGroups(list);
+          },
+        });
+        items.push({
+          id: 'in-col',
+          label: t('menu.arrangeCol'),
+          onClick: () => {
+            let curY = 0;
+            const sds = prepareScreensData(allPanels, screenGroups).screens;
+            const list = screenGroups.map(g => {
+              const sd = sds.find(s => s.group.id === g.id);
+              const item = { ...g, posX: 0, posY: curY };
+              curY += sd?.hPx ?? 0;
+              return item;
+            });
+            onUpdateGroups(list);
+          },
+        });
+        items.push({
+          id: 'reset-pos',
+          label: t('menu.resetPositions'),
+          onClick: () => {
+            onUpdateGroups(screenGroups.map(g => {
+              const next = { ...g };
+              delete next.posX; delete next.posY;
+              return next;
+            }));
+          },
+        });
+      }
+
+      setContextMenu({ x: e.clientX, y: e.clientY, items });
+      return;
+    }
+
+    // Wiring view context menu
+    let effectiveSelection = new Set(selectedPanels);
+    if (panelId && !effectiveSelection.has(panelId)) {
+      effectiveSelection = new Set([panelId]);
+      setSelectedPanels(effectiveSelection);
+    }
+
+    const items: ContextMenuItem[] = [];
+
+    if (effectiveSelection.size > 0) {
+      items.push({
+        id: 'group',
+        label: t('menu.group'),
+        shortcut: 'Ctrl+G',
+        onClick: groupSelectedPanels,
+      });
+
+      const hasGrouped = wiringScreenGroups.some(g => g.panelIds.some(pid => effectiveSelection.has(pid)));
+      if (hasGrouped) {
+        items.push({
+          id: 'ungroup',
+          label: t('menu.ungroup'),
+          shortcut: 'Ctrl+Shift+G',
+          onClick: ungroupSelectedPanels,
+        });
+      }
+
+      if (panelId) {
+        const foundGroup = wiringScreenGroups.find(g => g.panelIds.includes(panelId));
+        if (foundGroup) {
+          items.push({
+            id: 'rename-wiring-group',
+            label: t('menu.renameScreen', { name: foundGroup.name }),
+            onClick: () => {
+              const newName = window.prompt(t('menu.renameScreenPrompt'), foundGroup.name);
+              if (newName && newName.trim()) renameScreenGroup(foundGroup.id, newName.trim());
+            },
+          });
+          items.push({
+            id: 'select-all-group',
+            label: t('menu.selectAllScreenPanels', { name: foundGroup.name }),
+            onClick: () => onSelectWiringGroupPanels(foundGroup.id),
+          });
+        }
+      }
+
+      items.push({ type: 'separator' });
+      items.push({ id: 'copy', label: t('menu.copy'), shortcut: 'Ctrl+C', onClick: copySelectedPanels });
+      items.push({ id: 'cut', label: t('menu.cut'), shortcut: 'Ctrl+X', onClick: cutSelectedPanels });
+      items.push({ id: 'dup', label: t('menu.duplicate'), shortcut: 'Ctrl+D', onClick: duplicateSelectedPanels });
+      items.push({ id: 'del', label: t('menu.delete'), shortcut: 'Del', danger: true, onClick: deleteSelected });
+    } else {
+      if (clipboard && clipboard.panels.length > 0) {
+        items.push({ id: 'paste', label: t('menu.paste'), shortcut: 'Ctrl+V', onClick: pastePanels });
+      }
+      items.push({ id: 'select-all', label: t('menu.selectAll'), shortcut: 'Ctrl+A', onClick: selectAll });
+      items.push({ type: 'separator' });
+      items.push({ id: 'matrix', label: t('menu.createMatrix'), onClick: createMatrix });
+    }
+
+    setContextMenu({ x: e.clientX, y: e.clientY, items });
+  }, [
+    activeTab, selectedGroupIds, wiringPages, activeMaskPage, screenGroups, allPanels, onUpdateGroups,
+    selectedPanels, wiringScreenGroups, clipboard, groupSelectedPanels, ungroupSelectedPanels,
+    onSelectWiringGroupPanels, copySelectedPanels, cutSelectedPanels, duplicateSelectedPanels,
+    deleteSelected, pastePanels, selectAll, createMatrix, addScreenToMask, removeScreenFromMask, renameScreenGroup, t
+  ]);
+
   // ======== HUD / HOTKEYS ========
   useHotkeys(
     {
@@ -1647,6 +2003,7 @@ export default function EditorApp() {
       pan,
       draft,
       svgRef,
+      snapEnabled,
     },
     setDraft,
     marqueeStart,
@@ -1667,7 +2024,9 @@ export default function EditorApp() {
     pastePanels,
     saveJSON,
     saveJSONAs,
-    newProject
+    newProject,
+    groupSelectedPanels,
+    ungroupSelectedPanels
   );
 
   // ======== ZOOM ========
@@ -1820,12 +2179,20 @@ export default function EditorApp() {
         allPanels={allPanels}
         allCables={allCables}
         allScreenGroups={allScreenGroups}
-        onAddScreensFromWiringPage={addScreensFromWiringPage}
         maskLogoConfig={maskLogoConfig}
+        onUpdateMaskLogoConfig={handleSaveMaskLogoConfig}
         onOpenMaskLogoModal={() => setIsMaskLogoModalOpen(true)}
+        onOpenAddScreenModal={() => setIsAddScreenModalOpen(true)}
+        wiringScreenGroups={wiringScreenGroups}
+        onGroupSelectedPanels={groupSelectedPanels}
+        onUngroupSelectedPanels={ungroupSelectedPanels}
+        onSelectWiringGroupPanels={onSelectWiringGroupPanels}
+        onUngroupScreen={ungroupScreen}
+        onAutoGroupWiringPanels={autoGroupWiringPanels}
+        onRenameScreenGroup={renameScreenGroup}
       />
 
-      <div className="flex-1 relative" onContextMenu={(e) => e.preventDefault()}>
+      <div className="flex-1 relative" onContextMenu={(e) => handleContextMenu(e)}>
         <SvgStage
           svgRef={svgRef}
           pan={pan} setPan={setPan}
@@ -1848,13 +2215,25 @@ export default function EditorApp() {
                 showGuides={true}
                 showBadges={true}
                 maskLogoConfig={maskLogoConfig}
+                snapEnabled={snapEnabled}
               />
             ) : (
               <PanelsLayer
                 panels={panels}
                 selected={selectedPanels}
                 tool={tool}
+                screenGroups={wiringScreenGroups}
                 onPanelMouseDown={onPanelMouseDown}
+                onPanelDoubleClick={(e, pid) => {
+                  const g = wiringScreenGroups.find(gr => gr.panelIds.includes(pid));
+                  if (g) onSelectWiringGroupPanels(g.id);
+                }}
+                onPanelContextMenu={(e, pid) => handleContextMenu(e, pid)}
+                onSelectGroupPanels={onSelectWiringGroupPanels}
+                onGroupContextMenu={(e, gid) => {
+                  onSelectWiringGroupPanels(gid);
+                  handleContextMenu(e);
+                }}
                 getPanelCardColor={getPanelCardColor}
               />
             )
@@ -1872,6 +2251,34 @@ export default function EditorApp() {
                   onCableMouseDown={onCableMouseDown}
                 />
                 <SelectionMarquee rect={marquee} />
+                {wiringSnapGuides && (
+                  <g id="wiring-snap-guides" pointerEvents="none" className="select-none">
+                    {wiringSnapGuides.x !== null && (
+                      <g>
+                        <line x1={wiringSnapGuides.x} y1="-10000" x2={wiringSnapGuides.x} y2="10000" stroke="rgba(6, 182, 212, 0.35)" strokeWidth={4} />
+                        <line x1={wiringSnapGuides.x} y1="-10000" x2={wiringSnapGuides.x} y2="10000" stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="5 3" />
+                        <g transform={`translate(${wiringSnapGuides.x + 8}, 60)`}>
+                          <rect x="-4" y="-10" width={wiringSnapGuides.kindX === 'grid' ? 84 : 96} height={20} rx={5} fill="#0f111a" stroke="#06b6d4" strokeWidth={1} filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))" />
+                          <text x="4" y="4" fill="#ffffff" fontSize={10} fontWeight="600" fontFamily="sans-serif">
+                            {wiringSnapGuides.kindX === 'grid' ? t('wiring.snapGrid') : t('wiring.snapEdge')} • {Math.round(wiringSnapGuides.x)}
+                          </text>
+                        </g>
+                      </g>
+                    )}
+                    {wiringSnapGuides.y !== null && (
+                      <g>
+                        <line x1="-10000" y1={wiringSnapGuides.y} x2="10000" y2={wiringSnapGuides.y} stroke="rgba(6, 182, 212, 0.35)" strokeWidth={4} />
+                        <line x1="-10000" y1={wiringSnapGuides.y} x2="10000" y2={wiringSnapGuides.y} stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="5 3" />
+                        <g transform={`translate(60, ${wiringSnapGuides.y - 14})`}>
+                          <rect x="-4" y="-10" width={wiringSnapGuides.kindY === 'grid' ? 84 : 96} height={20} rx={5} fill="#0f111a" stroke="#06b6d4" strokeWidth={1} filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))" />
+                          <text x="4" y="4" fill="#ffffff" fontSize={10} fontWeight="600" fontFamily="sans-serif">
+                            {wiringSnapGuides.kindY === 'grid' ? t('wiring.snapGrid') : t('wiring.snapEdge')} • {Math.round(wiringSnapGuides.y)}
+                          </text>
+                        </g>
+                      </g>
+                    )}
+                  </g>
+                )}
               </>
             )
           }
@@ -1891,6 +2298,11 @@ export default function EditorApp() {
           cutSelectedPanels={cutSelectedPanels}
           pastePanels={pastePanels}
           duplicateSelectedPanels={duplicateSelectedPanels}
+          onGroupSelectedPanels={groupSelectedPanels}
+          onUngroupSelectedPanels={ungroupSelectedPanels}
+          onOpenAddScreenModal={() => setIsAddScreenModalOpen(true)}
+          snapEnabled={snapEnabled}
+          onToggleSnap={() => setSnapEnabled(v => !v)}
           maskPages={maskPages}
           activeMaskPageId={activeMaskPageId}
           switchMaskPage={switchMaskPage}
@@ -1911,6 +2323,45 @@ export default function EditorApp() {
           setScale={setScale}
           resetView={resetView}
           activeRefreshRate={activeRefreshRate}
+        />
+
+        {/* Пустой холст маски */}
+        {activeTab === 'mask' && screenGroups.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="pointer-events-auto bg-[#10121a]/95 backdrop-blur-md border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm shadow-2xl space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto text-xl">
+                ⊞
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {t('mask.emptyCanvasHint')}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddScreenModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition shadow-lg shadow-blue-500/20"
+              >
+                + {t('mask.addScreenBtn')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={contextMenu.items}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+
+        <AddScreenModal
+          isOpen={isAddScreenModalOpen}
+          onClose={() => setIsAddScreenModalOpen(false)}
+          wiringPages={wiringPages}
+          activeMaskScreenGroupIds={new Set(screenGroups.map(g => g.id))}
+          onAddScreen={addScreenToMask}
+          onGoToWiring={() => setActiveTab('wiring')}
         />
         <input
           ref={fileInputRef}
@@ -1941,6 +2392,7 @@ export default function EditorApp() {
           eventName={eventName}
           pageName={activeMaskPage.name}
           maskLogoConfig={maskLogoConfig}
+          maskPages={maskPages}
         />
 
         {/* Модальное окно настройки логотипа бейджей на масках */}

@@ -208,46 +208,46 @@ The **Info** tab instantly generates a complete technical report:
 #### Example Generated Report:
 
 ```text
-СПЕЦИФИКАЦИЯ ОБОРУДОВАНИЯ
+EQUIPMENT SPECIFICATION
 
-Мероприятие: Stadium Show 2026
-Дата: 2026-10-23
-
-----------------------
-СВОДКА:
-Количество экранов: 3
-Всего панелей: 160 шт.
-Общая площадь: 40.00 м²
-Общий вес экранов: 1680 кг
-Перемычки: 154 шт.
-Занято портов: 6
+Event: Stadium Show 2026
+Date: 2026-10-23
 
 ----------------------
-ЭКРАНЫ
-• Main Screen: 120 панелей, вес: 1260 кг, потребление: 38.64 кВт (38640 Вт)
-• Left Wing: 20 панелей, вес: 210 кг, потребление: 6.44 кВт (6440 Вт)
-• Right Wing: 20 панелей, вес: 210 кг, потребление: 6.44 кВт (6440 Вт)
+SUMMARY:
+Number of screens: 3
+Total panels: 160 pcs.
+Total area: 40.00 m²
+Total screens weight: 1680 kg
+Cables: 154 pcs.
+Ports used: 6
 
 ----------------------
-МОДЕЛИ ПАНЕЛЕЙ
-• Dicolor-C 0.5m (500×500) 4.8 (res 104×104, 7.5 кг): 80 шт.
-• Dicolor-C 1m (500×1000) 4.8 (res 104×208, 13.5 кг): 80 шт.
+SCREENS
+• Main Screen: 120 panels, weight: 1260 kg, power: 38.64 kW (38640 W)
+• Left Wing: 20 panels, weight: 210 kg, power: 6.44 kW (6440 W)
+• Right Wing: 20 panels, weight: 210 kg, power: 6.44 kW (6440 W)
 
 ----------------------
-КАРТЫ
+PANEL MODELS
+• Dicolor-C 0.5m (500×500) 4.8 (res 104×104, 7.5 kg): 80 pcs.
+• Dicolor-C 1m (500×1000) 4.8 (res 104×208, 13.5 kg): 80 pcs.
+
+----------------------
+CARDS
 • S1 — NovaStar VX1000
 
 CVT
-• NovaStar CVT10: 1 шт.
+• NovaStar CVT10: 1 pcs.
 
 ----------------------
-ЭЛЕКТРОПИТАНИЕ (СИЛА)
-Потребление: 38.64 кВт (38640 Вт)
-Ток (3 фазы, 230В): 56.00 A
+POWER CONSUMPTION
+Total power: 38.64 kW (38640 W)
+Current (3 phases, 230V): 56.00 A
 
 ----------------------
-МЕДИАСЕРВЕРЫ
-Сервер: HP Z4
+MEDIA SERVERS
+Server: HP Z4
 ```
 
 ---
@@ -279,9 +279,12 @@ For convenience, the editor provides full shortcut support:
 | **Cut Selected** | `Ctrl + X` |
 | **Paste** | `Ctrl + V` |
 | **Duplicate Selected Panels** | `Ctrl + D` |
+| **Group into Screen** | `Ctrl + G` |
+| **Ungroup Screen** | `Ctrl + Shift + G` |
 | **Delete Selected Elements** | `Delete` or `Backspace` |
 | **Export Scheme to PNG** | `Ctrl + E` |
-| **Canvas Navigation** | `Shift + Left Mouse Button` |
+| **Canvas Navigation (Pan)** | `Shift + Left Mouse Button` or `Middle Mouse Button` |
+| **Temporarily Disable Snapping** | Hold `Alt` while moving panels |
 | **Cancel Cable Mode / Clear Selection** | `Escape` or Right-Click |
 
 ---

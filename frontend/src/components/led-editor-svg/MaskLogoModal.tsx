@@ -68,6 +68,7 @@ export default function MaskLogoModal({
       scale: Math.max(0.2, Math.min(3.0, Math.round(((patch.scale ?? prev.scale) || 1) * 100) / 100)),
       offsetX: Math.max(-45, Math.min(45, Math.round(patch.offsetX ?? prev.offsetX))),
       offsetY: Math.max(-20, Math.min(60, Math.round(patch.offsetY ?? prev.offsetY))),
+      hideLogo: patch.hideLogo !== undefined ? Boolean(patch.hideLogo) : Boolean(prev.hideLogo),
     };
     draftRef.current = next;
     setDraft(next);
@@ -243,29 +244,55 @@ export default function MaskLogoModal({
                 </g>
                 <polygon points={octPointsStr} fill="rgba(8, 9, 11, 0.92)" stroke="#ffffff" strokeWidth={2} />
                 <g clipPath="url(#preview-badge-clip)">
-                  <g onMouseDown={onLogoMouseDown} className="cursor-grab active:cursor-grabbing">
-                    <title>{t('logo.dragHint')}</title>
-                    <rect
-                      x={logoRect.x}
-                      y={logoRect.y}
-                      width={logoRect.width}
-                      height={logoRect.height}
-                      fill="transparent"
-                      stroke={isDraggingLogo ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}
-                      strokeWidth={1.2}
-                      strokeDasharray="4 3"
-                      rx={4}
-                    />
-                    <image
-                      href={logoRect.href}
-                      x={logoRect.x}
-                      y={logoRect.y}
-                      width={logoRect.width}
-                      height={logoRect.height}
-                      preserveAspectRatio="xMidYMid meet"
-                      pointerEvents="none"
-                    />
-                  </g>
+                  {!draft.hideLogo ? (
+                    <g onMouseDown={onLogoMouseDown} className="cursor-grab active:cursor-grabbing">
+                      <title>{t('logo.dragHint')}</title>
+                      <rect
+                        x={logoRect.x}
+                        y={logoRect.y}
+                        width={logoRect.width}
+                        height={logoRect.height}
+                        fill="transparent"
+                        stroke={isDraggingLogo ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}
+                        strokeWidth={1.2}
+                        strokeDasharray="4 3"
+                        rx={4}
+                      />
+                      <image
+                        href={logoRect.href}
+                        x={logoRect.x}
+                        y={logoRect.y}
+                        width={logoRect.width}
+                        height={logoRect.height}
+                        preserveAspectRatio="xMidYMid meet"
+                        pointerEvents="none"
+                      />
+                    </g>
+                  ) : (
+                    <g pointerEvents="none" opacity={0.4}>
+                      <rect
+                        x={logoRect.x}
+                        y={logoRect.y}
+                        width={logoRect.width}
+                        height={logoRect.height}
+                        fill="transparent"
+                        stroke="rgba(255, 255, 255, 0.25)"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                        rx={4}
+                      />
+                      <text
+                        x={logoRect.cx}
+                        y={logoRect.cy + 4}
+                        textAnchor="middle"
+                        fill="rgba(255, 255, 255, 0.6)"
+                        fontSize={baseFs * 0.7}
+                        fontFamily="sans-serif"
+                      >
+                        {t('mask.logoHiddenBadge')}
+                      </text>
+                    </g>
+                  )}
                   <text x={badgeCx} y={badgeCy} textAnchor="middle" fill="#ffffff" fontSize={baseFs * 1.15} fontWeight="bold" fontFamily="sans-serif" pointerEvents="none">
                     1920×1080 px
                   </text>
@@ -284,6 +311,32 @@ export default function MaskLogoModal({
             </p>
           </div>
           <div className="md:col-span-6 flex flex-col justify-between space-y-4">
+            {/* Чекбокс скрытия логотипа */}
+            <div className="p-3.5 rounded-xl bg-[#10121a] border border-white/[0.08] flex items-center justify-between">
+              <label htmlFor="modal-hide-logo-toggle" className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="modal-hide-logo-toggle"
+                  checked={Boolean(draft.hideLogo)}
+                  onChange={e => updateDraft({ hideLogo: e.target.checked })}
+                  className="rounded border-white/20 bg-neutral-900 text-cyan-500 focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                />
+                <div>
+                  <div className="text-xs font-medium text-white">
+                    {t('mask.hideBadgeLogo')}
+                  </div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5">
+                    {t('logo.hideLogoDesc')}
+                  </div>
+                </div>
+              </label>
+              {draft.hideLogo && (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30 font-medium shrink-0">
+                  {t('mask.logoHidden')}
+                </span>
+              )}
+            </div>
+
             <div
               onDragOver={e => {
                 e.preventDefault();

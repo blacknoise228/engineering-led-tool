@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import type { Panel, Tool } from '@/lib/led-editor-svg/types';
+import type { Panel, Tool, ScreenGroup } from '@/lib/led-editor-svg/types';
 
 type GetColor = (panelId: string) => string | null;
 
@@ -24,11 +24,15 @@ function PanelShape({
   p,
   isSelected,
   onMouseDown,
+  onDoubleClick,
+  onContextMenu,
   tint,
 }: {
   p: Panel;
   isSelected: boolean;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
+  onDoubleClick?: (e: React.MouseEvent, id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, id: string) => void;
   /** HEX цвет карты (будет слегка осветлён для читаемости) */
   tint: string | null;
 }) {
@@ -36,7 +40,12 @@ function PanelShape({
   const r = 10;
 
   return (
-    <g onMouseDown={(e) => onMouseDown(e, p.id)} cursor="pointer">
+    <g
+      onMouseDown={(e) => onMouseDown(e, p.id)}
+      onDoubleClick={(e) => onDoubleClick?.(e, p.id)}
+      onContextMenu={(e) => onContextMenu?.(e, p.id)}
+      cursor="pointer"
+    >
       {/* Корпус кабинета */}
       <rect
         x={p.x}
@@ -121,27 +130,130 @@ export default function PanelsLayer(props: {
   panels: Panel[];
   selected: Set<string>;
   tool: Tool;
+  screenGroups?: ScreenGroup[];
   onPanelMouseDown: (e: React.MouseEvent, id: string) => void;
+  onPanelDoubleClick?: (e: React.MouseEvent, id: string) => void;
+  onPanelContextMenu?: (e: React.MouseEvent, id: string) => void;
+  onSelectGroupPanels?: (groupId: string) => void;
+  onGroupContextMenu?: (e: React.MouseEvent, groupId: string) => void;
   /** Вернёт HEX цвета карты для панели */
   getPanelCardColor?: GetColor;
 }) {
-  const { panels, selected, tool, onPanelMouseDown, getPanelCardColor } = props;
+  const {
+    panels,
+    selected,
+    tool,
+    screenGroups = [],
+    onPanelMouseDown,
+    onPanelDoubleClick,
+    onPanelContextMenu,
+    onSelectGroupPanels,
+    onGroupContextMenu,
+    getPanelCardColor,
+  } = props;
 
   const anchorR = 8;
   const hotspotR = 20;
 
+  const panelsById = React.useMemo(() => new Map(panels.map((p) => [p.id, p])), [panels]);
+
   return (
     <g>
+      {/* Screen group outlines and badges in schematic view */}
+      {screenGroups.map((group) => {
+        const gPanels = group.panelIds.map((id) => panelsById.get(id)).filter((p): p is Panel => Boolean(p));
+        if (gPanels.length === 0) return null;
+
+        const minX = Math.min(...gPanels.map((p) => p.x));
+        const maxX = Math.max(...gPanels.map((p) => p.x + p.w));
+        const minY = Math.min(...gPanels.map((p) => p.y));
+        const maxY = Math.max(...gPanels.map((p) => p.y + p.h));
+
+        const pad = 6;
+        const gx = minX - pad;
+        const gy = minY - pad;
+        const gw = maxX - minX + pad * 2;
+        const gh = maxY - minY + pad * 2;
+        const allSel = gPanels.every((p) => selected.has(p.id));
+        const someSel = gPanels.some((p) => selected.has(p.id));
+
+        const color = group.strokeColor || '#38bdf8';
+        const badgeW = Math.max(90, group.name.length * 8 + 24);
+
+        return (
+          <g key={`group-outline-${group.id}`}>
+            {/* Dashed contour around grouped cabinets */}
+            <rect
+              x={gx}
+              y={gy}
+              width={gw}
+              height={gh}
+              rx={12}
+              ry={12}
+              fill="none"
+              stroke={color}
+              strokeWidth={allSel ? 2 : 1.5}
+              strokeDasharray={allSel ? 'none' : '6 4'}
+              strokeOpacity={allSel ? 0.9 : someSel ? 0.6 : 0.35}
+              style={{ pointerEvents: 'none' }}
+            />
+
+            {/* Screen Header Badge */}
+            <g
+              transform={`translate(${gx + 8}, ${gy - 24})`}
+              cursor="pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectGroupPanels?.(group.id);
+              }}
+              onContextMenu={(e) => {
+                e.stopPropagation();
+                onGroupContextMenu?.(e, group.id);
+              }}
+            >
+              <rect
+                x={0}
+                y={0}
+                width={badgeW}
+                height={20}
+                rx={10}
+                ry={10}
+                fill="#0d1117"
+                stroke={color}
+                strokeWidth={1}
+                strokeOpacity={allSel ? 0.9 : 0.5}
+              />
+              <text
+                x={badgeW / 2}
+                y={10}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={10}
+                fontWeight={600}
+                fill={color}
+                style={{ userSelect: 'none', fontFamily: 'monospace' }}
+              >
+                {group.name}
+              </text>
+            </g>
+          </g>
+        );
+      })}
+
+      {/* Cabinets */}
       {panels.map((p) => (
         <PanelShape
           key={p.id}
           p={p}
           isSelected={selected.has(p.id)}
           onMouseDown={onPanelMouseDown}
+          onDoubleClick={onPanelDoubleClick}
+          onContextMenu={onPanelContextMenu}
           tint={getPanelCardColor ? getPanelCardColor(p.id) : null}
         />
       ))}
 
+      {/* Cable Connect Anchors */}
       {tool === 'cable' && (
         <g>
           {panels.map((p) => {
