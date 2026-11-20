@@ -80,7 +80,7 @@ export const ruEditor = {
   'wiring.clearWiring': 'Очистить расключение выделенных',
   'wiring.clearWiringTitle': 'Удалить все кабели у выбранных панелей',
   'wiring.downloadPng': 'Скачать PNG {name}',
-  'wiring.downloadPngTitle': 'Экспорт расключения текущей схемы в PNG',
+  'wiring.downloadPngTitle': 'Экспорт расключения текущей схемы в PNG (Ctrl+E)',
 
   // Screen Card
   'screen.select': 'Выбрать',
@@ -128,6 +128,7 @@ export const ruEditor = {
   'mask.deleteSelected': 'Удалить ({count})',
   'mask.deleteSelectedTitle': 'Удалить выбранные экраны (Delete)',
   'mask.downloadPng': 'Скачать PNG {name}',
+  'mask.downloadPngTitle': 'Экспорт маски в PNG (Ctrl+E)',
   'mask.downloadZip': 'Скачать все страницы (ZIP)',
   'mask.downloadZipTitle': 'Экспорт всех страниц маски в ZIP-архив',
   'mask.preview': 'Предпросмотр',

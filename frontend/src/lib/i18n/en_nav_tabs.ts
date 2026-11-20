@@ -3,6 +3,8 @@
 export const enNavTabs = {
   // Nav bar
   'nav.title': 'Engineering LED Tool',
+  'nav.modeLed': 'LED Screens',
+  'nav.modeProjection': 'Projection',
   'nav.updateAvailable': 'Update {version} available! Click to download',
   'nav.updateBadge': 'Update {version}',
   'nav.checkForUpdates': 'Check for updates',
@@ -16,11 +18,13 @@ export const enNavTabs = {
   'tabs.cards': 'Cards',
   'tabs.wiring': 'Wiring',
   'tabs.mask': 'Mask',
+  'tabs.projection': 'Projection',
   'tabs.info': 'Info',
 
   // Toolbar
   'toolbar.wiring': 'Wiring',
   'toolbar.mask': 'Mask',
+  'toolbar.projection': 'Projection',
   'toolbar.selectedScreens': 'Selected screens: {count}',
   'toolbar.deleteScreens': 'Delete selected screens (Delete)',
   'toolbar.selectedPanels': 'Selected: {count}',

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	sysRuntime "runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -22,6 +23,7 @@ type App struct {
 	initialFilePath string
 	updateMgr       UpdateManager
 	currentLanguage string
+	dialogMutex     sync.Mutex
 }
 
 type OpenProjectResult struct {
@@ -108,7 +110,7 @@ func findProjectArg(args []string) string {
 			continue
 		}
 		lower := strings.ToLower(clean)
-		if strings.HasSuffix(lower, ".ss") || strings.HasSuffix(lower, ".json") {
+		if strings.HasSuffix(lower, ".ss") || strings.HasSuffix(lower, ".projection") || strings.HasSuffix(lower, ".json") {
 			if abs, err := filepath.Abs(clean); err == nil {
 				if _, err := os.Stat(abs); err == nil {
 					return abs
@@ -216,15 +218,26 @@ func (a *App) GetInitialProject() (*OpenProjectResult, error) {
 }
 
 func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
+	if !a.dialogMutex.TryLock() {
+		return nil, fmt.Errorf("dialog already in progress")
+	}
+	defer a.dialogMutex.Unlock()
+
 	title := "Загрузить проект"
 	filters := []runtime.FileFilter{
-		{DisplayName: "Файлы проекта (*.ss, *.json)", Pattern: "*.ss;*.json"},
+		{DisplayName: "Все проекты (*.projection, *.ss, *.json)", Pattern: "*.projection;*.ss;*.json"},
+		{DisplayName: "Файлы проекта проекции (*.projection)", Pattern: "*.projection"},
+		{DisplayName: "Файлы проекта LED (*.ss)", Pattern: "*.ss"},
+		{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
 		{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 	}
 	if a.isEnglish() {
 		title = "Open Project"
 		filters = []runtime.FileFilter{
-			{DisplayName: "Project files (*.ss, *.json)", Pattern: "*.ss;*.json"},
+			{DisplayName: "All project files (*.projection, *.ss, *.json)", Pattern: "*.projection;*.ss;*.json"},
+			{DisplayName: "Projection Project files (*.projection)", Pattern: "*.projection"},
+			{DisplayName: "LED Project files (*.ss)", Pattern: "*.ss"},
+			{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
 			{DisplayName: "All files (*.*)", Pattern: "*.*"},
 		}
 	}
@@ -243,25 +256,53 @@ func (a *App) OpenProjectDialog() (*OpenProjectResult, error) {
 
 func (a *App) SaveProject(targetPath string, defaultName string, content string) (string, error) {
 	if targetPath == "" {
-		if defaultName == "" {
-			defaultName = "project.ss"
+		if !a.dialogMutex.TryLock() {
+			return "", fmt.Errorf("dialog already in progress")
 		}
-		if !strings.HasSuffix(strings.ToLower(defaultName), ".ss") && !strings.HasSuffix(strings.ToLower(defaultName), ".json") {
-			defaultName += ".ss"
+		defer a.dialogMutex.Unlock()
+
+		if defaultName == "" {
+			defaultName = "project.projection"
+		}
+		lower := strings.ToLower(defaultName)
+		isProjection := strings.HasSuffix(lower, ".projection")
+		if !strings.HasSuffix(lower, ".ss") && !strings.HasSuffix(lower, ".projection") && !strings.HasSuffix(lower, ".json") {
+			defaultName += ".projection"
+			isProjection = true
 		}
 
 		title := "Сохранить проект"
-		filters := []runtime.FileFilter{
-			{DisplayName: "Файлы проекта (*.ss)", Pattern: "*.ss"},
-			{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
-			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
-		}
-		if a.isEnglish() {
-			title = "Save Project"
+		var filters []runtime.FileFilter
+		if isProjection {
+			title = "Сохранить проект проекции"
 			filters = []runtime.FileFilter{
-				{DisplayName: "Project files (*.ss)", Pattern: "*.ss"},
-				{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
-				{DisplayName: "All files (*.*)", Pattern: "*.*"},
+				{DisplayName: "Файлы проекта проекции (*.projection)", Pattern: "*.projection"},
+				{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+				{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+			}
+			if a.isEnglish() {
+				title = "Save Projection Project"
+				filters = []runtime.FileFilter{
+					{DisplayName: "Projection Project files (*.projection)", Pattern: "*.projection"},
+					{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+					{DisplayName: "All files (*.*)", Pattern: "*.*"},
+				}
+			}
+		} else {
+			filters = []runtime.FileFilter{
+				{DisplayName: "Файлы проекта (*.ss)", Pattern: "*.ss"},
+				{DisplayName: "Файлы проекта проекции (*.projection)", Pattern: "*.projection"},
+				{DisplayName: "Файлы JSON (*.json)", Pattern: "*.json"},
+				{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
+			}
+			if a.isEnglish() {
+				title = "Save Project"
+				filters = []runtime.FileFilter{
+					{DisplayName: "Project files (*.ss)", Pattern: "*.ss"},
+					{DisplayName: "Projection Project files (*.projection)", Pattern: "*.projection"},
+					{DisplayName: "JSON files (*.json)", Pattern: "*.json"},
+					{DisplayName: "All files (*.*)", Pattern: "*.*"},
+				}
 			}
 		}
 
@@ -313,6 +354,11 @@ func writeTextFile(targetPath string, content string) error {
 }
 
 func (a *App) saveBase64Dialog(title, defaultFilename, fallbackName, ext, filterName, filterPattern, base64Data string) (string, error) {
+	if !a.dialogMutex.TryLock() {
+		return "", fmt.Errorf("dialog already in progress")
+	}
+	defer a.dialogMutex.Unlock()
+
 	if defaultFilename == "" {
 		defaultFilename = fallbackName
 	}
@@ -428,7 +474,14 @@ func getExeRelativePath(filename string) (string, error) {
 }
 
 func loadConfigFileWithDefault(filename string, defaultContent string) (*PanelsConfigResult, error) {
-	// 1. Check user config directory first (%APPDATA%\engineering-led-tool)
+	// 1. Check writable dir first (exe dir if portable, or %APPDATA%)
+	if writablePath, _ := getConfigWritablePath(filename); writablePath != "" {
+		if data, err := os.ReadFile(writablePath); err == nil && len(data) > 0 {
+			return &PanelsConfigResult{FilePath: writablePath, Content: string(data)}, nil
+		}
+	}
+
+	// 2. Check user config directory (%APPDATA%\engineering-led-tool)
 	if uDir, err := getUserConfigDir(); err == nil && uDir != "" {
 		uPath := filepath.Join(uDir, filename)
 		if data, err := os.ReadFile(uPath); err == nil && len(data) > 0 {
@@ -436,21 +489,21 @@ func loadConfigFileWithDefault(filename string, defaultContent string) (*PanelsC
 		}
 	}
 
-	// 2. Check directory next to the executable
+	// 3. Check directory next to the executable
 	if exePath, err := getExeRelativePath(filename); err == nil && exePath != "" {
 		if data, err := os.ReadFile(exePath); err == nil && len(data) > 0 {
 			return &PanelsConfigResult{FilePath: exePath, Content: string(data)}, nil
 		}
 	}
 
-	// 3. Check current working directory
+	// 4. Check current working directory
 	if absCwd, err := filepath.Abs(filename); err == nil {
 		if data, err := os.ReadFile(absCwd); err == nil && len(data) > 0 {
 			return &PanelsConfigResult{FilePath: absCwd, Content: string(data)}, nil
 		}
 	}
 
-	// 4. Default content initialization if needed
+	// 5. Default content initialization if needed
 	writablePath, _ := getConfigWritablePath(filename)
 	if defaultContent != "" && writablePath != "" {
 		_ = os.MkdirAll(filepath.Dir(writablePath), 0755)
@@ -480,6 +533,11 @@ func saveConfigFile(filename string, content string) (string, error) {
 }
 
 func (a *App) openJSONConfigDialog(title string) (*PanelsConfigResult, error) {
+	if !a.dialogMutex.TryLock() {
+		return nil, fmt.Errorf("dialog already in progress")
+	}
+	defer a.dialogMutex.Unlock()
+
 	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:   title,
 		Filters: a.getJsonFilters(),
@@ -503,6 +561,11 @@ func (a *App) openJSONConfigDialog(title string) (*PanelsConfigResult, error) {
 }
 
 func (a *App) saveJSONConfigDialog(title string, defaultFilename string, fallbackName string, content string) (string, error) {
+	if !a.dialogMutex.TryLock() {
+		return "", fmt.Errorf("dialog already in progress")
+	}
+	defer a.dialogMutex.Unlock()
+
 	if defaultFilename == "" {
 		defaultFilename = fallbackName
 	}

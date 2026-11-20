@@ -823,10 +823,7 @@ export default function SidebarWiringTab(props: SidebarWiringTabProps) {
       <div className="pt-2 border-t border-white/[0.06]">
         <button
           className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-blue-500/20 transition active:scale-[0.99] flex items-center justify-center gap-2"
-          onClick={() => {
-            setSelectedPanels(new Set());
-            setTimeout(() => exportPNG(), 50);
-          }}
+          onClick={exportPNG}
           title={t('wiring.downloadPngTitle')}
         >
           {t('wiring.downloadPng', { name: currentWiringPage ? `(${currentWiringPage.name})` : '' })}

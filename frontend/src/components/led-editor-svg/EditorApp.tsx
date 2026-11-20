@@ -49,6 +49,7 @@ import MaskLogoModal from './MaskLogoModal';
 import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
 import { useI18n } from '@/lib/i18n';
+import { useAppMode } from '@/lib/appMode';
 import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
 import FiberPresetsModal from './FiberPresetsModal';
@@ -79,11 +80,13 @@ import {
   loadDesktopMaskLogoConfig,
   saveDesktopMaskLogoConfig,
 } from '@/lib/desktop';
+import { isProjectionProjectData } from '@/lib/projection/types';
 
 export type { CableEx, CardInstance };
 
 export default function EditorApp() {
   const { language, t } = useI18n();
+  const { mode, setMode } = useAppMode();
   // ======== VIEW ========
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [pan, setPan] = useState<Vec>({ x: 0, y: 0 });
@@ -1051,8 +1054,15 @@ export default function EditorApp() {
 
   // ======== PNG EXPORT ========
   const exportPNG = useCallback(() => {
-    exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
-  }, [svgRef, panels, pan, scale, eventName, activeWiringPage.name]);
+    if (activeTab === 'mask') {
+      exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+      return;
+    }
+    setSelectedPanels(new Set());
+    setTimeout(() => {
+      exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
+    }, 50);
+  }, [activeTab, allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig, svgRef, panels, pan, scale, activeWiringPage.name]);
 
   // ======== APPLY LOADED PROJECT DATA ========
   const applyProjectData = useCallback((data: {
@@ -1323,6 +1333,10 @@ export default function EditorApp() {
       if (res && res.content) {
         try {
           const data = JSON.parse(res.content);
+          if (isProjectionProjectData(data)) {
+            setMode('projection');
+            return;
+          }
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
           showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1337,6 +1351,11 @@ export default function EditorApp() {
       if (res && res.content) {
         try {
           const data = JSON.parse(res.content);
+          if (isProjectionProjectData(data)) {
+            setMode('projection');
+            return;
+          }
+          setMode('led');
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
           showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1350,13 +1369,18 @@ export default function EditorApp() {
     const unsubFileDrop = setupDesktopFileDrop(async paths => {
       const ssPath = paths.find(p => {
         const lower = p.toLowerCase();
-        return lower.endsWith('.ss') || lower.endsWith('.json');
+        return lower.endsWith('.ss') || lower.endsWith('.json') || lower.endsWith('.projection');
       });
       if (ssPath) {
         try {
           const res = await readDesktopProjectFile(ssPath);
           if (res && res.content) {
             const data = JSON.parse(res.content);
+            if (isProjectionProjectData(data)) {
+              setMode('projection');
+              return;
+            }
+            setMode('led');
             applyProjectData(data);
             setCurrentFilePath(res.filePath);
             showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1376,11 +1400,15 @@ export default function EditorApp() {
       e.preventDefault();
       e.stopPropagation();
       const file = e.dataTransfer?.files?.[0];
-      if (file && (file.name.endsWith('.ss') || file.name.endsWith('.json'))) {
+      if (file && (file.name.endsWith('.ss') || file.name.endsWith('.json') || file.name.endsWith('.projection'))) {
         const reader = new FileReader();
         reader.onload = () => {
           try {
             const data = JSON.parse(String(reader.result));
+            if (isProjectionProjectData(data)) {
+              setMode('projection');
+              return;
+            }
             applyProjectData(data);
             setCurrentFilePath(null);
             showToast(t('toast.projectLoaded', { file: file.name }));
@@ -1400,7 +1428,7 @@ export default function EditorApp() {
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('drop', handleDrop);
     };
-  }, [applyProjectData, showToast, t]);
+  }, [applyProjectData, showToast, t, setMode]);
 
   // ======== SAVE JSON ========
   const saveProjectToFile = useCallback(async (targetPath: string | null) => {
@@ -2113,6 +2141,7 @@ export default function EditorApp() {
       draft,
       svgRef,
       snapEnabled,
+      enabled: mode === 'led',
     },
     setDraft,
     marqueeStart,

@@ -3,6 +3,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { type ServerPreset } from '@/lib/led-editor-svg/presets';
 import { useUpdater } from '@/lib/useUpdater';
 import { useI18n } from '@/lib/i18n';
+import { useAppMode } from '@/lib/appMode';
 
 interface SidebarInfoTabProps {
   eventName: string;
@@ -47,6 +48,7 @@ export default function SidebarInfoTab({
   const [copiedSpec, setCopiedSpec] = useState(false);
   const { currentVersion, updateInfo, checking, setIsModalOpen, checkForUpdatesManual } = useUpdater();
   const { t } = useI18n();
+  const { setMode } = useAppMode();
 
   const serverValue = useMemo(() => {
     const byId = serverPresetsList.find((s) => s.id === serverName)?.id;
@@ -291,6 +293,30 @@ export default function SidebarInfoTab({
             {t('info.loadProject')}
           </button>
         </div>
+      </div>
+
+      {/* Инженерный калькулятор проекции */}
+      <div className="p-3 rounded-xl bg-gradient-to-br from-[#0e1724] to-[#0a101d] border border-cyan-500/30 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-white">Engineering Projection Tool</span>
+            <div className="text-[10px] text-cyan-400/80 font-mono">Расчет сшивки и маппинга</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMode('projection')}
+          className="w-full py-1.5 px-3 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/45 text-cyan-200 border border-cyan-500/50 text-xs font-medium transition flex items-center justify-center gap-1.5"
+        >
+          <span>Открыть калькулятор проекции</span>
+          <span>→</span>
+        </button>
       </div>
 
       {/* Версия и обновление */}

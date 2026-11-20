@@ -395,6 +395,7 @@ export default function MaskTab({
       <div className="space-y-2 pt-2 border-t border-white/[0.06]">
         <button
           onClick={onExportMaskPNG}
+          title={t('mask.downloadPngTitle')}
           className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2 active:scale-[0.99]"
         >
           {t('mask.downloadPng', { name: currentMaskPage ? `(${currentMaskPage.name})` : '' })}

@@ -9,11 +9,13 @@ import {
 } from "../../wailsjs/wailsjs/runtime";
 import { useUpdater } from "@/lib/useUpdater";
 import { useI18n } from "@/lib/i18n";
+import { useAppMode } from "@/lib/appMode";
 
 export default function NavBar() {
   const [isMaximised, setIsMaximised] = useState(false);
   const { currentVersion, updateInfo, checking, setIsModalOpen, checkForUpdatesManual } = useUpdater();
   const { language, setLanguage, t } = useI18n();
+  const { mode, setMode } = useAppMode();
 
   async function checkMaximised() {
     const maximised = await WindowIsMaximised();
@@ -77,7 +79,53 @@ export default function NavBar() {
           </span>
         </div>
 
-        {/* DRAG REGION */}
+        {/* DRAG REGION LEFT */}
+        <div
+          className="flex-1 h-full"
+          style={{ "--wails-draggable": "drag" } as React.CSSProperties}
+        ></div>
+
+        {/* TOOL MODE SWITCHER */}
+        <div
+          className="flex items-center bg-[#151821] border border-white/[0.08] rounded-lg p-0.5 text-xs font-medium shrink-0"
+          data-no-drag
+          style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
+        >
+          <button
+            onClick={() => setMode('led')}
+            className={`px-3 py-1 rounded-md transition flex items-center gap-1.5 ${
+              mode === 'led'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-500/20'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span>{t('nav.modeLed')}</span>
+          </button>
+          <button
+            onClick={() => setMode('projection')}
+            className={`px-3 py-1 rounded-md transition flex items-center gap-1.5 ${
+              mode === 'projection'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-500/20'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <circle cx="12" cy="12" r="3" />
+              <line x1="2" y1="12" x2="6" y2="12" />
+              <line x1="18" y1="12" x2="22" y2="12" />
+            </svg>
+            <span>{t('nav.modeProjection')}</span>
+          </button>
+        </div>
+
+        {/* DRAG REGION RIGHT */}
         <div
           className="flex-1 h-full"
           style={{ "--wails-draggable": "drag" } as React.CSSProperties}
