@@ -33,7 +33,7 @@ export function renderFullCanvasMask(
     const minorStep = 50;
     const majorStep = 200;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1;
     for (let x = 0; x <= W; x += minorStep) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -42,8 +42,8 @@ export function renderFullCanvasMask(
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 1.5;
     for (let x = 0; x <= W; x += majorStep) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
     }
@@ -52,15 +52,15 @@ export function renderFullCanvasMask(
     }
   }
 
-  // 3. Projector Zones
+  // 3. Projector Zones (White high-visibility lines)
   for (const s of c.slices) {
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.03)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
     ctx.fillRect(s.startX, s.startY, s.width, s.height);
 
     ctx.save();
     ctx.setLineDash([8, 6]);
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.7)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(s.startX, s.startY, s.width, s.height);
     ctx.restore();
 
@@ -68,7 +68,7 @@ export function renderFullCanvasMask(
     const cy = s.startY + s.height / 2;
 
     if (cfg.showTargets) {
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(s.startX, s.startY); ctx.lineTo(s.startX + s.width, s.startY + s.height);
@@ -81,8 +81,8 @@ export function renderFullCanvasMask(
       ctx.stroke();
 
       const chLen = 30;
-      ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(cx - chLen, cy); ctx.lineTo(cx + chLen, cy);
       ctx.moveTo(cx, cy - chLen); ctx.lineTo(cx, cy + chLen);
@@ -90,22 +90,26 @@ export function renderFullCanvasMask(
     }
 
     if (cfg.showSliceLabels) {
-      const boxW = Math.min(s.width - 16, 260);
-      const boxH = 46;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-      ctx.fillRect(s.startX + 14, s.startY + 14, boxW, boxH);
-      ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(s.startX + 14, s.startY + 14, boxW, boxH);
+      // Centered in slice
+      const boxW = Math.min(s.width - 20, 270);
+      const boxH = 50;
+      const bx = cx - boxW / 2;
+      const by = cy - boxH / 2;
 
-      ctx.fillStyle = '#06b6d4';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(bx, by, boxW, boxH);
+
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${s.zoneId}  [${s.startX}, ${s.startY} px]`, s.startX + 24, s.startY + 34);
+      ctx.textAlign = 'center';
+      ctx.fillText(`${s.zoneId}  [${s.startX}, ${s.startY} px]`, cx, by + 22);
 
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = '#cbd5e1';
       ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-      ctx.fillText(`Res: ${s.width}×${s.height} px • Stack: ${s.stackMultiplier}x`, s.startX + 24, s.startY + 50);
+      ctx.fillText(`Res: ${s.width}×${s.height} px • Stack: ${s.stackMultiplier}x`, cx, by + 40);
     }
   }
 
@@ -165,26 +169,11 @@ export function renderFullCanvasMask(
     }
   }
 
-  // 5. Active Target Wall Outline
+  // 5. Active Target Wall Outline (Wall badge removed per user request)
   if (cfg.showWallBounds) {
     ctx.strokeStyle = '#10b981';
     ctx.lineWidth = 3;
     ctx.strokeRect(c.wallPxX, c.wallPxY, c.activeWallPxW, c.activeWallPxH);
-
-    const tagH = 26;
-    ctx.fillStyle = '#10b981';
-    ctx.fillRect(c.wallPxX, Math.max(0, c.wallPxY - tagH), Math.min(c.activeWallPxW, 450), tagH);
-
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-    ctx.textAlign = 'left';
-    const wallTag = cfg.lang === 'en' ? 'WALL' : 'СТЕНА';
-    const mTag = cfg.lang === 'en' ? 'm' : 'м';
-    ctx.fillText(
-      `${wallTag}: ${c.wallW.toFixed(2)}×${c.wallH.toFixed(2)} ${mTag}  [${c.activeWallPxW}×${c.activeWallPxH} px]`,
-      c.wallPxX + 10,
-      Math.max(16, c.wallPxY - 8)
-    );
   }
 
   // 6. Info Stamp
@@ -237,7 +226,7 @@ export function renderProjectorSliceMask(
   ctx.fillRect(0, 0, W, H);
 
   if (cfg.showGrid) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1;
     for (let x = 0; x <= W; x += 50) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -247,12 +236,12 @@ export function renderProjectorSliceMask(
     }
   }
 
-  ctx.strokeStyle = '#00f0ff';
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, W, H);
 
   if (cfg.showTargets) {
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(0, 0); ctx.lineTo(W, H);
@@ -269,8 +258,8 @@ export function renderProjectorSliceMask(
       ctx.stroke();
     });
 
-    ctx.strokeStyle = '#00f0ff';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(cx - 40, cy); ctx.lineTo(cx + 40, cy);
     ctx.moveTo(cx, cy - 40); ctx.lineTo(cx, cy + 40);
@@ -339,21 +328,27 @@ export function renderProjectorSliceMask(
     }
   }
 
+  // Centered slice info badge
+  const boxW = Math.min(W - 20, 320);
+  const boxH = 75;
+  const bx = (W - boxW) / 2;
+  const by = (H - boxH) / 2;
+
   ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
-  ctx.fillRect(20, 20, 320, 75);
-  ctx.strokeStyle = '#00f0ff';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(20, 20, 320, 75);
+  ctx.fillRect(bx, by, boxW, boxH);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.8;
+  ctx.strokeRect(bx, by, boxW, boxH);
 
-  ctx.fillStyle = '#06b6d4';
+  ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText(`PROJECTOR ${s.zoneId}`, 34, 48);
+  ctx.textAlign = 'center';
+  ctx.fillText(`PROJECTOR ${s.zoneId}`, W / 2, by + 28);
 
-  ctx.fillStyle = '#e2e8f0';
+  ctx.fillStyle = '#cbd5e1';
   ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  ctx.fillText(`Canvas Offset: [${s.startX}, ${s.startY}] px`, 34, 68);
-  ctx.fillText(`Output Res: ${s.width}×${s.height} px • Stack: ${s.stackMultiplier}x`, 34, 84);
+  ctx.fillText(`Canvas Offset: [${s.startX}, ${s.startY}] px`, W / 2, by + 48);
+  ctx.fillText(`Output Res: ${s.width}×${s.height} px • Stack: ${s.stackMultiplier}x`, W / 2, by + 64);
 
   ctx.restore();
 }

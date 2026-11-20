@@ -1,12 +1,58 @@
 // frontend/src/lib/i18n/en_projection.ts
 
 export const enProjection = {
-  // Presets
+  // Project & Templates
+  'projection.project.title': 'Event Project',
+  'projection.project.name': 'Project / Event Name:',
+  'projection.project.namePh': 'e.g. Main Stage 28×10m',
+  'projection.project.new': 'New',
+  'projection.project.newTooltip': 'Create new project (reset current parameters)',
+  'projection.project.newConfirm': 'Start a new project? Unsaved changes will be lost.',
+  'projection.project.open': 'Open',
+  'projection.project.openTooltip': 'Open .projection or .json project (Ctrl+O)',
+  'projection.project.save': 'Save',
+  'projection.project.saveTooltip': 'Save project .projection (Ctrl+S)',
+  'projection.project.saveAs': 'Save As',
+  'projection.project.saveAsTooltip': 'Save project as a new .projection file (Ctrl+Shift+S)',
+  'projection.project.templates': 'Quick Templates',
+  'projection.project.templateSelect': 'Load configuration template...',
+  'projection.project.saved': 'Project saved: {name}',
+  'projection.project.loaded': 'Project loaded: {name}',
+  'projection.project.created': 'New project created',
+  'projection.project.unsaved': 'Unsaved',
+  'projection.project.reset': 'Reset Parameters',
+  'projection.project.resetTooltip': 'Reset all parameters to default',
+  'projection.project.resetDone': 'Parameters reset to default',
+
+  // Presets / Templates names
   'projection.presets': 'Quick Presets',
+  'projection.preset.builtin': 'Standard Presets',
+  'projection.preset.custom': 'Custom Presets',
+  'projection.preset.projectName': 'Project / Scheme Name:',
+  'projection.preset.projectNamePh': 'e.g. Arena Hall 35×8m',
+  'projection.preset.save': 'Save Preset',
+  'projection.preset.saveNew': 'Save as New',
+  'projection.preset.saveTitle': 'Save Preset',
+  'projection.preset.namePrompt': 'Preset Name:',
+  'projection.preset.namePlaceholder': 'e.g. Arena Hall 35×8m',
+  'projection.preset.deleteConfirm': 'Delete preset "{name}"?',
+  'projection.preset.deleted': 'Preset "{name}" deleted',
+  'projection.preset.saved': 'Preset "{name}" saved',
+  'projection.preset.export': 'Export (.projection)',
+  'projection.preset.import': 'Import (.projection)',
+  'projection.action.saveProject': 'Save Project',
+  'projection.action.loadProject': 'Open Project',
+  'projection.action.saveProjectTitle': 'Save Project to .projection (Ctrl+S)',
+  'projection.action.loadProjectTitle': 'Open Project .projection (Ctrl+O)',
+  'projection.preset.imported': 'Loaded {count} preset(s)',
+  'projection.preset.importError': 'Failed to read presets file',
   'projection.preset.facade': 'Facade 28×10m (2×1)',
   'projection.preset.panorama': 'Panorama 36×6m (3×1)',
   'projection.preset.tower': 'Tower 12×15m (1×2 portrait)',
   'projection.preset.single27': 'Test 27.2m (1 projector)',
+  'projection.action.reset': 'Reset',
+  'projection.action.resetTooltip': 'Reset all parameters to default',
+  'projection.action.resetDone': 'Parameters reset to default',
 
   // Surface Section
   'projection.surface.title': '1. Surface & Illumination',
@@ -67,13 +113,27 @@ export const enProjection = {
 
   // Views and Actions
   'projection.view.front': 'Front Elevation',
-  'projection.view.top': 'Top-Down Cones',
+  'projection.view.top': 'Top View',
+  'projection.view.side': 'Right View',
   'projection.view.slices': 'Media Server Slices',
   'projection.action.exportMask': 'Export Mask',
+  'projection.action.exportScheme': 'Export Scheme (PNG)',
+  'projection.action.copyScheme': 'Copy Scheme to Clipboard',
+  'projection.action.colors': 'Colors',
   'projection.action.copySpec': 'Copy Spec',
   'projection.action.copied': 'Copied!',
   'projection.hint.frontStatus': 'Grid: {cols}×{rows} ({orientation}) • Overlap: {overlapM} m ({overlapPx} px)',
   'projection.hint.topStatus': 'Top-down: {cols} columns • Throw distance {dist} m',
+  'projection.hint.sideStatus': 'Right view: {rows} rows • Throw distance {dist} m',
+
+  // Color Settings
+  'projection.colors.title': 'Visualizer Colors',
+  'projection.colors.wall': 'Wall Outline',
+  'projection.colors.blend': 'Edge Blend',
+  'projection.colors.beam': 'Beam & Frustum',
+  'projection.colors.proj': 'Projector Body',
+  'projection.colors.perProj': 'Individual Projectors',
+  'projection.colors.reset': 'Reset Colors',
 
   // Slices
   'projection.slices.title': 'Pixel Slices Specification',

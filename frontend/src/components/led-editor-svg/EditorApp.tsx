@@ -49,6 +49,7 @@ import MaskLogoModal from './MaskLogoModal';
 import ConfirmModal from './ConfirmModal';
 import PanelPresetsModal from './PanelPresetsModal';
 import { useI18n } from '@/lib/i18n';
+import { useAppMode } from '@/lib/appMode';
 import CardPresetsModal from './CardPresetsModal';
 import ServerPresetsModal from './ServerPresetsModal';
 import FiberPresetsModal from './FiberPresetsModal';
@@ -84,6 +85,7 @@ export type { CableEx, CardInstance };
 
 export default function EditorApp() {
   const { language, t } = useI18n();
+  const { mode, setMode } = useAppMode();
   // ======== VIEW ========
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [pan, setPan] = useState<Vec>({ x: 0, y: 0 });
@@ -1337,6 +1339,10 @@ export default function EditorApp() {
       if (res && res.content) {
         try {
           const data = JSON.parse(res.content);
+          if (data && (data.format === 'projection' || data.projectionInputs || (data.wallW !== undefined && data.lumensPerProj !== undefined))) {
+            return;
+          }
+          setMode('led');
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
           showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1357,6 +1363,10 @@ export default function EditorApp() {
           const res = await readDesktopProjectFile(ssPath);
           if (res && res.content) {
             const data = JSON.parse(res.content);
+            if (data && (data.format === 'projection' || data.projectionInputs || (data.wallW !== undefined && data.lumensPerProj !== undefined))) {
+              return;
+            }
+            setMode('led');
             applyProjectData(data);
             setCurrentFilePath(res.filePath);
             showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1400,7 +1410,7 @@ export default function EditorApp() {
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('drop', handleDrop);
     };
-  }, [applyProjectData, showToast, t]);
+  }, [applyProjectData, showToast, t, setMode]);
 
   // ======== SAVE JSON ========
   const saveProjectToFile = useCallback(async (targetPath: string | null) => {
@@ -2113,6 +2123,7 @@ export default function EditorApp() {
       draft,
       svgRef,
       snapEnabled,
+      enabled: mode === 'led',
     },
     setDraft,
     marqueeStart,

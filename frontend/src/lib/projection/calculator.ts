@@ -8,12 +8,19 @@ export const RESOLUTION_PRESETS = [
   { label: 'Full HD (1920×1080 • 16:9)', value: '1920x1080', w: 1920, h: 1080 },
 ];
 
-export const SURFACE_PRESETS = [
-  { label: 'Матовый белый экран (1.0)', gain: 1.0 },
-  { label: 'Светлая штукатурка / Бетон (0.8)', gain: 0.8 },
-  { label: 'Серый камень / Фасад (0.6)', gain: 0.6 },
-  { label: 'Красный кирпич / Дерево (0.4)', gain: 0.4 },
-  { label: 'Тёмный фасад / Гранит (0.25)', gain: 0.25 },
+export interface SurfacePreset {
+  label: string;
+  labelRu: string;
+  labelEn: string;
+  gain: number;
+}
+
+export const SURFACE_PRESETS: SurfacePreset[] = [
+  { label: 'Матовый белый экран (1.0)', labelRu: 'Матовый белый экран (1.0)', labelEn: 'Matte White Screen (1.0)', gain: 1.0 },
+  { label: 'Светлая штукатурка / Бетон (0.8)', labelRu: 'Светлая штукатурка / Бетон (0.8)', labelEn: 'Light Plaster / Concrete (0.8)', gain: 0.8 },
+  { label: 'Серый камень / Фасад (0.6)', labelRu: 'Серый камень / Фасад (0.6)', labelEn: 'Grey Stone / Facade (0.6)', gain: 0.6 },
+  { label: 'Красный кирпич / Дерево (0.4)', labelRu: 'Красный кирпич / Дерево (0.4)', labelEn: 'Red Brick / Wood (0.4)', gain: 0.4 },
+  { label: 'Тёмный фасад / Гранит (0.25)', labelRu: 'Тёмный фасад / Гранит (0.25)', labelEn: 'Dark Facade / Granite (0.25)', gain: 0.25 },
 ];
 
 export const INITIAL_INPUTS: ProjectionInputs = {
@@ -37,6 +44,83 @@ export const INITIAL_INPUTS: ProjectionInputs = {
   efficiency: 0.85,
   canvasTab: 'front',
 };
+export const BUILTIN_PRESETS: Record<
+  string,
+  {
+    nameKey: string;
+    inputs: Partial<ProjectionInputs>;
+  }
+> = {
+  facade: {
+    nameKey: 'projection.preset.facade',
+    inputs: {
+      wallW: 28.0,
+      wallH: 10.0,
+      throwDist: 20.0,
+      calcMode: 'autoGrid',
+      lensInputType: 'tr',
+      tr: 1.50,
+      orientation: 'landscape',
+      blendPercent: 15,
+      lumensPerProj: 20000,
+      targetLux: 150,
+      stackMode: 1,
+      gain: 0.8,
+    },
+  },
+  panorama: {
+    nameKey: 'projection.preset.panorama',
+    inputs: {
+      wallW: 36.0,
+      wallH: 6.0,
+      throwDist: 15.0,
+      calcMode: 'autoGrid',
+      lensInputType: 'tr',
+      tr: 1.20,
+      orientation: 'landscape',
+      blendPercent: 15,
+      lumensPerProj: 20000,
+      targetLux: 200,
+      stackMode: 1,
+      gain: 0.8,
+    },
+  },
+  tower: {
+    nameKey: 'projection.preset.tower',
+    inputs: {
+      wallW: 12.0,
+      wallH: 15.0,
+      throwDist: 18.0,
+      calcMode: 'autoGrid',
+      lensInputType: 'tr',
+      tr: 1.20,
+      orientation: 'portrait',
+      blendPercent: 15,
+      lumensPerProj: 30000,
+      targetLux: 150,
+      stackMode: 1,
+      gain: 0.8,
+    },
+  },
+  single27: {
+    nameKey: 'projection.preset.single27',
+    inputs: {
+      wallW: 17.68,
+      wallH: 11.05,
+      throwDist: 27.2,
+      calcMode: 'autoGrid',
+      lensInputType: 'angle',
+      angleDeg: 36.0,
+      orientation: 'landscape',
+      blendPercent: 15,
+      lumensPerProj: 20000,
+      targetLux: 80,
+      gain: 1.0,
+      stackMode: 1,
+    },
+  },
+};
+
 
 export function trToAngle(tr: number): number {
   const safeTR = Math.max(0.1, tr);

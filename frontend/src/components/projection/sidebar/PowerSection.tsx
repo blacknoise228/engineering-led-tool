@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function PowerSection({ inputs, onChange, stackMultiplier }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const stackStatus =
     inputs.stackMode === 'auto'
@@ -63,10 +63,28 @@ export default function PowerSection({ inputs, onChange, stackMultiplier }: Prop
       <div>
         <div className="flex justify-between items-center text-[11px] mb-1.5">
           <span className="text-neutral-400">{t('projection.power.stack')}</span>
-          <span className="text-[10px] font-mono text-amber-400">{stackStatus}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono text-amber-400">{stackStatus}</span>
+            <div className="flex items-center gap-1 font-mono">
+              <input
+                type="number"
+                min="1"
+                max="32"
+                step="1"
+                value={inputs.stackMode === 'auto' ? stackMultiplier : inputs.stackMode}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  onChange({ stackMode: Number.isNaN(val) || val < 1 ? 1 : val });
+                }}
+                title={language === 'en' ? 'Custom projector count in stack' : 'Свое число проекторов в стаке'}
+                className="w-14 bg-[#141721] border border-white/[0.08] focus:border-cyan-500/50 rounded-lg px-1.5 py-0.5 text-center text-xs text-cyan-400 font-bold outline-none"
+              />
+              <span className="text-[10px] text-neutral-500">x</span>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-4 gap-1.5 text-[11px] font-mono">
-          {([1, 2, 3] as const).map((m) => (
+        <div className="grid grid-cols-5 gap-1 text-[11px] font-mono">
+          {([1, 2, 3, 4] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -82,7 +100,7 @@ export default function PowerSection({ inputs, onChange, stackMultiplier }: Prop
           ))}
           <button
             type="button"
-            onClick={() => onChange({ stackMode: 'auto' })}
+            onClick={() => onChange({ stackMode: inputs.stackMode === 'auto' ? 1 : 'auto' })}
             className={`py-1.5 rounded-lg border text-center transition ${
               inputs.stackMode === 'auto'
                 ? 'bg-blue-600/35 border-blue-400 text-blue-200 font-semibold shadow-sm'

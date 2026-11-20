@@ -1,12 +1,58 @@
 // frontend/src/lib/i18n/ru_projection.ts
 
 export const ruProjection = {
-  // Presets
+  // Project & Templates
+  'projection.project.title': 'Проект мероприятия',
+  'projection.project.name': 'Название проекта / мероприятия:',
+  'projection.project.namePh': 'Например: Главная сцена 28×10м',
+  'projection.project.new': 'Новый',
+  'projection.project.newTooltip': 'Создать новый проект (очистить текущие параметры)',
+  'projection.project.newConfirm': 'Начать новый проект? Несохраненные параметры будут сброшены.',
+  'projection.project.open': 'Открыть',
+  'projection.project.openTooltip': 'Открыть проект .projection или .json (Ctrl+O)',
+  'projection.project.save': 'Сохранить',
+  'projection.project.saveTooltip': 'Сохранить проект .projection (Ctrl+S)',
+  'projection.project.saveAs': 'Как...',
+  'projection.project.saveAsTooltip': 'Сохранить проект в новый файл .projection (Ctrl+Shift+S)',
+  'projection.project.templates': 'Шаблоны конфигураций',
+  'projection.project.templateSelect': 'Загрузить типовой шаблон...',
+  'projection.project.saved': 'Проект сохранен: {name}',
+  'projection.project.loaded': 'Проект загружен: {name}',
+  'projection.project.created': 'Создан новый проект',
+  'projection.project.unsaved': 'Не сохранен',
+  'projection.project.reset': 'Сбросить параметры',
+  'projection.project.resetTooltip': 'Сбросить все параметры к значениям по умолчанию',
+  'projection.project.resetDone': 'Параметры сброшены к значениям по умолчанию',
+
+  // Presets / Templates names
   'projection.presets': 'Быстрые пресеты',
+  'projection.preset.builtin': 'Стандартные',
+  'projection.preset.custom': 'Мои пресеты',
+  'projection.preset.projectName': 'Название проекта / схемы:',
+  'projection.preset.projectNamePh': 'Например: Зал Арена 35×8м',
+  'projection.preset.save': 'Сохранить пресет',
+  'projection.preset.saveNew': 'Сохранить как новый',
+  'projection.preset.saveTitle': 'Сохранение пресета',
+  'projection.preset.namePrompt': 'Название пресета:',
+  'projection.preset.namePlaceholder': 'Например: Зал Арена 35×8м',
+  'projection.preset.deleteConfirm': 'Удалить пресет «{name}»?',
+  'projection.preset.deleted': 'Пресет «{name}» удален',
+  'projection.preset.saved': 'Пресет «{name}» сохранен',
+  'projection.preset.export': 'Экспорт (.projection)',
+  'projection.preset.import': 'Импорт (.projection)',
+  'projection.action.saveProject': 'Сохранить проект',
+  'projection.action.loadProject': 'Загрузить проект',
+  'projection.action.saveProjectTitle': 'Сохранить проект в .projection (Ctrl+S)',
+  'projection.action.loadProjectTitle': 'Открыть проект .projection (Ctrl+O)',
+  'projection.preset.imported': 'Загружено пресетов: {count}',
+  'projection.preset.importError': 'Не удалось прочитать файл пресетов',
   'projection.preset.facade': 'Фасад 28×10м (2×1)',
   'projection.preset.panorama': 'Панорама 36×6м (3×1)',
   'projection.preset.tower': 'Башня 12×15м (1×2 портрет)',
   'projection.preset.single27': 'Тест 27.2м (1 проектор)',
+  'projection.action.reset': 'Сброс',
+  'projection.action.resetTooltip': 'Сбросить все параметры к значениям по умолчанию',
+  'projection.action.resetDone': 'Параметры сброшены к исходным',
 
   // Surface Section
   'projection.surface.title': '1. Стена и освещенность',
@@ -67,13 +113,27 @@ export const ruProjection = {
 
   // Views and Actions
   'projection.view.front': 'Схема засветки стены',
-  'projection.view.top': 'Вид сверху (Лучи)',
+  'projection.view.top': 'Вид сверху',
+  'projection.view.side': 'Вид справа',
   'projection.view.slices': 'Слайсы медиасервера',
   'projection.action.exportMask': 'Выгрузить маску',
+  'projection.action.exportScheme': 'Экспорт схемы (PNG)',
+  'projection.action.copyScheme': 'Скопировать схему в буфер обмена',
+  'projection.action.colors': 'Цвета',
   'projection.action.copySpec': 'Копировать ТЗ',
   'projection.action.copied': 'Скопировано!',
   'projection.hint.frontStatus': 'Сетка: {cols}×{rows} ({orientation}) • Нахлест: {overlapM} м ({overlapPx} px)',
   'projection.hint.topStatus': 'Вид сверху: {cols} колонок • Дистанция {dist} м',
+  'projection.hint.sideStatus': 'Вид справа: {rows} рядов • Дистанция {dist} м',
+
+  // Color Settings
+  'projection.colors.title': 'Настройка цветов схемы',
+  'projection.colors.wall': 'Контур стены',
+  'projection.colors.blend': 'Зоны сшивки',
+  'projection.colors.beam': 'Луч и зона проектора',
+  'projection.colors.proj': 'Корпус проектора',
+  'projection.colors.perProj': 'Отдельные проекторы',
+  'projection.colors.reset': 'Сбросить цвета',
 
   // Slices
   'projection.slices.title': 'Спецификация пиксельных слайсов',

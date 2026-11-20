@@ -16,6 +16,7 @@ interface ProjectionMaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventName?: string;
+  onEventNameChange?: (name: string) => void;
 }
 
 export default function ProjectionMaskModal({
@@ -23,6 +24,7 @@ export default function ProjectionMaskModal({
   isOpen,
   onClose,
   eventName = '',
+  onEventNameChange,
 }: ProjectionMaskModalProps) {
   const { t, language } = useI18n();
   const [selectedTarget, setSelectedTarget] = useState<'canvas' | string>('canvas');
@@ -35,6 +37,10 @@ export default function ProjectionMaskModal({
   const [showInfoStamp, setShowInfoStamp] = useState(true);
   const [customEvent, setCustomEvent] = useState(eventName);
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    setCustomEvent(eventName);
+  }, [eventName]);
 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -213,7 +219,10 @@ export default function ProjectionMaskModal({
               <input
                 type="text"
                 value={customEvent}
-                onChange={(e) => setCustomEvent(e.target.value)}
+                onChange={(e) => {
+                  setCustomEvent(e.target.value);
+                  onEventNameChange?.(e.target.value);
+                }}
                 placeholder="Show / Event Name"
                 className="w-full bg-[#141721] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-cyan-500/50"
               />

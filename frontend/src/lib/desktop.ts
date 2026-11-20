@@ -133,17 +133,27 @@ export function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+let isOpeningProject = false;
+let isSavingProject = false;
+let isSavingFile = false;
+
 export async function openDesktopProject(): Promise<{ filePath: string; content: string } | null> {
   const app = getWailsApp();
   if (!app) return null;
-  const res = await app.OpenProjectDialog();
-  if (res && res.filePath && res.content) {
-    return {
-      filePath: res.filePath,
-      content: res.content,
-    };
+  if (isOpeningProject) return null;
+  isOpeningProject = true;
+  try {
+    const res = await app.OpenProjectDialog();
+    if (res && res.filePath && res.content) {
+      return {
+        filePath: res.filePath,
+        content: res.content,
+      };
+    }
+    return null;
+  } finally {
+    isOpeningProject = false;
   }
-  return null;
 }
 
 export async function saveDesktopProject(
@@ -153,17 +163,25 @@ export async function saveDesktopProject(
 ): Promise<string | null> {
   const app = getWailsApp();
   if (!app) return null;
-  const res = await app.SaveProject(
-    targetPath || '',
-    defaultFilename,
-    content
-  );
-  return res || null;
+  if (!targetPath && isSavingProject) return null;
+  if (!targetPath) isSavingProject = true;
+  try {
+    const res = await app.SaveProject(
+      targetPath || '',
+      defaultFilename,
+      content
+    );
+    return res || null;
+  } finally {
+    if (!targetPath) isSavingProject = false;
+  }
 }
 
 export async function savePngBlob(filename: string, blob: Blob): Promise<boolean> {
   const app = getWailsApp();
   if (app) {
+    if (isSavingFile) return false;
+    isSavingFile = true;
     try {
       const base64 = await blobToBase64(blob);
       const savedPath = await app.SavePNG(filename, base64);
@@ -171,6 +189,8 @@ export async function savePngBlob(filename: string, blob: Blob): Promise<boolean
     } catch (e) {
       console.error('Failed to save PNG in desktop app:', e);
       return false;
+    } finally {
+      isSavingFile = false;
     }
   }
 
@@ -189,12 +209,16 @@ export async function savePngBlob(filename: string, blob: Blob): Promise<boolean
 export async function savePngFile(filename: string, dataUrlOrBase64: string): Promise<boolean> {
   const app = getWailsApp();
   if (app) {
+    if (isSavingFile) return false;
+    isSavingFile = true;
     try {
       const savedPath = await app.SavePNG(filename, dataUrlOrBase64);
       return Boolean(savedPath);
     } catch (e) {
       console.error('Failed to save PNG in desktop app:', e);
       return false;
+    } finally {
+      isSavingFile = false;
     }
   }
 
@@ -211,12 +235,16 @@ export async function savePngFile(filename: string, dataUrlOrBase64: string): Pr
 export async function saveDesktopZIP(filename: string, base64Data: string): Promise<string | null> {
   const app = getWailsApp();
   if (!app) return null;
+  if (isSavingFile) return null;
+  isSavingFile = true;
   try {
     const res = await app.SaveZIP(filename, base64Data);
     return res || null;
   } catch (e) {
     console.error('Failed to save ZIP in desktop app:', e);
     return null;
+  } finally {
+    isSavingFile = false;
   }
 }
 
@@ -278,22 +306,36 @@ export function onDesktopProjectOpen(callback: (project: { filePath: string; con
   });
 }
 
+const fileDropListeners = new Set<(paths: string[]) => void>();
+let fileDropInitialized = false;
+
 export function setupDesktopFileDrop(onFilePaths: (paths: string[]) => void): () => void {
   if (typeof window === 'undefined') return () => {};
+  fileDropListeners.add(onFilePaths);
+
   const w = window as unknown as WailsWindow;
-  if (w.runtime?.OnFileDrop) {
+  if (!fileDropInitialized && w.runtime?.OnFileDrop) {
+    fileDropInitialized = true;
     w.runtime.OnFileDrop((_x: number, _y: number, paths: string[]) => {
       if (Array.isArray(paths) && paths.length > 0) {
-        onFilePaths(paths);
+        fileDropListeners.forEach((listener) => {
+          try {
+            listener(paths);
+          } catch (e) {
+            console.error('Error in file drop listener:', e);
+          }
+        });
       }
     }, false);
-    return () => {
-      if (w.runtime?.OnFileDropOff) {
-        w.runtime.OnFileDropOff();
-      }
-    };
   }
-  return () => {};
+
+  return () => {
+    fileDropListeners.delete(onFilePaths);
+    if (fileDropListeners.size === 0 && w.runtime?.OnFileDropOff) {
+      w.runtime.OnFileDropOff();
+      fileDropInitialized = false;
+    }
+  };
 }
 
 export interface DesktopConfigResult {

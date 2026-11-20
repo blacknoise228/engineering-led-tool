@@ -11,6 +11,7 @@ export function useHotkeys(
         tool: Tool,
         pan: Vec,
         snapEnabled?: boolean,
+        enabled?: boolean,
 
         draft: {
             fromId: string;
@@ -57,8 +58,9 @@ export function useHotkeys(
     groupSelected?: () => void,
     ungroupSelected?: () => void
 ) {
-    const { scale, svgRef, draft, pan, tool, selectedCables, selectedPanels, selectedGroupIds, snapEnabled = true } = values;
+    const { scale, svgRef, draft, pan, tool, selectedCables, selectedPanels, selectedGroupIds, snapEnabled = true, enabled = true } = values;
     useEffect(() => {
+        if (!enabled) return;
         const onMove = (e: MouseEvent) => {
             if (draft && svgRef.current) {
                 const pt = clientToStage(e.clientX, e.clientY, svgRef.current, pan, scale);
@@ -208,6 +210,7 @@ export function useHotkeys(
             window.removeEventListener('contextmenu', onContextMenu);
         };
     }, [
+        enabled,
         draft, pan, scale, applySnapToDelta, onPointerUp, snapEnabled,
         deleteSelected, exportPNG, redo, undo,
         selectedPanels.size, selectedCables.size, selectedGroupIds, tool,

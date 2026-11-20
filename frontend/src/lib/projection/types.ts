@@ -1,7 +1,15 @@
 export type CalcMode = 'autoGrid' | 'manualGrid';
 export type LensInputType = 'tr' | 'angle';
 export type Orientation = 'landscape' | 'portrait';
-export type CanvasTab = 'front' | 'top';
+export type CanvasTab = 'front' | 'top' | 'side';
+
+export interface ProjectionColorConfig {
+  wallColor: string;
+  blendColor: string;
+  beamColor: string;
+  projColor: string;
+  customProjectorColors?: Record<string, string>;
+}
 
 export interface ProjectionInputs {
   wallW: number;
@@ -28,6 +36,13 @@ export interface ProjectionInputs {
   efficiency: number;
 
   canvasTab: CanvasTab;
+}
+
+export interface CustomProjectionPreset {
+  id: string;
+  name: string;
+  createdAt?: number;
+  inputs: ProjectionInputs;
 }
 
 export interface SliceData {

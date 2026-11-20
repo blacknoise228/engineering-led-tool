@@ -121,7 +121,9 @@ export default function SurfaceSection({ inputs, onChange, wallArea }: Props) {
             className="w-full bg-[#141721] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-cyan-500/50"
           >
             {SURFACE_PRESETS.map((p) => (
-              <option key={p.gain} value={String(p.gain)}>{p.label}</option>
+              <option key={p.gain} value={String(p.gain)}>
+                {language === 'en' ? p.labelEn : p.labelRu}
+              </option>
             ))}
           </select>
         </div>
