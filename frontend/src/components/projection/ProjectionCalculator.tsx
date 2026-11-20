@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { ProjectionInputs } from '@/lib/projection/types';
+import { ProjectionInputs, isProjectionProjectData, extractProjectionProjectName } from '@/lib/projection/types';
 import { INITIAL_INPUTS, BUILTIN_PRESETS, computeProjection, buildProjectionSpecText } from '@/lib/projection/calculator';
 import ProjectionPresetsSection from './sidebar/ProjectionPresetsSection';
 import SurfaceSection from './sidebar/SurfaceSection';
@@ -21,6 +21,7 @@ import {
   readDesktopProjectFile,
   onDesktopProjectOpen,
   setupDesktopFileDrop,
+  getInitialDesktopProject,
 } from '@/lib/desktop';
 import { useI18n } from '@/lib/i18n';
 import { useAppMode } from '@/lib/appMode';
@@ -29,23 +30,25 @@ export default function ProjectionCalculator() {
   const { t, language } = useI18n();
   const { mode, setMode } = useAppMode();
   const [inputs, setInputs] = useState<ProjectionInputs>(INITIAL_INPUTS);
-  const [selectedPreset, setSelectedPreset] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('elt_projection_selected_preset_v1') || 'facade';
-    }
-    return 'facade';
-  });
-  const [projectName, setProjectName] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('elt_projection_project_name_v1') || '';
-    }
-    return '';
-  });
+  const [selectedPreset, setSelectedPreset] = useState<string>('facade');
+  const [projectName, setProjectName] = useState<string>('');
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'front' | 'top' | 'side' | 'slices'>('front');
   const [isMaskModalOpen, setIsMaskModalOpen] = useState(false);
   const [copiedSpec, setCopiedSpec] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Clear legacy localStorage project name on mount so it never gets stuck
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('elt_projection_project_name_v1');
+        localStorage.removeItem('elt_projection_selected_preset_v1');
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   const computed = useMemo(() => computeProjection(inputs, language), [inputs, language]);
 
@@ -53,28 +56,22 @@ export default function ProjectionCalculator() {
     setInputs((prev) => ({ ...prev, ...updates }));
   };
 
-  const handleSetProjectName = (name: string) => {
+  const handleSetProjectName = useCallback((name: string) => {
     setProjectName(name);
-    try {
-      localStorage.setItem('elt_projection_project_name_v1', name);
-    } catch {
-      // ignore
-    }
-  };
+  }, []);
 
   const handleNewProject = useCallback(() => {
     setInputs(INITIAL_INPUTS);
     setSelectedPreset('facade');
-    const defaultName = language === 'en' ? 'New Project' : 'Новый проект';
-    handleSetProjectName(defaultName);
+    handleSetProjectName('');
     setCurrentFilePath(null);
     showToast(language === 'en' ? 'New project created' : 'Создан новый проект');
-  }, [language]);
+  }, [language, handleSetProjectName]);
 
   const handleResetInputs = () => {
     setInputs(INITIAL_INPUTS);
     setSelectedPreset('facade');
-    handleSetProjectName(t('projection.preset.facade'));
+    handleSetProjectName('');
     setCurrentFilePath(null);
     showToast(t('projection.project.resetDone'));
   };
@@ -106,6 +103,7 @@ export default function ProjectionCalculator() {
       module: 'projection',
       exportedAt: new Date().toISOString(),
       eventName: projectName || activePresetName,
+      projectName: projectName || activePresetName,
       inputs,
     };
     const jsonContent = JSON.stringify(payload, null, 2);
@@ -116,6 +114,12 @@ export default function ProjectionCalculator() {
         if (savedPath) {
           setCurrentFilePath(savedPath);
           const fileName = savedPath.split(/[\\/]/).pop() || defaultName;
+          if (!projectName || !projectName.trim()) {
+            const cleanName = fileName.replace(/\.(projection|json|ss)$/i, '').trim();
+            if (cleanName) {
+              handleSetProjectName(cleanName);
+            }
+          }
           showToast(t('projection.project.saved', { name: fileName }));
         }
       } catch (err) {
@@ -135,19 +139,34 @@ export default function ProjectionCalculator() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!projectName || !projectName.trim()) {
+      handleSetProjectName(safeName);
+    }
     showToast(t('projection.project.saved', { name: defaultName }));
-  }, [projectName, activePresetName, inputs, t, language]);
+  }, [projectName, activePresetName, inputs, t, language, handleSetProjectName]);
 
   const applyProjectData = useCallback((content: string, filePath?: string) => {
     try {
       const data = JSON.parse(content);
       if (!data) return;
 
+      const extractedName = extractProjectionProjectName(data, filePath);
+
       if (data.inputs && typeof data.inputs === 'object') {
         updateInputs(data.inputs);
-        if (data.eventName || data.name) {
-          handleSetProjectName(data.eventName || data.name);
+        handleSetProjectName(extractedName);
+        if (filePath) {
+          setCurrentFilePath(filePath);
         }
+        const fileName = (filePath ? filePath.split(/[\\/]/).pop() : null) || 'project.projection';
+        showToast(t('projection.project.loaded', { name: fileName }));
+        return;
+      }
+
+      // Check root inputs format (e.g. { wallW: 28, lumensPerProj: 20000, ... })
+      if (typeof data.wallW === 'number' && (typeof data.lumensPerProj === 'number' || typeof data.targetLux === 'number')) {
+        updateInputs(data);
+        handleSetProjectName(extractedName);
         if (filePath) {
           setCurrentFilePath(filePath);
         }
@@ -172,9 +191,7 @@ export default function ProjectionCalculator() {
 
       if (legacyInputs) {
         updateInputs(legacyInputs);
-        if (legacyName) {
-          handleSetProjectName(legacyName);
-        }
+        handleSetProjectName(legacyName || extractedName);
         if (filePath) {
           setCurrentFilePath(filePath);
         }
@@ -188,7 +205,7 @@ export default function ProjectionCalculator() {
       console.error('Error applying loaded project:', err);
       showToast(language === 'en' ? 'Error reading file' : 'Ошибка чтения файла');
     }
-  }, [t, language]);
+  }, [t, language, handleSetProjectName]);
 
   const openProjectDialog = useCallback(async () => {
     if (isDesktopApp()) {
@@ -264,11 +281,26 @@ export default function ProjectionCalculator() {
 
   // Support desktop file drop and external file open (drag & drop from Explorer into window)
   useEffect(() => {
+    // 1. Initial desktop project on startup (e.g. CLI argument or double-clicking .projection file)
+    getInitialDesktopProject().then((project) => {
+      if (project && project.content) {
+        try {
+          const parsed = JSON.parse(project.content);
+          if (isProjectionProjectData(parsed)) {
+            setMode('projection');
+            applyProjectData(project.content, project.filePath);
+          }
+        } catch {
+          // not a projection JSON
+        }
+      }
+    });
+
     const unsubProjectOpen = onDesktopProjectOpen((project) => {
       if (project && project.content) {
         try {
           const parsed = JSON.parse(project.content);
-          if (parsed && (parsed.format === 'projection' || parsed.projectionInputs || (parsed.wallW !== undefined && parsed.lumensPerProj !== undefined))) {
+          if (isProjectionProjectData(parsed)) {
             setMode('projection');
             applyProjectData(project.content, project.filePath);
           }
@@ -288,7 +320,7 @@ export default function ProjectionCalculator() {
           const res = await readDesktopProjectFile(projPath);
           if (res && res.content) {
             const parsed = JSON.parse(res.content);
-            if (parsed && (parsed.format === 'projection' || parsed.projectionInputs || (parsed.wallW !== undefined && parsed.lumensPerProj !== undefined))) {
+            if (isProjectionProjectData(parsed)) {
               setMode('projection');
               applyProjectData(res.content, res.filePath);
             }
@@ -312,7 +344,11 @@ export default function ProjectionCalculator() {
         const reader = new FileReader();
         reader.onload = () => {
           try {
-            applyProjectData(String(reader.result || ''), file.name);
+            const text = String(reader.result || '');
+            const parsed = JSON.parse(text);
+            if (isProjectionProjectData(parsed)) {
+              applyProjectData(text, file.name);
+            }
           } catch (err) {
             console.error('Failed to parse dropped projection file:', err);
           }
@@ -490,21 +526,6 @@ export default function ProjectionCalculator() {
               ].join(' ')}
             >
               <span>{t('projection.view.slices')}</span>
-            </button>
-          </div>
-
-          {/* Right Action Button Pill */}
-          <div className="pointer-events-auto flex items-center gap-2 bg-[#0c0d14]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-2xl">
-            <button
-              onClick={() => setIsMaskModalOpen(true)}
-              className="px-3 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>{t('projection.action.exportMask')}</span>
             </button>
           </div>
         </div>

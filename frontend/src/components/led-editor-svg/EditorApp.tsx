@@ -80,6 +80,7 @@ import {
   loadDesktopMaskLogoConfig,
   saveDesktopMaskLogoConfig,
 } from '@/lib/desktop';
+import { isProjectionProjectData } from '@/lib/projection/types';
 
 export type { CableEx, CardInstance };
 
@@ -1332,6 +1333,10 @@ export default function EditorApp() {
       if (res && res.content) {
         try {
           const data = JSON.parse(res.content);
+          if (isProjectionProjectData(data)) {
+            setMode('projection');
+            return;
+          }
           applyProjectData(data);
           setCurrentFilePath(res.filePath);
           showToast(t('toast.projectLoaded', { file: res.filePath.split(/[\\/]/).pop() || '' }));
@@ -1346,7 +1351,8 @@ export default function EditorApp() {
       if (res && res.content) {
         try {
           const data = JSON.parse(res.content);
-          if (data && (data.format === 'projection' || data.projectionInputs || (data.wallW !== undefined && data.lumensPerProj !== undefined))) {
+          if (isProjectionProjectData(data)) {
+            setMode('projection');
             return;
           }
           setMode('led');
@@ -1363,14 +1369,15 @@ export default function EditorApp() {
     const unsubFileDrop = setupDesktopFileDrop(async paths => {
       const ssPath = paths.find(p => {
         const lower = p.toLowerCase();
-        return lower.endsWith('.ss') || lower.endsWith('.json');
+        return lower.endsWith('.ss') || lower.endsWith('.json') || lower.endsWith('.projection');
       });
       if (ssPath) {
         try {
           const res = await readDesktopProjectFile(ssPath);
           if (res && res.content) {
             const data = JSON.parse(res.content);
-            if (data && (data.format === 'projection' || data.projectionInputs || (data.wallW !== undefined && data.lumensPerProj !== undefined))) {
+            if (isProjectionProjectData(data)) {
+              setMode('projection');
               return;
             }
             setMode('led');
@@ -1393,11 +1400,15 @@ export default function EditorApp() {
       e.preventDefault();
       e.stopPropagation();
       const file = e.dataTransfer?.files?.[0];
-      if (file && (file.name.endsWith('.ss') || file.name.endsWith('.json'))) {
+      if (file && (file.name.endsWith('.ss') || file.name.endsWith('.json') || file.name.endsWith('.projection'))) {
         const reader = new FileReader();
         reader.onload = () => {
           try {
             const data = JSON.parse(String(reader.result));
+            if (isProjectionProjectData(data)) {
+              setMode('projection');
+              return;
+            }
             applyProjectData(data);
             setCurrentFilePath(null);
             showToast(t('toast.projectLoaded', { file: file.name }));

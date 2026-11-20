@@ -25,17 +25,20 @@ export default function ProjectionVisualizer({
   const { t, language } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const [colors, setColors] = useState<ProjectionColorConfig>(() => {
+  const [colors, setColors] = useState<ProjectionColorConfig>(DEFAULT_PROJECTION_COLORS);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('elt_projection_colors');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          setColors(JSON.parse(saved));
+        }
       } catch {
         // ignore
       }
     }
-    return DEFAULT_PROJECTION_COLORS;
-  });
+  }, []);
 
   const saveColors = (newColors: ProjectionColorConfig) => {
     setColors(newColors);
