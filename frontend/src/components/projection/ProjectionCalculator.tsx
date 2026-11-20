@@ -12,6 +12,7 @@ import ProjectionKpiCards from './ProjectionKpiCards';
 import ProjectionVisualizer from './ProjectionVisualizer';
 import ProjectionSliceTable from './ProjectionSliceTable';
 import ProjectionMaskModal from './ProjectionMaskModal';
+import { exportVisualizerSchemePNG, DEFAULT_PROJECTION_COLORS } from '@/lib/projection/canvas-visualizer';
 import {
   showToast,
   isDesktopApp,
@@ -218,7 +219,7 @@ export default function ProjectionCalculator() {
     }
   };
 
-  // Keyboard shortcuts (Ctrl+S, Ctrl+Shift+S, Ctrl+O)
+  // Keyboard shortcuts (Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+E)
   useEffect(() => {
     if (mode !== 'projection') return;
 
@@ -236,12 +237,30 @@ export default function ProjectionCalculator() {
       } else if (e.key === 'o' || e.key === 'O' || e.key === 'щ' || e.key === 'Щ') {
         e.preventDefault();
         openProjectDialog();
+      } else if (!e.shiftKey && !e.altKey && (e.code === 'KeyE' || e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У')) {
+        e.preventDefault();
+        let currentColors = DEFAULT_PROJECTION_COLORS;
+        if (typeof window !== 'undefined') {
+          try {
+            const saved = localStorage.getItem('elt_projection_colors');
+            if (saved) currentColors = JSON.parse(saved);
+          } catch {
+            // ignore
+          }
+        }
+        exportVisualizerSchemePNG(
+          computed,
+          inputs.canvasTab,
+          language,
+          currentColors,
+          activePresetName
+        );
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, currentFilePath, saveProjectToFile, openProjectDialog]);
+  }, [mode, currentFilePath, saveProjectToFile, openProjectDialog, computed, inputs.canvasTab, language, activePresetName]);
 
   // Support desktop file drop and external file open (drag & drop from Explorer into window)
   useEffect(() => {

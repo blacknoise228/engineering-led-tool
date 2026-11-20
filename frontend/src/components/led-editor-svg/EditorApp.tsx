@@ -1053,8 +1053,15 @@ export default function EditorApp() {
 
   // ======== PNG EXPORT ========
   const exportPNG = useCallback(() => {
-    exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
-  }, [svgRef, panels, pan, scale, eventName, activeWiringPage.name]);
+    if (activeTab === 'mask') {
+      exportMaskPNG(allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig);
+      return;
+    }
+    setSelectedPanels(new Set());
+    setTimeout(() => {
+      exportPNGFunc(svgRef, panels, pan, scale, eventName, activeWiringPage.name);
+    }, 50);
+  }, [activeTab, allPanels, screenGroups, eventName, activeMaskPage.name, maskLogoConfig, svgRef, panels, pan, scale, activeWiringPage.name]);
 
   // ======== APPLY LOADED PROJECT DATA ========
   const applyProjectData = useCallback((data: {

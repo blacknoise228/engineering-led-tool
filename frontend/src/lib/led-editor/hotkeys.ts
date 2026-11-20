@@ -164,7 +164,7 @@ export function useHotkeys(
                     return;
                 }
             }
-            if (isCtrlOrMeta && (e.code === 'KeyE' || e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У')) {
+            if (isCtrlOrMeta && !e.shiftKey && !e.altKey && (e.code === 'KeyE' || e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У')) {
                 e.preventDefault();
                 exportPNG();
                 return;

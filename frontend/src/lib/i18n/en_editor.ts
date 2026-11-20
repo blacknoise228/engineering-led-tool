@@ -80,7 +80,7 @@ export const enEditor = {
   'wiring.clearWiring': 'Clear selected wiring',
   'wiring.clearWiringTitle': 'Remove all cables from selected panels',
   'wiring.downloadPng': 'Download PNG {name}',
-  'wiring.downloadPngTitle': 'Export current wiring diagram to PNG',
+  'wiring.downloadPngTitle': 'Export current wiring diagram to PNG (Ctrl+E)',
 
   // Screen Card
   'screen.select': 'Select',
@@ -128,6 +128,7 @@ export const enEditor = {
   'mask.deleteSelected': 'Delete ({count})',
   'mask.deleteSelectedTitle': 'Delete selected screens (Delete)',
   'mask.downloadPng': 'Download PNG {name}',
+  'mask.downloadPngTitle': 'Export mask to PNG (Ctrl+E)',
   'mask.downloadZip': 'Download all pages (ZIP)',
   'mask.downloadZipTitle': 'Export all mask pages to ZIP archive',
   'mask.preview': 'Preview',

@@ -78,7 +78,7 @@ export default function OpticsSection({ inputs, onChange, lensTR, beamAngleDeg, 
       {inputs.calcMode === 'autoGrid' && (
         <div className="p-2.5 rounded-lg bg-black border border-[#22222a] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-zinc-400">Оптика:</span>
+            <span className="text-[11px] text-zinc-400">{t('projection.optics.optic')}:</span>
             <div className="inline-flex rounded bg-[#141419] p-0.5 border border-[#262630] text-[10px] font-mono">
               <button
                 type="button"
@@ -92,7 +92,7 @@ export default function OpticsSection({ inputs, onChange, lensTR, beamAngleDeg, 
                 onClick={() => onChange({ lensInputType: 'angle' })}
                 className={`px-2 py-0.5 rounded ${inputs.lensInputType === 'angle' ? 'bg-cyan-500/20 text-cyan-400 font-semibold' : 'text-zinc-400'}`}
               >
-                Угол
+                {t('projection.optics.angle')}
               </button>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function OpticsSection({ inputs, onChange, lensTR, beamAngleDeg, 
           ) : (
             <div>
               <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-zinc-400">Угол:</span>
+                <span className="text-zinc-400">{t('projection.optics.angle')}:</span>
                 <span className="font-mono text-zinc-400">TR ≈ {lensTR.toFixed(2)}:1</span>
               </div>
               <div className="flex gap-2 items-center">

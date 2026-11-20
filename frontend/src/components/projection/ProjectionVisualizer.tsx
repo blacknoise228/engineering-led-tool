@@ -106,7 +106,7 @@ export default function ProjectionVisualizer({
         <button
           type="button"
           onClick={() => exportVisualizerSchemePNG(c, activeTab, language, colors, eventName)}
-          title={t('projection.action.exportScheme')}
+          title={t('projection.action.exportSchemeTitle')}
           className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 text-xs font-semibold transition flex items-center gap-1.5 active:scale-[0.99]"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
