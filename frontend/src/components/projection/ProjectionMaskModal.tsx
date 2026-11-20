@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ProjectionComputed, MaskExportConfig, MaskExportStyle } from '@/lib/projection/types';
 import {
   renderFullCanvasMask,
+  renderWallMask,
   renderProjectorSliceMask,
   exportCanvasPNG,
+  exportWallPNG,
   exportSlicePNG,
   exportAllMasksZIP,
 } from '@/lib/projection/projection-mask-export';
@@ -27,7 +29,7 @@ export default function ProjectionMaskModal({
   onEventNameChange,
 }: ProjectionMaskModalProps) {
   const { t, language } = useI18n();
-  const [selectedTarget, setSelectedTarget] = useState<'canvas' | string>('canvas');
+  const [selectedTarget, setSelectedTarget] = useState<'canvas' | 'wall' | string>('canvas');
   const [style, setStyle] = useState<MaskExportStyle>('engineering');
   const [showGrid, setShowGrid] = useState(true);
   const [showTargets, setShowTargets] = useState(true);
@@ -69,6 +71,10 @@ export default function ProjectionMaskModal({
       canvas.width = computed.totalCanvasPxW;
       canvas.height = computed.totalCanvasPxH;
       renderFullCanvasMask(ctx, computed, config);
+    } else if (selectedTarget === 'wall') {
+      canvas.width = computed.activeWallPxW;
+      canvas.height = computed.activeWallPxH;
+      renderWallMask(ctx, computed, config);
     } else {
       const slice = computed.slices.find((s) => s.zoneId === selectedTarget);
       if (slice) {
@@ -87,6 +93,15 @@ export default function ProjectionMaskModal({
     setIsExporting(true);
     try {
       await exportCanvasPNG(computed, config);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportWall = async () => {
+    setIsExporting(true);
+    try {
+      await exportWallPNG(computed, config);
     } finally {
       setIsExporting(false);
     }
@@ -145,8 +160,11 @@ export default function ProjectionMaskModal({
                 onChange={(e) => setSelectedTarget(e.target.value)}
                 className="w-full bg-[#141721] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs font-mono text-white outline-none focus:border-cyan-500/50"
               >
+                <option value="wall">
+                  {t('projection.mask.targetWall')} ({computed.activeWallPxW}×{computed.activeWallPxH} px)
+                </option>
                 <option value="canvas">
-                  {t('projection.mask.downloadCanvas')} ({computed.totalCanvasPxW}×{computed.totalCanvasPxH} px)
+                  {t('projection.mask.targetCanvas')} ({computed.totalCanvasPxW}×{computed.totalCanvasPxH} px)
                 </option>
                 {computed.slices.map((s) => (
                   <option key={s.zoneId} value={s.zoneId}>
@@ -234,7 +252,9 @@ export default function ProjectionMaskModal({
               <span>Preview:</span>
               <span className="text-cyan-400 font-semibold">
                 {selectedTarget === 'canvas'
-                  ? `${computed.totalCanvasPxW} × ${computed.totalCanvasPxH} px`
+                  ? `${computed.totalCanvasPxW} × ${computed.totalCanvasPxH} px (${language === 'en' ? 'Canvas' : 'Холст'})`
+                  : selectedTarget === 'wall'
+                  ? `${computed.activeWallPxW} × ${computed.activeWallPxH} px (${language === 'en' ? 'Wall' : 'Стена'})`
                   : `${currentSlice?.width} × ${currentSlice?.height} px (${selectedTarget})`}
               </span>
             </div>
@@ -248,10 +268,13 @@ export default function ProjectionMaskModal({
 
             <div className="p-3 bg-[#10121a] rounded-xl border border-white/[0.06] text-xs text-neutral-400 leading-relaxed space-y-1">
               <div>
-                • <b className="text-neutral-200">{t('projection.mask.downloadCanvas')}</b>: {language === 'en' ? 'Single composite canvas for Resolume Arena / disguise.' : 'Единая маска всего холста для медиасервера.'}
+                • <b className="text-emerald-400">{t('projection.mask.targetWall')}</b> ({computed.activeWallPxW}×{computed.activeWallPxH} px): {language === 'en' ? 'Wall content canvas with designated edge blend zones.' : 'Размер стены с обозначением мест бленды для создания контента.'}
               </div>
               <div>
-                • <b className="text-neutral-200">{t('projection.mask.downloadZip')}</b>: {language === 'en' ? 'All projector slices + composite + specification txt.' : 'Все слайсы проекторов + общий холст + ТЗ спецификация.'}
+                • <b className="text-neutral-200">{t('projection.mask.targetCanvas')}</b> ({computed.totalCanvasPxW}×{computed.totalCanvasPxH} px): {language === 'en' ? 'Single composite canvas for Resolume Arena / disguise.' : 'Единая маска всего холста для медиасервера.'}
+              </div>
+              <div>
+                • <b className="text-neutral-200">{t('projection.mask.downloadZip')}</b>: {language === 'en' ? 'All projector slices + wall mask + composite canvas + specification txt.' : 'Все слайсы проекторов + маска стены + холст + ТЗ спецификация.'}
               </div>
             </div>
           </div>
@@ -264,7 +287,7 @@ export default function ProjectionMaskModal({
           </div>
 
           <div className="flex items-center gap-2.5">
-            {selectedTarget !== 'canvas' && currentSlice && (
+            {selectedTarget !== 'canvas' && selectedTarget !== 'wall' && currentSlice && (
               <button
                 type="button"
                 onClick={handleExportSlice}
@@ -277,9 +300,26 @@ export default function ProjectionMaskModal({
 
             <button
               type="button"
+              onClick={handleExportWall}
+              disabled={isExporting}
+              className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 ${
+                selectedTarget === 'wall'
+                  ? 'bg-emerald-600/25 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/35 font-semibold shadow-sm'
+                  : 'bg-[#141620] hover:bg-[#1b1e2b] text-neutral-200 border-white/[0.08]'
+              }`}
+            >
+              {t('projection.mask.downloadWall')}
+            </button>
+
+            <button
+              type="button"
               onClick={handleExportCanvas}
               disabled={isExporting}
-              className="px-4 py-2 rounded-xl text-xs font-medium bg-[#141620] hover:bg-[#1b1e2b] text-neutral-200 border border-white/[0.08] transition disabled:opacity-50"
+              className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 ${
+                selectedTarget === 'canvas'
+                  ? 'bg-blue-600/25 text-blue-300 border-blue-500/50 hover:bg-blue-600/35 font-semibold shadow-sm'
+                  : 'bg-[#141620] hover:bg-[#1b1e2b] text-neutral-200 border-white/[0.08]'
+              }`}
             >
               {t('projection.mask.downloadCanvas')}
             </button>

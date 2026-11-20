@@ -159,7 +159,10 @@ export const ruProjection = {
   'projection.mask.layerBadge': 'Штамп параметров',
   'projection.mask.layerIds': 'Номера слайсов',
   'projection.mask.downloadCanvas': 'Холст (PNG)',
+  'projection.mask.downloadWall': 'Маска стены (PNG)',
   'projection.mask.downloadSlice': 'Слайс {name} (PNG)',
   'projection.mask.downloadZip': 'Скачать всё (ZIP)',
-  'projection.mask.selectSlice': 'Выбрать слайс:',
+  'projection.mask.selectSlice': 'Выбрать маску для предпросмотра:',
+  'projection.mask.targetWall': 'Стена (контент)',
+  'projection.mask.targetCanvas': 'Общий холст проекторов',
 };

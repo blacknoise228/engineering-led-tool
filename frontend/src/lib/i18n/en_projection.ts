@@ -159,7 +159,10 @@ export const enProjection = {
   'projection.mask.layerBadge': 'Parameter Stamp',
   'projection.mask.layerIds': 'Slice IDs',
   'projection.mask.downloadCanvas': 'Canvas (PNG)',
+  'projection.mask.downloadWall': 'Wall Mask (PNG)',
   'projection.mask.downloadSlice': 'Slice {name} (PNG)',
   'projection.mask.downloadZip': 'Download All (ZIP)',
-  'projection.mask.selectSlice': 'Select Slice:',
+  'projection.mask.selectSlice': 'Select Mask for Preview:',
+  'projection.mask.targetWall': 'Wall (Content Size)',
+  'projection.mask.targetCanvas': 'Composite Canvas',
 };
