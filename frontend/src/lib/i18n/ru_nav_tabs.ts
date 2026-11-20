@@ -3,6 +3,8 @@
 export const ruNavTabs = {
   // Nav bar
   'nav.title': 'Engineering LED Tool',
+  'nav.modeLed': 'LED Экраны',
+  'nav.modeProjection': 'Проекция',
   'nav.updateAvailable': 'Доступно обновление {version}! Нажмите для загрузки',
   'nav.updateBadge': 'Обновление {version}',
   'nav.checkForUpdates': 'Проверить обновления',
@@ -16,11 +18,13 @@ export const ruNavTabs = {
   'tabs.cards': 'Карты',
   'tabs.wiring': 'Схема',
   'tabs.mask': 'Маска',
+  'tabs.projection': 'Проекция',
   'tabs.info': 'Инфо',
 
   // Toolbar
   'toolbar.wiring': 'Расключение',
   'toolbar.mask': 'Маска',
+  'toolbar.projection': 'Проекция',
   'toolbar.selectedScreens': 'Выбрано экранов: {count}',
   'toolbar.deleteScreens': 'Удалить выбранные экраны (Delete)',
   'toolbar.selectedPanels': 'Выбрано: {count}',

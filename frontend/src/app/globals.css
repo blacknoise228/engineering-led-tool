@@ -16,6 +16,32 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Custom Range Input */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1f1f27;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: #00f0ff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+  border: 1px solid #000;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #50f6ff;
+}
+
 /* Стилизация скроллбара для темной темы */
 ::-webkit-scrollbar {
   width: 6px;
