@@ -246,7 +246,7 @@ export function computeProjection(inputs: ProjectionInputs, lang: 'ru' | 'en' = 
 export function buildProjectionSpecText(c: ProjectionComputed, eventName?: string, lang: 'ru' | 'en' = 'ru'): string {
   if (lang === 'en') {
     return [
-      `=== PROJECTION MAPPING SPECIFICATION (ARRAYMAPPER PRO) ===`,
+      `=== PROJECTION MAPPING SPECIFICATION (Engineering LED Tool) ===`,
       eventName ? `Event: ${eventName}` : '',
       `Surface (Wall): ${c.wallW.toFixed(2)} m (W) × ${c.wallH.toFixed(2)} m (H) | Area: ${c.wallArea.toFixed(1)} m² | Gain: ${c.gain}`,
       `Throw Distance: ${c.throwDist.toFixed(2)} m`,
@@ -272,7 +272,7 @@ export function buildProjectionSpecText(c: ProjectionComputed, eventName?: strin
   }
 
   return [
-    `=== СПЕЦИФИКАЦИЯ ВИДЕОМЭППИНГА (ARRAYMAPPER PRO) ===`,
+    `=== СПЕЦИФИКАЦИЯ ВИДЕОМЭППИНГА (Engineering LED Tool) ===`,
     eventName ? `Событие: ${eventName}` : '',
     `Поверхность (Стена): ${c.wallW.toFixed(2)} м (Ш) × ${c.wallH.toFixed(2)} м (В) | Площадь: ${c.wallArea.toFixed(1)} м² | Gain: ${c.gain}`,
     `Дистанция проекции (Throw Distance): ${c.throwDist.toFixed(2)} м`,

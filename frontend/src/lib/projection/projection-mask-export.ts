@@ -207,7 +207,7 @@ export function renderFullCanvasMask(
     ctx.fillStyle = '#06b6d4';
     ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('ARRAYMAPPER PRO // MASK', sx + 14, sy + 22);
+    ctx.fillText('Engineering LED Tool Projection', sx + 14, sy + 22);
 
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';

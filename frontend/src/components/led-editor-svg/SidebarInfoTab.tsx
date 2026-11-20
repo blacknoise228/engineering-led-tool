@@ -305,7 +305,7 @@ export default function SidebarInfoTab({
             </svg>
           </div>
           <div>
-            <span className="text-xs font-semibold text-white">ArrayMapper Pro</span>
+            <span className="text-xs font-semibold text-white">Engineering Projection Tool</span>
             <div className="text-[10px] text-cyan-400/80 font-mono">Расчет сшивки и маппинга</div>
           </div>
         </div>
